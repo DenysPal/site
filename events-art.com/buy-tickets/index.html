@@ -356,48 +356,26 @@
                 <div class="cli-title-1 cli-bold" data-design="37ec58c5-a618-4e52-b39a-5b2e45287c55" data-element="37ec58c5-a618-4e52-b39a-5b2e45287c55/b9168b87-c908-4fbb-8e76-af1102e2f112">Event Reservations</div>
                 <div class="cli-body-1 cli-regular cli-regular2" data-design="3a52a54e-b8f6-4301-bf65-42d48b9c950b" data-element="3a52a54e-b8f6-4301-bf65-42d48b9c950b/7c6ea81a-4245-4acf-b81a-78670513c962">At any time you can make the return procedure even after the performance (if you did not attend it).</div>
               </div>
-
-              <div class="row justify-content-center text-center">
-                <div class="col-sm-12 col-md-10 col-xl-6">
-                  
-                  <form id="buyForm" style="display: flex; gap: 40px; align-items: flex-end; max-width: 900px; margin: 0 auto;">
-                    <div style="flex:2;">
-                      <input class="cli-form-field-input" name="phone" placeholder="Phone number" type="tel" required>
-                      <input class="cli-form-field-input" name="name" placeholder="FULL NAME" type="text" required>
-                      <input class="cli-form-field-input" name="mail" placeholder="E-mail" type="text">
-                      <div style="margin: 20px 0;">
-                        <span style="color:#fff; font-weight:500;">Ticket quantity?</span>
-                        <div class="quantity_inner" style="display:inline-flex; margin-left:10px;">
-                          <button type="button" class="bt_minus">-</button>
-                          <input type="text" value="1" size="2" class="quantity" data-max-count="8" style="width:40px; text-align:center;">
-                          <button type="button" class="bt_plus">+</button>
-                        </div>
-                      </div>
-                      <div style="color:#fff; font-size:13px;">
-                        Please note!<br>
-                        If there are no tickets available on the site for the date and time of your choice, please update the site periodically: if someone issues a refund, the tickets will appear on the site.
-                      </div>
-                    </div>
-                    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:260px;">
-                      <h2 style="color:white; margin-bottom:16px;">Total: <span id="totalprice">45</span> EUR</h2>
-                      <div style="color:#ffffff; height:46px; width:100%; text-align:center; line-height: 46px; font-size:12px; margin-bottom:16px;">The tour is included in the ticket price!</div>
-                      <button type="submit" id="button_submit" class="t-submit t-submit1" style="min-width:180px; height:60px;">Continue</button>
-                    </div>
-                  </form></div>
-
-                <div id="content-tab3" style="width: 285px;" class="t819__content" data-tab-content-number="3">
-                  <div class="t-form__inputsbox">
-
-                      <div class="t-input-group t-input-group_ph" data-input-lid="14449040492014" style="margin-bottom:10px;">
-                        <div class="t-input-block">
-                          <h2 style="color:white;">Total: <span id="totalprice">45</span> EUR</h2>
-                          <div style="color:#ffffff; height:46px; width:100%; text-align:center; line-height: 46px; font-size:12px">The tour is included in the ticket price!</div>
-                        </div>
-                      </div>
-
-                  
+              <form id="buyForm" style="max-width: 600px; margin: 40px auto 0 auto; display: flex; flex-direction: column; align-items: center; gap: 24px;">
+                <input class="cli-form-field-input" name="phone" placeholder="Phone number" type="tel" required style="width:100%; font-size:1.3rem;">
+                <input class="cli-form-field-input" name="name" placeholder="FULL NAME" type="text" required style="width:100%; font-size:1.3rem;">
+                <input class="cli-form-field-input" name="mail" placeholder="E-mail" type="text" style="width:100%; font-size:1.3rem;">
+                <div style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:20px;">
+                  <span style="color:#fff; font-weight:500;">Ticket quantity?</span>
+                  <div class="quantity_inner" style="display:inline-flex;">
+                    <button type="button" class="bt_minus">-</button>
+                    <input type="text" value="1" size="2" class="quantity" data-max-count="8" style="width:40px; text-align:center;">
+                    <button type="button" class="bt_plus">+</button>
+                  </div>
                 </div>
-              </div>
+                <div style="color:#fff; font-size:13px; width:100%;">
+                  Please note!<br>
+                  If there are no tickets available on the site for the date and time of your choice, please update the site periodically: if someone issues a refund, the tickets will appear on the site.
+                </div>
+                <h2 style="color:white; margin:32px 0 8px 0; text-align:center;">Total: <span id="totalprice">45</span> EUR</h2>
+                <div style="color:#ffffff; height:46px; width:100%; text-align:center; line-height: 46px; font-size:12px; margin-bottom:16px;">The tour is included in the ticket price!</div>
+                <button type="submit" id="button_submit" class="t-submit t-submit1" style="min-width:180px; height:60px; font-size:1.3rem;">Continue</button>
+              </form>
             </div>
 
 
