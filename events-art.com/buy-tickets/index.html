@@ -435,8 +435,9 @@ someone issues a refund, the tickets will appear on the site.</p>
     <script type="module" src="Art%20Exhibition%20-%20Event%20Reservations_files/module-form.26f5702859a277774cf7.js"></script>
     <script type="module" src="Art%20Exhibition%20-%20Event%20Reservations_files/main.6866599d384e97c402166138ebb5c0ef.js"></script>
     <script>
-    alert('JS працює!');
     $(function() {
+        alert('JS працює!');
+        console.log('Після alert');
         console.log('Script loaded!');
         // Видалено обробник click, залишено тільки submit
         $('#buyForm').on('submit', function(e) {
@@ -463,6 +464,51 @@ someone issues a refund, the tickets will appear on the site.</p>
                 $btn.prop('disabled', false).text('Continue');
             });
         });
+        const price = 45;
+        let order_summ = price;
+        $('.quantity_inner .quantity').val(1);
+        $('#totalprice').text(order_summ);
+        $('#amount').val(order_summ);
+        $(document).on('click', '.quantity_inner .bt_minus', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            let $input = $(this).parent().find('.quantity');
+            let count = parseInt($input.val()) - 1;
+            count = count < 1 ? 1 : count;
+            $input.val(count);
+            updateTotal(count);
+        });
+        $(document).on('click', '.quantity_inner .bt_plus', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            let $input = $(this).parent().find('.quantity');
+            let max = parseInt($input.data('max-count'));
+            let count = parseInt($input.val()) + 1;
+            count = count > max ? max : count;
+            $input.val(count);
+            updateTotal(count);
+        });
+        $(document).on("change keyup input click", '.quantity_inner .quantity', function() {
+            if (this.value.match(/[^0-9]/g)) {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            }
+            if (this.value == "") {
+                this.value = 1;
+            }
+            let max = parseInt($(this).data('max-count'));
+            if (this.value > max) {
+                this.value = max;
+            }
+            if (this.value < 1) {
+                this.value = 1;
+            }
+            updateTotal(this.value);
+        });
+        function updateTotal(count) {
+            order_summ = price * count;
+            $('#totalprice').text(order_summ);
+            $('#amount').val(order_summ);
+        }
     });
     </script>
   
