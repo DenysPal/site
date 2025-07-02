@@ -438,6 +438,10 @@ someone issues a refund, the tickets will appear on the site.</p>
     alert('JS працює!');
     $(function() {
         console.log('Script loaded!');
+        // Діагностика кліку по кнопці
+        $('#button_submit').on('click', function() {
+            alert('Клік по кнопці!');
+        });
         
         const price = 45;
         let order_summ = price;
