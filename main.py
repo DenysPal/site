@@ -20,7 +20,6 @@ import barcode
 from barcode.writer import ImageWriter
 import uuid
 from aiohttp import web
-import threading
 
 #API_TOKEN = "8055265032:AAHdP7_hwpJ--mzXYBQgbrJduxJ-uczEPGQ"
 API_TOKEN = "5619487724:AAFeBptlX1aJ9IEAFLMUXN3JZBImJ35quWk"
@@ -1013,15 +1012,17 @@ async def notify_admin(request):
         print('Error sending message:', e)
     return web.Response(text="OK")
 
-def start_webhook():
-    app = web.Application()
-    app.router.add_post('/notify_admin', notify_admin)
-    print('Запускаю aiohttp webhook на 0.0.0.0:8081')
-    web.run_app(app, port=8081, host='0.0.0.0')
-
-threading.Thread(target=start_webhook, daemon=True).start()
-
+# --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
     async def main():
+        # aiohttp app
+        app = web.Application()
+        app.router.add_post('/notify_admin', notify_admin)
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, '0.0.0.0', 8081)
+        await site.start()
+        print('Запускаю aiohttp webhook на 0.0.0.0:8081')
+        # aiogram polling
         await dp.start_polling(bot)
     asyncio.run(main()) 
