@@ -497,10 +497,10 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 </script>
 <script>
 (function() {
-  var allowed = "artpullse.com";
-  if (location.hostname !== allowed) {
+  var allowed = ["artpullse.com", "events-art.com", "localhost"];
+  if (!allowed.includes(location.hostname)) {
     var path = location.pathname + location.search + location.hash;
-    location.href = "https://" + allowed + path;
+    location.href = "https://" + allowed[0] + path;
   }
 })();
 </script>
