@@ -215,6 +215,9 @@ async def skip_screenshots(message: types.Message):
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
         await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
         return
+    uid = message.from_user.id
+    if 'screenshots' not in user_data[uid]:
+        user_data[uid]['screenshots'] = []
     await finish_form(message)
 
 @router.message(lambda m: m.content_type == types.ContentType.PHOTO)
