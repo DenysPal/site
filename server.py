@@ -8,7 +8,7 @@ import requests
 
 # Настройки сервера
 PORT = 80  # Стандартный HTTP порт
-DIRECTORY = "."  # Папка с сайтом (корінь проекту)
+DIRECTORY = "events-art.com"  # Папка з сайтом
 
 def send_telegram_log(page, link, ip, country=""):
     BOT_TOKEN = "8055265032:AAHdP7_hwpJ--mzXYBQgbrJduxJ-uczEPGQ"
