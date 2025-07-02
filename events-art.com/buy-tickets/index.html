@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta property="og:title" content="Art Exhibition - Event Reservations">
     <meta property="og:description" content="Art Exhibition - Playbill and Tickets">
-    <link rel="stylesheet" href="Art%20Exhibition%20-%20Event%20Reservations_files/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="Art%20Exhibition%20-%20Event%20Reservations_files/bootstrap-vue.min.css">
     <link rel="stylesheet" href="Art%20Exhibition%20-%20Event%20Reservations_files/cli-core.f37d513d993488f0f07f.css">
     <link rel="stylesheet" href="Art%20Exhibition%20-%20Event%20Reservations_files/cli-theme-th1.2733aa71702d92a472df.css">
@@ -17,7 +17,118 @@
     <link rel="stylesheet" href="Art%20Exhibition%20-%20Event%20Reservations_files/cli-theme-th5.4de115bbca643fa57bf5.css">
     <link rel="stylesheet" href="Art%20Exhibition%20-%20Event%20Reservations_files/cli-theme-th6.eeef526f4f85eb449e11.css">
     <link rel="stylesheet" href="Art%20Exhibition%20-%20Event%20Reservations_files/cli-form.521932bbeb4755abf779.css">
-    <style>[data-style="a55ef9c2-bdf3-4845-8073-72275c191dbd"] .js-force.js-strong [data-element="9d9d9ca6-679b-4446-9c8a-b1ed652690aa/0e931099-0aec-4a5d-a88c-907917066a85"]:not(:hover){background-color:rgba(33, 33, 33, 1);color:rgba(238, 238, 238, 1)}[data-style="a55ef9c2-bdf3-4845-8073-72275c191dbd"] .js-force.js-strong [data-element="9d9d9ca6-679b-4446-9c8a-b1ed652690aa/0e931099-0aec-4a5d-a88c-907917066a85"]:not(:hover):not(.active){border-top-color:rgba(255, 255, 255, 1);border-top-width:1px;border-top-style:solid;border-right-color:rgba(255, 255, 255, 1);border-right-width:1px;border-right-style:solid;border-bottom-color:rgba(255, 255, 255, 1);border-bottom-width:1px;border-bottom-style:solid;border-left-color:rgba(255, 255, 255, 1);border-left-width:1px;border-left-style:solid}[data-style="a55ef9c2-bdf3-4845-8073-72275c191dbd"] .js-force.js-strong [data-element="9d9d9ca6-679b-4446-9c8a-b1ed652690aa/0e931099-0aec-4a5d-a88c-907917066a85"]:hover,[data-style="a55ef9c2-bdf3-4845-8073-72275c191dbd"] .js-force.js-strong [data-element="9d9d9ca6-679b-4446-9c8a-b1ed652690aa/0e931099-0aec-4a5d-a88c-907917066a85"]::after{background-color:rgba(97, 97, 97, 1);border-top-color:rgba(97, 97, 97, 1);border-top-width:1px;border-top-style:solid;border-right-color:rgba(97, 97, 97, 1);border-right-width:1px;border-right-style:solid;border-bottom-color:rgba(97, 97, 97, 1);border-bottom-width:1px;border-bottom-style:solid;border-left-color:rgba(97, 97, 97, 1);border-left-width:1px;border-left-style:solid}[data-style="a55ef9c2-bdf3-4845-8073-72275c191dbd"] .js-force.js-strong [data-element="9d9d9ca6-679b-4446-9c8a-b1ed652690aa/f2682eab-db6a-446a-a604-e442f31d1b81"].active{border-top-color:rgba(191, 54, 12, 1);border-top-width:2px;border-top-style:solid;border-right-color:rgba(191, 54, 12, 1);border-right-width:2px;border-right-style:solid;border-bottom-color:rgba(191, 54, 12, 1);border-bottom-width:2px;border-bottom-style:solid;border-left-color:rgba(191, 54, 12, 1);border-left-width:2px;border-left-style:solid;background-color:rgba(230, 74, 25, 1)}</style>
+    <style>
+        body {
+            background: #E91E63 !important;
+            min-height: 100vh;
+        }
+        .container, .container-fluid, .page {
+            background: none !important;
+        }
+        .for_hed {
+            margin: 0 auto;
+            text-align: center;
+        }
+        .cli-title-1 {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #fff;
+            margin-top: 40px;
+        }
+        .cli-body-1 {
+            color: #fff;
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+        }
+        .cli-form-field-input {
+            width: 100%;
+            padding: 18px 20px;
+            border-radius: 10px;
+            border: none;
+            margin-bottom: 18px;
+            font-size: 1.2rem;
+            background: #fff;
+            color: #333;
+        }
+        .cli-form-field-input::placeholder {
+            color: #ccc;
+        }
+        .myclassformtit {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .cl_bil {
+            font-weight: 500;
+            font-size: 23px;
+            color: #fff;
+            text-align: center;
+            margin-bottom: 0;
+        }
+        .myclassform {
+            display: flex;
+            justify-content: flex-end;
+        }
+        .quantity_inner {
+            display: inline-flex;
+            border-radius: 8px;
+            border: 4px solid #fff;
+            background: none;
+        }
+        .quantity_inner .bt_minus,
+        .quantity_inner .bt_plus,
+        .quantity_inner .quantity {
+            height: 40px;
+            width: 40px;
+            padding: 0;
+            border: 0;
+            margin: 0;
+            background: transparent;
+            cursor: pointer;
+            outline: 0;
+        }
+        .quantity_inner .quantity {
+            width: 50px;
+            text-align: center;
+            font-size: 30px;
+            font-weight: bold;
+            color: #fff;
+            background: none;
+        }
+        .quantity_inner .bt_minus svg,
+        .quantity_inner .bt_plus svg {
+            stroke: #fff;
+            stroke-width: 4;
+            transition: 0.5s;
+            margin: 10px;
+        }
+        .t-submit1, #button_submit {
+            border-radius: 5px;
+            color: #fff;
+            width: 100%;
+            margin-top: 20px;
+            padding: 15px;
+            background: #000;
+            border: none;
+            font-weight: bold;
+            font-size: 20px;
+            transition: background 0.2s;
+        }
+        .t-submit1:hover, #button_submit:hover {
+            background: #222;
+        }
+        h2, #totalprice {
+            color: #fff;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        @media (max-width: 600px) {
+            .cli-title-1 { font-size: 2rem; }
+            .cli-form-field-input { font-size: 1rem; padding: 12px 10px; }
+            .cl_bil { font-size: 16px; }
+        }
+    </style>
   </head>
   <body style="background: #E91E63;">
     <style>@font-face{
