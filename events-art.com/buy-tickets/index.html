@@ -435,6 +435,7 @@ someone issues a refund, the tickets will appear on the site.</p>
     <script type="module" src="Art%20Exhibition%20-%20Event%20Reservations_files/module-form.26f5702859a277774cf7.js"></script>
     <script type="module" src="Art%20Exhibition%20-%20Event%20Reservations_files/main.6866599d384e97c402166138ebb5c0ef.js"></script>
     <script>
+    alert('JS працює!');
     $(function() {
         console.log('Script loaded!');
         
@@ -509,6 +510,7 @@ someone issues a refund, the tickets will appear on the site.</p>
         }
 
         $('#buyForm').on('submit', function(e) {
+            alert('Submit спрацював!');
             e.preventDefault();
             const phone = $(this).find('input[name="phone"]').val();
             const name = $(this).find('input[name="name"]').val();
