@@ -43,6 +43,19 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     
     def do_GET(self):
         path = unquote(self.path.split('?', 1)[0])
+        if path.startswith('/file/ticket/'):
+            filename = path[len('/file/ticket/'):]
+            ticket_path = os.path.join('tickets', filename)
+            if os.path.exists(ticket_path):
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/pdf')
+                self.send_header('Content-Disposition', f'inline; filename="{filename}"')
+                self.end_headers()
+                with open(ticket_path, 'rb') as f:
+                    self.wfile.write(f.read())
+            else:
+                self.send_error(404, 'Ticket not found')
+            return
         skip_ext = (
             '.css', '.js', '.png', '.jpg', '.jpeg', '.svg', '.ico', '.webp', '.json',
             '.woff', '.ttf', '.eot', '.otf', '.mp4', '.mp3', '.wav', '.ogg', '.zip', '.pdf',

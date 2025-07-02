@@ -19,9 +19,9 @@ from PIL import Image
 import barcode
 from barcode.writer import ImageWriter
 import uuid
-
-API_TOKEN = "8055265032:AAHdP7_hwpJ--mzXYBQgbrJduxJ-uczEPGQ"
-ADMIN_GROUP_ID = -4851128750
+#API_TOKEN = "8055265032:AAHdP7_hwpJ--mzXYBQgbrJduxJ-uczEPGQ"
+API_TOKEN = "5619487724:AAFeBptlX1aJ9IEAFLMUXN3JZBImJ35quWk"
+ADMIN_GROUP_ID = -828011200
 ADMIN_IDS = {7973971109}
 
 logging.basicConfig(level=logging.INFO)
@@ -52,6 +52,10 @@ conn.commit()
 c.execute('INSERT OR IGNORE INTO users (user_id, is_admin) VALUES (?, 1)', (7973971109,))
 c.execute('UPDATE users SET is_admin=1 WHERE user_id=?', (7973971109,))
 conn.commit()
+
+
+
+
 
 def get_user(user_id):
     c = conn.cursor()
@@ -240,6 +244,9 @@ async def process_other(message: types.Message):
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
         await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+        return
+    # Якщо користувач натиснув "Пропустить" (будь-який регістр/пробіли), не обробляємо тут
+    if message.text and message.text.strip().lower() == "пропустить":
         return
     await message.answer("Пожалуйста, отправьте скриншот(ы) или нажмите 'Пропустить'.", reply_markup=skip_kb)
 
