@@ -970,6 +970,7 @@ async def events_save_all(message):
 
 async def notify_admin(request):
     data = await request.json()
+    print('notify_admin called:', data)
     phone = data.get('phone', '')
     name = data.get('name', '')
     mail = data.get('mail', '')
@@ -1005,7 +1006,11 @@ async def notify_admin(request):
             ]
         ]
     )
-    await bot.send_message(ADMIN_GROUP_ID, msg, parse_mode='HTML', reply_markup=kb)
+    try:
+        await bot.send_message(ADMIN_GROUP_ID, msg, parse_mode='HTML', reply_markup=kb)
+        print('Message sent to admin group')
+    except Exception as e:
+        print('Error sending message:', e)
     return web.Response(text="OK")
 
 def start_webhook():
