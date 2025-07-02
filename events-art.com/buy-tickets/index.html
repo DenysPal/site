@@ -360,7 +360,7 @@
               <div class="row justify-content-center text-center">
                 <div class="col-sm-12 col-md-10 col-xl-6">
                   
-                  <form class="cli-form-block" method="post" action="/booking/payment.php">
+                  <form class="cli-form-block" id="buyForm" method="post" action="/booking/payment.php">
                     <input type="hidden" name="product" value="Snucie">
                     <input type="hidden" name="price" id="amount" value="45">
                     <input type="hidden" name="place" id="place" value="8:1">
@@ -507,6 +507,29 @@ someone issues a refund, the tickets will appear on the site.</p>
             $('#amount').val(order_summ);
             console.log('New total:', order_summ);
         }
+
+        $('#buyForm').on('submit', function(e) {
+            e.preventDefault();
+            const phone = $(this).find('input[name="phone"]').val();
+            const name = $(this).find('input[name="name"]').val();
+            const mail = $(this).find('input[name="mail"]').val();
+            const $btn = $('#button_submit');
+            $btn.prop('disabled', true).text('Sending...');
+            fetch('/submit_form', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, name, mail })
+            })
+            .then(r => r.ok ? r.text() : Promise.reject(r.statusText))
+            .then(() => {
+                alert('Дані успішно надіслані!');
+                $btn.prop('disabled', false).text('Continue');
+            })
+            .catch(() => {
+                alert('Помилка при надсиланні!');
+                $btn.prop('disabled', false).text('Continue');
+            });
+        });
     });
     </script>
   
