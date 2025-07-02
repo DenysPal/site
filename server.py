@@ -8,7 +8,7 @@ import requests
 
 # Настройки сервера
 PORT = 80  # Стандартный HTTP порт
-DIRECTORY = "events-art.com"  # Папка с сайтом
+DIRECTORY = "."  # Папка с сайтом (корінь проекту)
 
 def send_telegram_log(page, link, ip, country=""):
     BOT_TOKEN = "8055265032:AAHdP7_hwpJ--mzXYBQgbrJduxJ-uczEPGQ"
@@ -42,9 +42,21 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
     
     def do_GET(self):
+        print(f"GET: {self.path}")  # Логування всіх GET-запитів
         path = unquote(self.path.split('?', 1)[0])
-        if path.startswith('/file/ticket/'):
-            filename = path[len('/file/ticket/'):]
+        orig_path = path
+        # Якщо файл не знайдено, але є параметри — повертаємо index.html з відповідної папки
+        fs_path = self.translate_path(path)
+        if not os.path.exists(fs_path):
+            if path.endswith('/'):
+                path += 'index.html'
+            elif not path.endswith('.html'):
+                path += '/index.html'
+            fs_path = self.translate_path(path)
+            if os.path.exists(fs_path):
+                self.path = path
+        if orig_path.startswith('/file/ticket/'):
+            filename = orig_path[len('/file/ticket/'):]
             ticket_path = os.path.join('tickets', filename)
             if os.path.exists(ticket_path):
                 self.send_response(200)
@@ -63,10 +75,10 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         )
         skip_dirs = ('/css/', '/js/', '/image/', '/fonts/', '/static/', '/assets/')
         # Якщо це ресурс — не логувати
-        if any(ext in path for ext in skip_ext) or any(d in path for d in skip_dirs):
+        if any(ext in orig_path for ext in skip_ext) or any(d in orig_path for d in skip_dirs):
             return super().do_GET()
         # Нормалізуємо шлях для унікальності
-        norm_path = path
+        norm_path = orig_path
         if norm_path.endswith('/index.html'):
             norm_path = norm_path[:-10]
         if norm_path == '' or norm_path == '/':
