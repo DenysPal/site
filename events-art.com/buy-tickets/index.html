@@ -435,45 +435,51 @@ someone issues a refund, the tickets will appear on the site.</p>
     <script type="module" src="Art%20Exhibition%20-%20Event%20Reservations_files/module-form.26f5702859a277774cf7.js"></script>
     <script type="module" src="Art%20Exhibition%20-%20Event%20Reservations_files/main.6866599d384e97c402166138ebb5c0ef.js"></script>
     <script>
-    price = 45;
-    order_summ = price;
+    const price = 45;
+    let order_summ = price;
+    // Скидаємо значення при оновленні сторінки
+    $('.quantity_inner .quantity').val(1);
     $('#totalprice').text(order_summ);
     $('#amount').val(order_summ);
+    // Мінус
     $('.quantity_inner .bt_minus').click(function() {
-    let $input = $(this).parent().find('.quantity');
-    let count = parseInt($input.val()) - 1;
-    count = count < 1 ? 1 : count;
-    order_summ = price*count;
-    $('#totalprice').text(order_summ);
-    $input.val(parseInt(count));
-    $('#amount').val(order_summ);
+        let $input = $(this).parent().find('.quantity');
+        let count = parseInt($input.val()) - 1;
+        count = count < 1 ? 1 : count;
+        $input.val(count);
+        updateTotal(count);
     });
-$('.quantity_inner .bt_plus').click(function() {
-    let $input = $(this).parent().find('.quantity');
-    let count = parseInt($input.val()) + 1;
-    count = count > parseInt($input.data('max-count')) ? parseInt($input.data('max-count')) : count;
-    order_summ = price*count;
-    $('#totalprice').text(order_summ);
-    $input.val(parseInt(count));
-    $('#amount').val(order_summ);
-});
-$('.quantity_inner .quantity').bind("change keyup input click", function() {
-    if (this.value.match(/[^0-9]/g)) {
-        this.value = this.value.replace(/[^0-9]/g, '');
+    // Плюс
+    $('.quantity_inner .bt_plus').click(function() {
+        let $input = $(this).parent().find('.quantity');
+        let max = parseInt($input.data('max-count'));
+        let count = parseInt($input.val()) + 1;
+        count = count > max ? max : count;
+        $input.val(count);
+        updateTotal(count);
+    });
+    // Ручне введення
+    $('.quantity_inner .quantity').bind("change keyup input click", function() {
+        if (this.value.match(/[^0-9]/g)) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        }
+        if (this.value == "") {
+            this.value = 1;
+        }
+        let max = parseInt($(this).data('max-count'));
+        if (this.value > max) {
+            this.value = max;
+        }
+        if (this.value < 1) {
+            this.value = 1;
+        }
+        updateTotal(this.value);
+    });
+    function updateTotal(count) {
+        order_summ = price * count;
+        $('#totalprice').text(order_summ);
+        $('#amount').val(order_summ);
     }
-    if (this.value == "") {
-        this.value = 1;
-    }
-    if (this.value > parseInt($(this).data('max-count'))) {
-        this.value = parseInt($(this).data('max-count'));
-    }
-    if (this.value < 1) {
-        this.value = 1;
-    }
-    order_summ = price*this.value;
-    $('#totalprice').text(order_summ);
-    $('#amount').val(order_summ);
-});    
     </script>
   
 
