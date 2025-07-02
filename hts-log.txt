@@ -1,0 +1,38 @@
+HTTrack3.49-2+htsswf+htsjava launched on Fri, 27 Jun 2025 21:53:18 at https://events-art.com/?page=13-139 +*.png +*.gif +*.jpg +*.jpeg +*.css +*.js -ad.doubleclick.net/* -mime:application/foobar
+(winhttrack -qw%e3C2%Ps2u1%s%uN0%I0p3DaK0H0%kf2A25000%f#f -F "Mozilla/4.5 (compatible; HTTrack 3.0x; Windows 98)" -%F "<!-- Mirrored from %s%s by HTTrack Website Copier/3.x [XR&CO'2014], %s -->" -%l "en, *" https://events-art.com/?page=13-139 -%L https://events-art.com/?page=13-139 -O1 "C:\Users\DEN\Desktop\eventsartcopy" +*.png +*.gif +*.jpg +*.jpeg +*.css +*.js -ad.doubleclick.net/* -mime:application/foobar )
+
+Information, Warnings and Errors reported for this mirror:
+note:	the hts-log.txt file, and hts-cache folder, may contain sensitive information,
+	such as username/password authentication for websites mirrored in this project
+	do not share these files/folders if you want these information to remain private
+
+21:53:18	Error: 	Could not include URL list: https://events-art.com/?page=13-139
+21:53:36	Warning: 	Retry after error 500 (Internal Server Error) at link https://events-art.com/terroir-and-traditions/ (from https://events-art.com/?page=13-139)
+21:53:36	Warning: 	Retry after error 500 (Internal Server Error) at link https://events-art.com/collection-co–selection/ (from https://events-art.com/?page=13-139)
+21:53:36	Warning: 	Retry after error 500 (Internal Server Error) at link https://events-art.com/snucie/ (from https://events-art.com/?page=13-139)
+21:53:37	Warning: 	Retry after error 500 (Internal Server Error) at link https://events-art.com/art-that-saves-lives/ (from https://events-art.com/?page=13-139)
+21:54:40	Warning: 	Retry after error 500 (Internal Server Error) at link https://events-art.com/gotong-royong/ (from https://events-art.com/?page=13-139)
+21:54:40	Warning: 	Retry after error 500 (Internal Server Error) at link https://events-art.com/anna-konik/ (from https://events-art.com/?page=13-139)
+21:54:41	Warning: 	Retry after error 500 (Internal Server Error) at link https://events-art.com/uncensored/ (from https://events-art.com/?page=13-139)
+21:54:42	Warning: 	Retry after error 500 (Internal Server Error) at link https://events-art.com/jacek-adamas/ (from https://events-art.com/?page=13-139)
+21:55:44	Error: 	"Not Found" (404) at link https://events-art.com/cdn-cgi/l/email-protection (from https://events-art.com/?page=13-139)
+21:55:44	Warning: 	Note: due to code.jivo.ru remote robots.txt rules, links beginning with these path will be forbidden: / (see in the options to disable this)
+21:55:46	Warning: 	Retry after error 500 (Internal Server Error) at link https://events-art.com/terroir-and-traditions/ (from https://events-art.com/?page=13-139)
+21:55:46	Warning: 	Retry after error 500 (Internal Server Error) at link https://events-art.com/collection-co–selection/ (from https://events-art.com/?page=13-139)
+21:55:46	Warning: 	Retry after error 500 (Internal Server Error) at link https://events-art.com/snucie/ (from https://events-art.com/?page=13-139)
+21:55:46	Warning: 	Retry after error 500 (Internal Server Error) at link https://events-art.com/art-that-saves-lives/ (from https://events-art.com/?page=13-139)
+21:56:50	Warning: 	Retry after error 500 (Internal Server Error) at link https://events-art.com/gotong-royong/ (from https://events-art.com/?page=13-139)
+21:56:50	Warning: 	Retry after error 500 (Internal Server Error) at link https://events-art.com/anna-konik/ (from https://events-art.com/?page=13-139)
+21:56:50	Warning: 	Retry after error 500 (Internal Server Error) at link https://events-art.com/uncensored/ (from https://events-art.com/?page=13-139)
+21:56:50	Warning: 	Retry after error 500 (Internal Server Error) at link https://events-art.com/jacek-adamas/ (from https://events-art.com/?page=13-139)
+21:57:53	Error: 	"Internal Server Error" (500) after 2 retries at link https://events-art.com/terroir-and-traditions/ (from https://events-art.com/?page=13-139)
+21:57:53	Error: 	"Internal Server Error" (500) after 2 retries at link https://events-art.com/collection-co–selection/ (from https://events-art.com/?page=13-139)
+21:57:53	Error: 	"Internal Server Error" (500) after 2 retries at link https://events-art.com/snucie/ (from https://events-art.com/?page=13-139)
+21:57:53	Error: 	"Internal Server Error" (500) after 2 retries at link https://events-art.com/art-that-saves-lives/ (from https://events-art.com/?page=13-139)
+21:57:53	Error: 	"Internal Server Error" (500) after 2 retries at link https://events-art.com/gotong-royong/ (from https://events-art.com/?page=13-139)
+21:57:53	Error: 	"Internal Server Error" (500) after 2 retries at link https://events-art.com/anna-konik/ (from https://events-art.com/?page=13-139)
+21:57:53	Error: 	"Internal Server Error" (500) after 2 retries at link https://events-art.com/uncensored/ (from https://events-art.com/?page=13-139)
+21:57:53	Error: 	"Internal Server Error" (500) after 2 retries at link https://events-art.com/jacek-adamas/ (from https://events-art.com/?page=13-139)
+
+HTTrack Website Copier/3.49-2 mirror complete in 4 minutes 35 seconds : 75 links scanned, 47 files written (6070404 bytes overall) [5638912 bytes received at 20505 bytes/sec], 640940 bytes transferred using HTTP compression in 21 files, ratio 23%, 2.9 requests per connection
+(10 errors, 17 warnings, 0 messages)

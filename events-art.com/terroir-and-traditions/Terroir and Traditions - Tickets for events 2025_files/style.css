@@ -1,0 +1,386 @@
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&family=Notable&display=swap');
+
+body {
+	background: #f8f8f8;
+}
+
+.menu-header {
+    margin: 0 auto 15px 0;
+    padding: 10px;
+    background: #fff;	
+}
+.nav-item a {
+  font-family: "Merriweather", serif;
+  font-weight: 500;
+  font-style: normal;
+  color: #000;
+  font-size: 18px;
+}
+.big-event {
+	height: 450px;
+	width: 100%;
+	background: #39bacb;
+	border-radius: 30px;
+	display: flex;
+	align-items: center;
+	justify-content: space-around;
+}
+.big-event-about span, .medium-event-about span {
+	display: inline-flex;
+	align-items: center;
+	margin-right: 5px;
+	margin-bottom: 10px;
+}
+.big-event-about {
+	font-family: "Merriweather", serif;
+	color: #fff;
+	font-weight: bold;
+	width: 500px;
+	font-style: italic;
+}
+.big-event-about h1 {
+    font-style: normal;
+}
+.big-event-about span img,.medium-event-about span img {
+	width: 15px;
+	margin-right: 3px;
+}
+.big-event-img {
+	width: 400px;
+    height: 400px;
+    border-radius: 30px;
+    border: 10px solid #008395;
+    margin-right: 10px;
+    background-image: url('../image/header-image.jpg');
+    background-size: cover;
+}
+.medium-event-container {
+	margin:  30px 0;
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 30px;
+}
+.medium-event {
+	width: 100%;
+	height: 300px;
+	background: #E91E63;
+	border-radius: 30px;
+	display: flex;
+	align-items: center;
+}
+.medium-event-about {
+	font-family: "Merriweather", serif;
+	width: 50%;
+	padding: 15px;
+  color: #fff;
+  text-align: center;
+}
+.medium-event-img {
+	width: 50%;
+	height: 100%;
+	background-image: url('../vine.jpg');
+	background-size: cover;
+	background-position: center;
+	border-radius: 30px 0 0 30px;
+}
+
+.medium-event-about span img {
+	width: 15px;
+}
+
+.medium-event-about a, .big-event-about a {
+    width: 100%;
+    display: inline-block;
+    text-align: center;
+    padding: 10px;
+    color: #fff;
+    font-size: 18px;
+    border: 1px solid;
+    margin: 10px auto;
+}
+
+.subscribe-mail {
+	width: 100%;
+	height: 250px;
+	background: #1A1A1D;
+    color: #fff;
+	border-radius: 30px;
+	margin: 50px auto;
+	display: flex;
+	align-items: center;
+}
+.faq-box {
+    width: 100%;
+    min-height: 400px;
+	background: #1A1A1D;
+    color: #fff;
+    font-family: "Merriweather", serif;
+	margin: 50px auto;
+	border-radius: 30px;
+	display: flex;
+	align-items: center;
+}
+#contacts {
+    width: 100%;
+    min-height: 350px;
+	background: #1A1A1D;
+	display: flex;
+	align-items: center;
+	font-family: "Merriweather", serif;
+	color: #fff;
+	border-radius: 30px 30px 0 0;
+}
+.title-contacts {
+    width: 50%;
+    text-align: center;
+}
+.info-contacts {
+    width:50%;
+}
+.title-faq {
+    width: 50%;
+    text-align: center;
+}
+.faq-info {
+    width: 50%;
+    margin: 30px;
+}
+.page-event {
+    height: 450px;
+}
+.faq-info #accordion .card {
+    background: #fff;
+    color: #000;
+    border: unset;
+    border-radius: unset;
+}
+.btn:focus {
+    box-shadow: unset;
+}
+.title-subscribe {
+	width: 50%;
+}
+.title-subscribe span {
+	font-family: "Merriweather", serif;
+	font-size: 2.5rem;
+}
+
+.form-subscribe {
+	width: 50%;
+}
+.form-subscribe p {
+	font-family: "Merriweather", serif;
+	font-weight: 400;
+}
+.form-scb button {
+    background: #e91e63;
+    color: #fff;
+}
+.news-box {
+    min-height: 100px;
+    width: 100%;
+    background-color: #fff;
+    border-radius: 30px;
+    padding: 0 30px 30px 30px;
+}
+.news-box span {
+    margin-top: 30px;
+    text-align: center;
+    display: inline-block;
+    width: 100%;
+	font-family: "Merriweather", serif;
+	font-size: 2.5rem;    
+}
+.news-card {
+    min-height: 500px;
+    font-family: "Merriweather", serif;
+}
+.news-card h5 {
+    font-weight: bold;
+}
+.news-card p {
+    font-size: 14px;
+}
+.news-card .card-body button,.news-card-subscribe .card-body a {
+    position: absolute;
+    bottom: 0;
+}
+.news-card .card-body a {
+    position: absolute;
+    bottom: 0;
+} 
+figcaption {
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 27px;
+    color: #919191;
+    margin: 5px auto 0;
+    text-align: center;    
+}
+.news-full {
+    margin: 10px auto;
+    display: block;
+    padding: 10px 45px;
+    border: none;
+    background: #E91E63;
+    font-family: "Merriweather", serif;
+}
+.news-full:hover {
+    background: #000;
+    transition: all 0.5s;
+}
+.news-full:focus {
+    background: #000;
+    border: none;
+    box-shadow: none;
+}
+.card-img-top {
+    height: 210px;
+}
+.news-card-subscribe {
+    min-height: 500px;
+    font-family: "Merriweather", serif;
+    background: #1A1A1D;
+}
+.news-btn-scb {
+    margin: 10px auto;
+    display: block;
+    padding: 10px 45px;
+    border: none;
+    background: #E91E63;
+    font-family: "Merriweather", serif;    
+}
+.news-btn-scb:hover {
+    background: #fff;
+    color: #000;
+    transition: all 0.5s;    
+}
+.eventImg {
+      width: 600px;
+      height: 400px;    
+}
+    .Eventslide {
+      background-position: center;
+      background-size: cover;
+      width: 300px;
+      height: 300px;
+    }
+    .Eventslide img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+.event-content {
+    font-family: "Merriweather", serif;
+    background: #fff;
+    border-radius: 30px;
+    margin: 50px auto;
+    padding: 30px;
+}
+.event-content h1 {
+    border-left: 5px solid #E91E63;
+    padding-left: 5px;
+}
+.eventWrapSwiper {
+    width: 50%;
+}
+@media screen and (max-width: 992px) {
+    .medium-event-container {
+        grid-template-columns: auto;
+    }
+}
+@media screen and (max-width: 992px) {
+    .faq-box {
+        flex-direction: column-reverse;
+        border-radius: unset;
+    }
+    .faq-info {
+        width: 100%;
+    }
+    .title-faq {
+        padding-top: 30px;
+    }
+    #contacts {
+        flex-direction: column;
+        justify-content: center;
+        border-radius: unset;
+    }
+    .info-contacts {
+        width: 100%;
+    }
+}
+@media screen and (max-width: 540px) {
+    .news-box {
+        border-radius: unset;
+    }
+    .event-content {
+        padding: 30px 10px;
+        border-radius: unset;
+    }
+    .page-event {
+        margin-top: 100px;
+    }
+    .medium-event-container {
+        gap: 35px;
+    }
+    .medium-event {
+        border-radius: unset;
+        height: 330px;
+    }
+    .medium-event-img {
+        border-radius: unset;
+    }
+    .big-event {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    flex-direction: column-reverse;
+    border-radius: unset;
+    height: 520px;
+    margin-top: 80px;
+    }
+    .big-event-img {
+        width: 100%;
+        border: none;
+        border-radius: unset;
+        margin: 0;
+    }
+    .big-event-about {
+        width: 100%;
+    }
+    .big-event-about h1 {
+        font-size: 1.5rem;
+        text-align: center;
+        margin: 10px;
+    }
+    .big-event-about p {
+        text-align: center;
+    }
+    .subscribe-mail {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    height: 330px;
+    border-radius: unset;
+    }
+    .title-subscribe {
+        width: 100%;
+    }
+    .title-subscribe span {
+        font-size: 1.8rem;
+    }
+    .form-subscribe p {
+        font-size: 14px;
+    }
+    .form-subscribe {
+        width: 100%;
+    }
+    .header-nav {
+    width: 100%;
+    position: fixed;
+    top: 0;
+    z-index: 5;
+    }
+}
