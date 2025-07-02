@@ -16,6 +16,15 @@
     <meta property="og:image" content="/image/header-image.jpg" />
 </head>
 <body>
+<script>
+(function() {
+  const url = new URL(window.location);
+  if (url.searchParams.has('e')) {
+    url.searchParams.delete('e');
+    window.history.replaceState({}, document.title, url.pathname + url.search);
+  }
+})();
+</script>
 <div class="container-flued header-nav">
 <ul class="nav justify-content-center menu-header">
 	<li class="nav-item"><a class="nav-link" href="#">Home</a></li>
@@ -536,15 +545,6 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 })();
 </script>
 <script src="/js/event-loader.js"></script>
-<script>
-(function() {
-  const url = new URL(window.location);
-  if (url.searchParams.has('e')) {
-    url.searchParams.delete('e');
-    window.history.replaceState({}, document.title, url.pathname + url.search);
-  }
-})();
-</script>
 </body>
 
 <!-- Mirrored from events-art.com/?page=13-139 by HTTrack Website Copier/3.x [XR&CO'2014], Fri, 27 Jun 2025 18:53:34 GMT -->
