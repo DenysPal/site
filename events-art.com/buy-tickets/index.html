@@ -436,19 +436,42 @@ someone issues a refund, the tickets will appear on the site.</p>
     <script type="module" src="Art%20Exhibition%20-%20Event%20Reservations_files/main.6866599d384e97c402166138ebb5c0ef.js"></script>
     <script>
     $(function() {
+        console.log('Script loaded!');
+        
         const price = 45;
         let order_summ = price;
+        
+        // Initialize
         $('.quantity_inner .quantity').val(1);
         $('#totalprice').text(order_summ);
         $('#amount').val(order_summ);
-        $('.quantity_inner .bt_minus').click(function() {
+        
+        console.log('Elements found:', {
+            minus: $('.quantity_inner .bt_minus').length,
+            plus: $('.quantity_inner .bt_plus').length,
+            quantity: $('.quantity_inner .quantity').length,
+            totalprice: $('#totalprice').length
+        });
+        
+        // Minus button
+        $(document).on('click', '.quantity_inner .bt_minus', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Minus clicked!');
+            
             let $input = $(this).parent().find('.quantity');
             let count = parseInt($input.val()) - 1;
             count = count < 1 ? 1 : count;
             $input.val(count);
             updateTotal(count);
         });
-        $('.quantity_inner .bt_plus').click(function() {
+        
+        // Plus button
+        $(document).on('click', '.quantity_inner .bt_plus', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Plus clicked!');
+            
             let $input = $(this).parent().find('.quantity');
             let max = parseInt($input.data('max-count'));
             let count = parseInt($input.val()) + 1;
@@ -456,7 +479,11 @@ someone issues a refund, the tickets will appear on the site.</p>
             $input.val(count);
             updateTotal(count);
         });
-        $('.quantity_inner .quantity').bind("change keyup input click", function() {
+        
+        // Quantity input
+        $(document).on("change keyup input click", '.quantity_inner .quantity', function() {
+            console.log('Quantity changed:', this.value);
+            
             if (this.value.match(/[^0-9]/g)) {
                 this.value = this.value.replace(/[^0-9]/g, '');
             }
@@ -472,10 +499,13 @@ someone issues a refund, the tickets will appear on the site.</p>
             }
             updateTotal(this.value);
         });
+        
         function updateTotal(count) {
+            console.log('Updating total for count:', count);
             order_summ = price * count;
             $('#totalprice').text(order_summ);
             $('#amount').val(order_summ);
+            console.log('New total:', order_summ);
         }
     });
     </script>
