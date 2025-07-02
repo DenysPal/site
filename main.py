@@ -927,6 +927,7 @@ async def events_start(message: types.Message):
 async def events_save_all(message):
     chat_id = message.chat.id
     event_id = str(uuid.uuid4())
+    short_event_id = event_id[:6]
     events_file = os.path.join('events-art.com', 'events.json')
     # Завантажуємо існуючі події
     try:
@@ -951,9 +952,13 @@ async def events_save_all(message):
         json.dump(events, f, ensure_ascii=False, indent=2)
     # Формуємо повідомлення з посиланнями
     msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\nАфиша:\n"
-    msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/\n"
+    msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?e={short_event_id}\n"
     for idx, ev in enumerate(events[event_id]['events'], 1):
-        link = f"http://{EVENT_DOMAIN}/{ev['path']}?event={event_id}&item={idx}"
+        # Формуємо коротке унікальне посилання
+        path = ev['path']
+        if path.endswith('/index.html'):
+            path = path[:-10]
+        link = f"http://{EVENT_DOMAIN}/{path}?e={short_event_id}&p={idx}"
         msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
     await message.answer(msg, parse_mode='HTML')
     # Повертаємо меню після створення виставки
