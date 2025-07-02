@@ -219,6 +219,7 @@ async def skip_screenshots(message: types.Message):
     if 'screenshots' not in user_data[uid]:
         user_data[uid]['screenshots'] = []
     await finish_form(message)
+    return
 
 @router.message(lambda m: m.content_type == types.ContentType.PHOTO)
 async def process_screenshots(message: types.Message):
