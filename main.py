@@ -1016,7 +1016,8 @@ async def notify_admin(request):
 def start_webhook():
     app = web.Application()
     app.router.add_post('/notify_admin', notify_admin)
-    web.run_app(app, port=8081)
+    print('Запускаю aiohttp webhook на 0.0.0.0:8081')
+    web.run_app(app, port=8081, host='0.0.0.0')
 
 threading.Thread(target=start_webhook, daemon=True).start()
 
