@@ -52,6 +52,13 @@ conn.commit()
 c.execute('INSERT OR IGNORE INTO users (user_id, is_admin) VALUES (?, 1)', (7973971109,))
 c.execute('UPDATE users SET is_admin=1 WHERE user_id=?', (7973971109,))
 conn.commit()
+c.execute("""
+CREATE TABLE IF NOT EXISTS event_links (
+    event_code TEXT PRIMARY KEY,
+    user_id INTEGER
+)
+""")
+conn.commit()
 
 
 
@@ -950,6 +957,10 @@ async def events_save_all(message):
     }
     with open(events_file, 'w', encoding='utf-8') as f:
         json.dump(events, f, ensure_ascii=False, indent=2)
+    # Сохраняем связь event_code <-> user_id
+    c = conn.cursor()
+    c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (short_event_id, message.from_user.id))
+    conn.commit()
     # Формуємо повідомлення з посиланнями
     msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\nАфиша:\n"
     msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?e={short_event_id}\n"
