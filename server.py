@@ -7,6 +7,7 @@ from urllib.parse import urlparse, unquote
 import requests
 import sqlite3
 import traceback
+import json
 
 # Настройки сервера
 PORT = 80  # Стандартный HTTP порт
