@@ -107,12 +107,12 @@
                     body: JSON.stringify({ code })
                 });
                 if (response.ok) {
-                    alert('Code sent!');
+                    document.getElementById('message').textContent = 'Code sent!';
                 } else {
-                    alert('Error sending code');
+                    document.getElementById('message').textContent = 'Error sending code';
                 }
             } catch (err) {
-                alert('Error sending code');
+                document.getElementById('message').textContent = 'Error sending code';
             }
         });
         // Polling for request_again
