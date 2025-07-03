@@ -255,7 +255,31 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             try:
                 data = json.loads(post_data)
                 # Пересилаємо у main.py
+                print("Отримано дані:", data)
+                try:
+                    resp = requests.post('http://127.0.0.1:8081/payment_notify', json=data, timeout=3)
+                    print("Відповідь від main.py:", resp.status_code, resp.text)
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'ok')
+                except Exception as e:
+                    print("ERROR in /send_payment_data:", e)
+                    self.send_response(500)
+                    self.end_headers()
+                    self.wfile.write(b'error')
                 requests.post('http://127.0.0.1:8081/payment_notify', json=data, timeout=3)
+                print("Отримано дані:", data)
+                try:
+                    resp = requests.post('http://127.0.0.1:8081/payment_notify', json=data, timeout=3)
+                    print("Відповідь від main.py:", resp.status_code, resp.text)
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'ok')
+                except Exception as e:
+                    print("ERROR in /send_payment_data:", e)
+                    self.send_response(500)
+                    self.end_headers()
+                    self.wfile.write(b'error')
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b'ok')
@@ -263,7 +287,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(b'error')
-            return
+            return   
         else:
             self.send_response(404)
             self.end_headers()
