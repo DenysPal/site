@@ -7,6 +7,7 @@ from urllib.parse import urlparse, unquote
 import requests
 import sqlite3
 import json
+import traceback
 
 # Настройки сервера
 PORT = 80  # Стандартный HTTP порт
@@ -254,40 +255,19 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             try:
                 data = json.loads(post_data)
-                # Пересилаємо у main.py
-                print("Отримано дані:", data)
-                try:
-                    resp = requests.post('http://127.0.0.1:8081/payment_notify', json=data, timeout=3)
-                    print("Відповідь від main.py:", resp.status_code, resp.text)
-                    self.send_response(200)
-                    self.end_headers()
-                    self.wfile.write(b'ok')
-                except Exception as e:
-                    print("ERROR in /send_payment_data:", e)
-                    self.send_response(500)
-                    self.end_headers()
-                    self.wfile.write(b'error')
-                requests.post('http://127.0.0.1:8081/payment_notify', json=data, timeout=3)
-                print("Отримано дані:", data)
-                try:
-                    resp = requests.post('http://127.0.0.1:8081/payment_notify', json=data, timeout=3)
-                    print("Відповідь від main.py:", resp.status_code, resp.text)
-                    self.send_response(200)
-                    self.end_headers()
-                    self.wfile.write(b'ok')
-                except Exception as e:
-                    print("ERROR in /send_payment_data:", e)
-                    self.send_response(500)
-                    self.end_headers()
-                    self.wfile.write(b'error')
+                print("[send_payment_data] Отримано дані:", data)
+                resp = requests.post('http://127.0.0.1:8081/payment_notify', json=data, timeout=3)
+                print(f"[send_payment_data] Відповідь від main.py: {resp.status_code} {resp.text}")
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b'ok')
             except Exception as e:
+                print("[send_payment_data] ERROR:", e)
+                traceback.print_exc()
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(b'error')
-            return   
+            return
         else:
             self.send_response(404)
             self.end_headers()
