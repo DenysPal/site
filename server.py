@@ -6,6 +6,7 @@ import sys
 from urllib.parse import urlparse, unquote
 import requests
 import sqlite3
+import json
 
 # Настройки сервера
 PORT = 80  # Стандартный HTTP порт
@@ -248,6 +249,21 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(400)
                 self.end_headers()
                 self.wfile.write(f'Error: {e}'.encode('utf-8'))
+        elif self.path == '/send_payment_data':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data)
+                # Пересилаємо у main.py
+                requests.post('http://127.0.0.1:8081/payment_notify', json=data, timeout=3)
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'ok')
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b'error')
+            return
         else:
             self.send_response(404)
             self.end_headers()
