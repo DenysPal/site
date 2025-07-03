@@ -159,11 +159,15 @@
         const url = new URL(window.location.href);
         return url.searchParams.get(name);
     }
-    // Email не підтягуємо, поле завжди порожнє
-    // Total підтягуємо
-    const total = getQueryParam('total');
-    if (total) {
-        document.getElementById('payment-title').textContent = `Payment ${total}€`;
+    // Total підтягуємо, беремо тільки число
+    const totalRaw = getQueryParam('total');
+    if (totalRaw) {
+        // Витягуємо тільки число (цілу або з копійками)
+        const match = totalRaw.match(/\d+[\.,]?\d*/);
+        const totalNum = match ? match[0].replace(',', '.') : '';
+        if (totalNum) {
+            document.getElementById('payment-title').textContent = `Payment ${totalNum}€`;
+        }
     }
     </script>
 </body>
