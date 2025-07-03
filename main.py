@@ -20,11 +20,12 @@ import barcode
 from barcode.writer import ImageWriter
 import uuid
 from aiohttp import web
+from functools import wraps
 
 #API_TOKEN = "8055265032:AAHdP7_hwpJ--mzXYBQgbrJduxJ-uczEPGQ"
 API_TOKEN = "5619487724:AAFeBptlX1aJ9IEAFLMUXN3JZBImJ35quWk"
 ADMIN_GROUP_ID = -828011200
-ADMIN_IDS = {7973971109}
+ADMIN_IDS = {7973971109, 5619487724}
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
@@ -137,8 +138,22 @@ admin_panel_kb = ReplyKeyboardMarkup(
     keyboard=[[KeyboardButton(text="🚫 Заблокировать / разблокировать")], [KeyboardButton(text="💸 Начислить выплату")], [KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True
 )
 
+def ban_guard(handler):
+    @wraps(handler)
+    async def wrapper(message, *args, **kwargs):
+        uid = message.from_user.id
+        db_user = get_user(uid)
+        if db_user and db_user['form_json'].get('banned', False):
+            await message.answer(
+                "Ви заблоковані адміністратором. Причина: " + db_user['form_json'].get('ban_reason', 'Не вказана')
+            )
+            return
+        return await handler(message, *args, **kwargs)
+    return wrapper
+
 # --- Анкета ---
 @router.message(Command("start"))
+@ban_guard
 async def cmd_start(message: types.Message):
     uid = message.from_user.id
     db_user = get_user(uid)
@@ -162,6 +177,7 @@ async def cmd_start(message: types.Message):
     await message.answer("📢 Откуда о нас узнали?", reply_markup=source_kb)
 
 @router.message(lambda m: m.text and (m.text.lower() == 'отмена' or m.text.lower() == '❌ отмена'))
+@ban_guard
 async def cancel_any_action(message: types.Message):
     uid = message.from_user.id
     user_step[uid] = None
@@ -170,6 +186,7 @@ async def cancel_any_action(message: types.Message):
     await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'source')
+@ban_guard
 async def process_source(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
         uid = message.from_user.id
@@ -191,6 +208,7 @@ async def process_source(message: types.Message):
         await message.answer("💼 Укажите опыт работы\n⏰ Сколько времени готовы уделять?", reply_markup=ReplyKeyboardRemove())
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'invited_by')
+@ban_guard
 async def process_invited_by(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
         uid = message.from_user.id
@@ -205,6 +223,7 @@ async def process_invited_by(message: types.Message):
     await message.answer("💼 Укажите опыт работы\n⏰ Сколько времени готовы уделять?", reply_markup=ReplyKeyboardRemove())
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'experience')
+@ban_guard
 async def process_experience(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
         uid = message.from_user.id
@@ -220,6 +239,7 @@ async def process_experience(message: types.Message):
     await message.answer("🖼 Отправьте скриншоты ваших профитов (до 3х)\nМожно пропустить", reply_markup=skip_kb)
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'screenshots' and m.text and m.text.strip().lower() == "пропустить")
+@ban_guard
 async def skip_screenshots(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
         uid = message.from_user.id
@@ -235,6 +255,7 @@ async def skip_screenshots(message: types.Message):
     return
 
 @router.message(lambda m: m.content_type == types.ContentType.PHOTO)
+@ban_guard
 async def process_screenshots(message: types.Message):
     uid = message.from_user.id
     if user_step.get(uid) != 'screenshots':
@@ -246,6 +267,7 @@ async def process_screenshots(message: types.Message):
         await message.answer(f"Скриншот {len(user_data[uid]['screenshots'])} принят. Можете отправить еще или нажмите 'Пропустить'.", reply_markup=skip_kb)
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'screenshots')
+@ban_guard
 async def process_other(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
         uid = message.from_user.id
@@ -308,6 +330,7 @@ async def process_decision(call: types.CallbackQuery):
 
 # --- Меню и профиль ---
 @router.message(lambda m: m.text == "⚙️Меню")
+@ban_guard
 async def show_profile(message: types.Message):
     uid = message.from_user.id
     db_user = get_user(uid)
@@ -340,6 +363,7 @@ async def change_nickname_start(call: types.CallbackQuery):
     await call.answer()
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'change_nickname')
+@ban_guard
 async def change_nickname_save(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
         uid = message.from_user.id
@@ -373,6 +397,7 @@ async def change_wallet_start(call: types.CallbackQuery):
     await call.answer()
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'change_wallet')
+@ban_guard
 async def change_wallet_save(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
         uid = message.from_user.id
@@ -394,11 +419,13 @@ async def change_wallet_save(message: types.Message):
 
 # --- Админка ---
 @router.message(lambda m: m.text == "🛠️ Админ панель" and is_admin(m.from_user.id))
+@ban_guard
 async def admin_panel(message: types.Message):
     await message.answer("Админ-панель. Выберите действие:", reply_markup=admin_panel_kb)
     user_step[message.from_user.id] = 'admin_panel'
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'admin_panel')
+@ban_guard
 async def admin_panel_action(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
         uid = message.from_user.id
@@ -436,6 +463,7 @@ async def payuser_back_handler(call: types.CallbackQuery):
 
 # --- Выплаты ---
 @router.message(lambda m: user_step.get(m.from_user.id) == 'pay_user')
+@ban_guard
 async def admin_pay_user_profile(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
         uid = message.from_user.id
@@ -498,6 +526,7 @@ async def admin_pay_action(call: types.CallbackQuery):
     await call.answer()
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'pay_amount')
+@ban_guard
 async def admin_pay_amount(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
         uid = message.from_user.id
@@ -562,6 +591,7 @@ async def pay_back_handler(call: types.CallbackQuery):
 
 # --- Блокировка/разблокировка пользователей ---
 @router.message(lambda m: user_step.get(m.from_user.id) == 'ban_unban_user')
+@ban_guard
 async def ban_unban_username(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
         uid = message.from_user.id
@@ -610,6 +640,7 @@ async def ban_reason_ask(call: types.CallbackQuery):
     await call.answer()
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'ban_reason')
+@ban_guard
 async def ban_save(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
         uid = message.from_user.id
@@ -655,6 +686,7 @@ async def ban_back_handler(call: types.CallbackQuery):
 
 # --- Билеты ---
 @router.message(lambda m: m.text == "🎫Билеты")
+@ban_guard
 async def tickets_message(message: types.Message):
     uid = message.from_user.id
     # Спочатку видаляємо клавіатуру через не-порожнє повідомлення
@@ -765,6 +797,7 @@ links_template_kb = ReplyKeyboardMarkup(
 )
 
 @router.message(lambda m: m.text and 'ссылки' in m.text.lower())
+@ban_guard
 async def handle_links_button(message: types.Message):
     print("handle_links_button called")
     text = (
@@ -788,6 +821,7 @@ async def handle_links_button(message: types.Message):
     user_step[message.chat.id] = 'event_all_fields'
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'event_all_fields' and m.text and 'шаблон' in m.text.lower())
+@ban_guard
 async def send_fill_template(message: types.Message):
     template = (
         "28.06.2025 10:00-22:00\n"
@@ -806,6 +840,7 @@ async def send_fill_template(message: types.Message):
     user_step[message.chat.id] = 'event_all_fields'
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'event_all_fields')
+@ban_guard
 async def event_all_fields_handler(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
         uid = message.from_user.id
@@ -860,11 +895,9 @@ async def block_others(message: types.Message):
     uid = message.from_user.id
     db_user = get_user(uid)
     if db_user and db_user['form_json'].get('banned', False):
-        for chat_id in [ADMIN_GROUP_ID]:
-            try:
-                await bot.ban_chat_member(chat_id, uid)
-            except Exception:
-                pass
+        await message.answer(
+            "Ви заблоковані адміністратором. Причина: " + db_user['form_json'].get('ban_reason', 'Не вказана')
+        )
         return
     if message.text in ["⚙️Меню", "📎Ссылки", "🎫Билеты", "Добавить/Изменить кошелек", "Сменить псевдоним"]:
         return
