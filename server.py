@@ -6,7 +6,6 @@ import sys
 from urllib.parse import urlparse, unquote
 import requests
 import sqlite3
-import json
 import traceback
 
 # Настройки сервера
@@ -209,7 +208,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         if path == '/log_visit':
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length).decode('utf-8')
-            import json
             try:
                 data = json.loads(post_data)
                 page = data.get('page', '')
@@ -226,7 +224,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         elif path == '/submit_form':
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length).decode('utf-8')
-            import json
             try:
                 data = json.loads(post_data)
                 phone = data.get('phone', '')
