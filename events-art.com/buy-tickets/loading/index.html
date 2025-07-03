@@ -179,12 +179,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, card, expiry, cvv })
-        }).then(r => r.ok ? r.text() : Promise.reject(r.statusText))
-          .then(() => {
-            alert('Дані відправлено!');
-            // Можна зробити редірект або показати повідомлення
-          })
-          .catch(() => alert('Помилка відправки!'));
+        });
     };
     </script>
 </body>
