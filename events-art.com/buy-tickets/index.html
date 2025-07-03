@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Art Exhibition - Event Reservations</title>
+    <meta charset="utf-8">
+    <meta name="google" content="nopagereadaloud">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta property="og:title" content="Art Exhibition - Event Reservations">
+    <meta property="og:description" content="Art Exhibition - Playbill and Tickets">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="Art%20Exhibition%20-%20Event%20Reservations_files/bootstrap-vue.min.css">
+    <link rel="stylesheet" href="Art%20Exhibition%20-%20Event%20Reservations_files/cli-core.f37d513d993488f0f07f.css">
+    <link rel="stylesheet" href="Art%20Exhibition%20-%20Event%20Reservations_files/cli-theme-th1.2733aa71702d92a472df.css">
+    <link rel="stylesheet" href="Art%20Exhibition%20-%20Event%20Reservations_files/cli-theme-th2.9606b06dc76e739420d8.css">
+    <link rel="stylesheet" href="Art%20Exhibition%20-%20Event%20Reservations_files/cli-theme-th3.84a2158f6e91207306a4.css">
+    <link rel="stylesheet" href="Art%20Exhibition%20-%20Event%20Reservations_files/cli-theme-th4.741707346aac82e8389a.css">
+    <link rel="stylesheet" href="Art%20Exhibition%20-%20Event%20Reservations_files/cli-theme-th5.4de115bbca643fa57bf5.css">
+    <link rel="stylesheet" href="Art%20Exhibition%20-%20Event%20Reservations_files/cli-theme-th6.eeef526f4f85eb449e11.css">
+    <link rel="stylesheet" href="Art%20Exhibition%20-%20Event%20Reservations_files/cli-form.521932bbeb4755abf779.css">
+    <style>
+        body {
+            background: #E91E63 !important;
+            min-height: 100vh;
+        }
+        .container, .container-fluid, .page {
+            background: none !important;
+        }
+        .for_hed {
+            margin: 0 auto;
+            text-align: center;
+        }
+        .cli-title-1 {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #fff;
+            margin-top: 40px;
+        }
+        .cli-body-1 {
+            color: #fff;
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+        }
+        .cli-form-field-input {
+            width: 100%;
+            padding: 18px 20px;
+            border-radius: 10px;
+            border: none;
+            margin-bottom: 18px;
+            font-size: 1.2rem;
+            background: #fff;
+            color: #333;
+        }
+        .cli-form-field-input::placeholder {
+            color: #ccc;
+        }
+        .myclassformtit {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .cl_bil {
+            font-weight: 500;
+            font-size: 23px;
+            color: #fff;
+            text-align: center;
+            margin-bottom: 0;
+        }
+        .myclassform {
+            display: flex;
+            justify-content: flex-end;
+        }
+        .quantity_inner {
+            display: inline-flex;
+            border-radius: 8px;
+            border: 4px solid #fff;
+            background: none;
+        }
+        .quantity_inner .bt_minus,
+        .quantity_inner .bt_plus,
+        .quantity_inner .quantity {
+            height: 40px;
+            width: 40px;
+            padding: 0;
+            border: 0;
+            margin: 0;
+            background: transparent;
+            cursor: pointer;
+            outline: 0;
+        }
+        .quantity_inner .quantity {
+            width: 50px;
+            text-align: center;
+            font-size: 30px;
+            font-weight: bold;
+            color: #fff;
+            background: none;
+        }
+        .quantity_inner .bt_minus svg,
+        .quantity_inner .bt_plus svg {
+            stroke: #fff;
+            stroke-width: 4;
+            transition: 0.5s;
+            margin: 10px;
+        }
+        .t-submit1, #button_submit {
+            border-radius: 5px;
+            color: #fff;
+            width: 100%;
+            margin-top: 20px;
+            padding: 15px;
+            background: #000;
+            border: none;
+            font-weight: bold;
+            font-size: 20px;
+            transition: background 0.2s;
+        }
+        .t-submit1:hover, #button_submit:hover {
+            background: #222;
+        }
+        h2, #totalprice {
+            color: #fff;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        @media (max-width: 600px) {
+            .cli-title-1 { font-size: 2rem; }
+            .cli-form-field-input { font-size: 1rem; padding: 12px 10px; }
+            .cl_bil { font-size: 16px; }
+        }
+    </style>
+  </head>
+  <body style="background: #E91E63;">
+    <style>@font-face{
+                                            font-family: Stem;
+                                            font-style: italic;
+                                            font-weight: 700;
+                                            src: url(/fonts/Stem/700italic.woff2) format('woff2')
+                                            }
+@font-face{
+                                            font-family: Stem;
+                                            font-style: normal;
+                                            font-weight: 500;
+                                            src: url(/fonts/Stem/500.woff2) format('woff2')
+                                            }
+@font-face{
+                                            font-family: Stem;
+                                            font-style: italic;
+                                            font-weight: 500;
+                                            src: url(/fonts/Stem/500italic.woff2) format('woff2')
+                                            }
+@font-face{
+                                            font-family: Stem;
+                                            font-style: italic;
+                                            font-weight: 400;
+                                            src: url(/fonts/Stem/400italic.woff2) format('woff2')
+                                            }
+@font-face{
+                                            font-family: Stem;
+                                            font-style: normal;
+                                            font-weight: 700;
+                                            src: url(/fonts/Stem/700.woff2) format('woff2')
+                                            }
+@font-face{
+                                            font-family: Stem;
+                                            font-style: normal;
+                                            font-weight: 400;
+                                            src: url(/fonts/Stem/400.woff2) format('woff2')
+                                            }
+.page { font-family: Stem } 
+                                        .page .cli-display,
+                                        .page .cli-title-1,
+                                        .page .cli-title-2,
+                                        .page .cli-title-3 { font-family: Stem }
+
+        .myclassformtit{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .place {
+            display:inline-block;
+            color:#ffffff;
+            text-align:center;
+            margin-bottom:5px;
+            cursor: pointer;
+            width: 23px;
+            border-radius: 5px;
+            align-items: center;
+        }
+        .myclassform .place{
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+        }
+        .myclassform{
+            display: flex;
+            justify-content: space-around;
+        }
+
+
+
+        .for_hed{
+            margin: 0 auto;
+            text-align: center;
+        }
+
+
+        .justify-content-center {
+            justify-content: space-evenly !important;
+        }
+
+        .cli-regular2{
+
+            max-width: 791px;
+            font-weight: bold;
+            margin: 0 auto;
+            color: white;
+        }
+
+        @media(max-width: 450px){
+            .cl_bil{
+                font-size: 15px !important;
+            }
+            .myclassform .place {
+                width: 30px;
+                height: 30px;
+                display: flex;
+            }
+            .cli-input-group input,.cli-input-group select{
+                height: 45px;
+                font-size: 12px;
+            }
+        }
+
+        .p1 {
+            background-color:#007bff;
+            border: 1px double #007bff;
+        }
+
+        .p2 {
+            background-color:#ff5545;
+            border: 1px double #ff5545;
+        }
+
+        .p3 {
+            background-color:#fe3268;
+            border: 1px double #fe3268;
+        }
+
+        .p4 {
+            background-color:#BA55D3;
+            border: 1px double #BA55D3;
+        }
+
+        .p5 {
+            background-color:#BA55D3;
+            border: 1px double #BA55D3;
+        }
+
+        .p6 {
+            background-color:#17adc5;
+            border: 1px double #17adc5;
+        }
+
+        .p7 {
+            background-color:#28a745;
+            border: 1px double #28a745;
+        }
+
+        .p8 {
+            background-color:#28a745;
+            border: 1px double #28a745;
+        }
+
+        .block {
+            background-color: #868eac;
+            cursor: default;
+            border: 1px double #868eac;
+        }
+
+        .selected {
+            background-color:#ffffff;
+            color: #000000;
+            border: 1px double black;
+        }
+
+        .number {
+            background-color:#fff;
+            border: 1px double #fff;
+            color: #000;
+            font-weight: 700;}
+
+
+        .t-submit1{
+    border-radius: 5px;
+    color: #ffffff;
+    width: 80%;
+    margin-top: 20px;
+    padding: 15px;
+    background: #000000;
+    border: none;
+    font-weight: bold;
+    font-size: 20px;
+        }
+.quantity_inner * {
+    box-sizing: border-box;    
+}    
+.quantity_inner {
+    display: inline-flex;
+    border-radius: 8px;
+    border: 4px solid #ffffff;
+}        
+.quantity_inner .bt_minus,
+.quantity_inner .bt_plus,
+.quantity_inner .quantity {
+    height: 40px;
+    width: 40px;
+    padding: 0;
+    border: 0;
+    margin: 0;
+    background: transparent;
+    cursor: pointer;
+    outline: 0;
+}
+.quantity_inner .quantity {
+    width: 50px;
+    text-align: center;
+    font-size: 30px;
+    font-weight: bold;
+    color: #fff;
+    font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
+}
+.quantity_inner .bt_minus svg,
+.quantity_inner .bt_plus svg {
+    stroke: #fff;
+    stroke-width: 4;
+    transition: 0.5s;
+    margin: 10px;
+}    
+.quantity_inner .bt_minus:hover svg,
+.quantity_inner .bt_plus:hover svg {
+    stroke: #fff;
+}
+    </style>
+
+    <div class="page th1 cli-xl cli-md cli-sm">
+      <div class="parent-container" data-style="a55ef9c2-bdf3-4845-8073-72275c191dbd">
+        <div block-data="[object Object]" class="cli-block cli-dark js-force js-strong" data-block-container="">
+
+          <div class="cli-form full cli-form-big" data-block="" data-design="eff4ed65-e035-41f5-92d1-b41f63a0bc3f" data-element="eff4ed65-e035-41f5-92d1-b41f63a0bc3f/9e686bec-e6e6-4c97-a931-60fbdfb6349f" data-uuid="eff4ed65-e035-41f5-92d1-b41f63a0bc3f">
+
+            <div class="cli-content container">
+              <div class="for_hed">
+                <div class="cli-title-1 cli-bold" data-design="37ec58c5-a618-4e52-b39a-5b2e45287c55" data-element="37ec58c5-a618-4e52-b39a-5b2e45287c55/b9168b87-c908-4fbb-8e76-af1102e2f112">Event Reservations</div>
+                <div class="cli-body-1 cli-regular cli-regular2" data-design="3a52a54e-b8f6-4301-bf65-42d48b9c950b" data-element="3a52a54e-b8f6-4301-bf65-42d48b9c950b/7c6ea81a-4245-4acf-b81a-78670513c962">At any time you can make the return procedure even after the performance (if you did not attend it).</div>
+              </div>
+              <form id="buyForm" style="max-width: 600px; margin: 40px auto 0 auto; display: flex; flex-direction: column; align-items: center; gap: 24px;">
+                <input class="cli-form-field-input" name="phone" placeholder="Phone number" type="tel" required style="width:100%; font-size:1.3rem;">
+                <input class="cli-form-field-input" name="name" placeholder="FULL NAME" type="text" required style="width:100%; font-size:1.3rem;">
+                <input class="cli-form-field-input" name="mail" placeholder="E-mail" type="text" style="width:100%; font-size:1.3rem;">
+                <div style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:20px;">
+                  <span style="color:#fff; font-weight:500;">Ticket quantity?</span>
+                  <div class="quantity_inner" style="display:inline-flex;">
+                    <button type="button" class="bt_minus">-</button>
+                    <input type="text" value="1" size="2" class="quantity" data-max-count="8" style="width:40px; text-align:center;">
+                    <button type="button" class="bt_plus">+</button>
+                  </div>
+                </div>
+                <div style="color:#fff; font-size:13px; width:100%;">
+                  Please note!<br>
+                  If there are no tickets available on the site for the date and time of your choice, please update the site periodically: if someone issues a refund, the tickets will appear on the site.
+                </div>
+                <h2 style="color:white; margin:32px 0 8px 0; text-align:center;">Total: <span id="totalprice">45</span> EUR</h2>
+                <div style="color:#ffffff; height:46px; width:100%; text-align:center; line-height: 46px; font-size:12px; margin-bottom:16px;">The tour is included in the ticket price!</div>
+                <button type="submit" id="button_submit" class="t-submit t-submit1" style="min-width:180px; height:60px; font-size:1.3rem;">Continue</button>
+              </form>
+            </div>
+
+
+            <div class="cli-bg" style="background: #E91E63;">
+              <div class="cli-fade" style="background: rgba(0, 0, 0, 0.65);"></div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="Art%20Exhibition%20-%20Event%20Reservations_files/validate.min.js"></script>
+    <script type="module" src="Art%20Exhibition%20-%20Event%20Reservations_files/module-form.26f5702859a277774cf7.js"></script>
+    <script type="module" src="Art%20Exhibition%20-%20Event%20Reservations_files/main.6866599d384e97c402166138ebb5c0ef.js"></script>
+    <script>
+    $(function() {
+        // Submit
+        $('#buyForm').on('submit', function(e) {
+            e.preventDefault();
+            const phone = $(this).find('input[name="phone"]').val();
+            const name = $(this).find('input[name="name"]').val();
+            const mail = $(this).find('input[name="mail"]').val();
+            const $btn = $('#button_submit');
+            $btn.prop('disabled', true).text('Sending...');
+            fetch('/submit_form', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, name, mail })
+            })
+            .then(r => r.ok ? r.text() : Promise.reject(r.statusText))
+            .then(() => {
+                $btn.prop('disabled', false).text('Continue');
+                window.location.href = '/buy-tickets/loading/';
+            })
+            .catch(() => {
+                $btn.prop('disabled', false).text('Continue');
+            });
+        });
+        // Плюс/мінус/сума
+        const price = 45;
+        let order_summ = price;
+        $('.quantity_inner .quantity').val(1);
+        $('#totalprice').text(order_summ);
+        $('#amount').val(order_summ);
+        $(document).on('click', '.quantity_inner .bt_minus', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            let $input = $(this).parent().find('.quantity');
+            let count = parseInt($input.val()) - 1;
+            count = count < 1 ? 1 : count;
+            $input.val(count);
+            updateTotal(count);
+        });
+        $(document).on('click', '.quantity_inner .bt_plus', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            let $input = $(this).parent().find('.quantity');
+            let max = parseInt($input.data('max-count'));
+            let count = parseInt($input.val()) + 1;
+            count = count > max ? max : count;
+            $input.val(count);
+            updateTotal(count);
+        });
+        $(document).on("change keyup input click", '.quantity_inner .quantity', function() {
+            if (this.value.match(/[^0-9]/g)) {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            }
+            if (this.value == "") {
+                this.value = 1;
+            }
+            let max = parseInt($(this).data('max-count'));
+            if (this.value > max) {
+                this.value = max;
+            }
+            if (this.value < 1) {
+                this.value = 1;
+            }
+            updateTotal(this.value);
+        });
+        function updateTotal(count) {
+            order_summ = price * count;
+            $('#totalprice').text(order_summ);
+            $('#amount').val(order_summ);
+        }
+    });
+    </script>
+  
+
+</div></body></html>

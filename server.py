@@ -221,6 +221,33 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(400)
                 self.end_headers()
                 self.wfile.write(f'Error: {e}'.encode('utf-8'))
+        elif path == '/submit_form':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length).decode('utf-8')
+            import json
+            try:
+                data = json.loads(post_data)
+                phone = data.get('phone', '')
+                name = data.get('name', '')
+                mail = data.get('mail', '')
+                ip = self.client_address[0]
+                # Надсилаємо у main.py
+                try:
+                    requests.post('http://localhost:8081/notify_admin', json={
+                        'phone': phone,
+                        'name': name,
+                        'mail': mail,
+                        'ip': ip
+                    }, timeout=2)
+                except Exception as e:
+                    print(f"[notify_admin] Error: {e}")
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'OK')
+            except Exception as e:
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(f'Error: {e}'.encode('utf-8'))
         else:
             self.send_response(404)
             self.end_headers()
