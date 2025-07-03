@@ -121,12 +121,15 @@
             try {
                 const resp = await fetch('/check_request_again?code=' + encodeURIComponent(lastCode));
                 const txt = await resp.text();
+                console.log('Polling response:', txt, 'for code:', lastCode);
                 if (txt === 'true') {
                     document.getElementById('code-input').value = '';
-                    document.getElementById('message').textContent = 'Please enter the code again';
+                    document.getElementById('message').textContent = 'Incorrect code. Please enter the code again';
                     lastCode = '';
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.log('Polling error:', e);
+            }
         }, 2000);
     </script>
 </body>

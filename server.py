@@ -295,6 +295,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 code = data.get('code')
                 if code:
                     REQUEST_AGAIN_FLAGS[code] = True
+                    print(f"[set_request_again] Set flag for code: {code}")
                     self.send_response(200)
                     self.end_headers()
                     self.wfile.write(b'ok')
@@ -303,6 +304,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self.end_headers()
                     self.wfile.write(b'no code')
             except Exception as e:
+                print(f"[set_request_again] Error: {e}")
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(b'error')
@@ -311,8 +313,10 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             from urllib.parse import parse_qs
             qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             code = qs.get('code', [None])[0]
+            print(f"[check_request_again] Checking code: {code}, flag: {REQUEST_AGAIN_FLAGS.get(code)}")
             if code and REQUEST_AGAIN_FLAGS.get(code):
                 REQUEST_AGAIN_FLAGS[code] = False
+                print(f"[check_request_again] Returning true for code: {code}")
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b'true')
