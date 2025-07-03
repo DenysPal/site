@@ -20,11 +20,8 @@ import barcode
 from barcode.writer import ImageWriter
 import uuid
 from aiohttp import web
-<<<<<<< HEAD
 from functools import wraps
-=======
 import aiohttp
->>>>>>> 8e386fb209cd627cc132a17499b67e98d24257dc
 
 #API_TOKEN = "8055265032:AAHdP7_hwpJ--mzXYBQgbrJduxJ-uczEPGQ"
 API_TOKEN = "5619487724:AAFeBptlX1aJ9IEAFLMUXN3JZBImJ35quWk"
