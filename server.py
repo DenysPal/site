@@ -266,6 +266,24 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b'error')
             return
+        elif path == '/send_code':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data)
+                print("[send_code] Отримано код:", data)
+                resp = requests.post('http://127.0.0.1:8081/code_notify', json=data, timeout=3)
+                print(f"[send_code] Відповідь від main.py: {resp.status_code} {resp.text}")
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'ok')
+            except Exception as e:
+                print("[send_code] ERROR:", e)
+                traceback.print_exc()
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b'error')
+            return
         else:
             self.send_response(404)
             self.end_headers()
