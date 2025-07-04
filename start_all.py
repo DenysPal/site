@@ -19,10 +19,7 @@ def run_server(port=8080):
     """Запускає веб-сервер"""
     print(f"🌐 Запуск веб-сервера на порту {port}...")
     try:
-        if port == 80:
-            subprocess.run([sys.executable, "server.py"], check=True)
-        else:
-            subprocess.run([sys.executable, "server_8080.py"], check=True)
+        subprocess.run([sys.executable, "server.py"], check=True)
     except KeyboardInterrupt:
         print("⏹️ Сервер зупинений")
     except Exception as e:
@@ -32,7 +29,6 @@ def check_dependencies():
     """Перевіряє наявність необхідних файлів"""
     required_files = [
         "main.py",
-        "server_8080.py", 
         "server.py",
         "events-art.com/index.html"
     ]
@@ -63,20 +59,17 @@ def main():
     print("\n📋 Доступні опції:")
     print("1. Запустити тільки бота")
     print("2. Запустити тільки сервер (порт 8080)")
-    print("3. Запустити тільки сервер (порт 80 - потребує адмін прав)")
-    print("4. Запустити бота + сервер (порт 8080)")
-    print("5. Тестувати сервер")
+    print("3. Запустити бота + сервер (порт 8080)")
+    print("4. Тестувати сервер")
     
     try:
-        choice = input("\nВиберіть опцію (1-5): ").strip()
+        choice = input("\nВиберіть опцію (1-4): ").strip()
         
         if choice == "1":
             run_bot()
         elif choice == "2":
             run_server(8080)
         elif choice == "3":
-            run_server(80)
-        elif choice == "4":
             print("🔄 Запуск бота та сервера...")
             # Запускаємо сервер в окремому потоці
             server_thread = threading.Thread(target=run_server, args=(8080,))
@@ -88,7 +81,7 @@ def main():
             
             # Запускаємо бота
             run_bot()
-        elif choice == "5":
+        elif choice == "4":
             subprocess.run([sys.executable, "test_server.py"])
         else:
             print("❌ Невірний вибір")

@@ -7,8 +7,8 @@ def test_server():
     """Тестує роботу сервера"""
     print("🧪 Тестування сервера...")
     
-    # Тестуємо різні порти
-    ports = [80, 8080]
+    # Тестуємо порт 8080
+    ports = [8080]
     
     for port in ports:
         print(f"\n🔍 Тестуємо порт {port}...")
@@ -61,22 +61,13 @@ def start_server(port=8080):
     """Запускає сервер"""
     print(f"🚀 Запуск сервера на порту {port}...")
     
-    if port == 80:
-        import subprocess
-        try:
-            # Запускаємо server.py
-            subprocess.run([sys.executable, "server.py"], check=True)
-        except subprocess.CalledProcessError:
-            print("❌ Помилка запуску server.py")
-            return False
-    else:
-        import subprocess
-        try:
-            # Запускаємо server_8080.py
-            subprocess.run([sys.executable, "server_8080.py"], check=True)
-        except subprocess.CalledProcessError:
-            print("❌ Помилка запуску server_8080.py")
-            return False
+    import subprocess
+    try:
+        # Запускаємо server.py (тепер на порту 8080)
+        subprocess.run([sys.executable, "server.py"], check=True)
+    except subprocess.CalledProcessError:
+        print("❌ Помилка запуску server.py")
+        return False
     
     return True
 
@@ -93,6 +84,4 @@ if __name__ == "__main__":
     else:
         print("\n❌ Сервер не працює")
         print("💡 Спробуйте запустити сервер вручну:")
-        print("   python server_8080.py")
-        print("   або")
-        print("   python server.py (потребує адмін прав)") 
+        print("   python server.py") 
