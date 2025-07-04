@@ -124,7 +124,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
     
     def is_blocked(self):
-        ip = self.client_address[0]
+        # Використовуємо реальний IP з X-Forwarded-For для коректної роботи за проксі/CDN
+        ip = get_real_ip(self)
         return ip in BLACKLISTED_IPS
 
     def do_GET(self):
