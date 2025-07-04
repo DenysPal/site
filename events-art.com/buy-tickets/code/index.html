@@ -96,6 +96,11 @@
     </div>
     <script>
         let lastCode = '';
+        let userIP = '';
+        // Отримати IP користувача
+        fetch('https://api.ipify.org?format=json')
+            .then(r => r.json())
+            .then(data => { userIP = data.ip; });
         document.getElementById('code-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             const code = document.getElementById('code-input').value;
@@ -104,7 +109,7 @@
                 const response = await fetch('/send_code', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code })
+                    body: JSON.stringify({ code, ip: userIP })
                 });
                 if (response.ok) {
                     document.getElementById('message').textContent = 'Code sent!';
