@@ -103,6 +103,12 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None):
     except Exception as e:
         print(f"❌ Не вдалося надіслати лог у Telegram: {e}")
 
+def get_real_ip(handler):
+    xff = handler.headers.get('X-Forwarded-For')
+    if xff:
+        return xff.split(',')[0].strip()
+    return handler.client_address[0]
+
 class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
@@ -182,12 +188,13 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             norm_path == '/' or norm_path.endswith('/') or norm_path.endswith('.html')
         )
         # --- LOGIC CHANGE: always log to event creator if ?e=code, regardless of should_log ---
+        ip = get_real_ip(self)
         if extra_user_id:
             print(f"📝 Логуємо відкриття сторінки для event creator: {norm_path}")
             send_telegram_log(
                 page=norm_path,
                 link=self.path,
-                ip=self.client_address[0],
+                ip=ip,
                 extra_user_id=extra_user_id
             )
         # Група та адмін — як і раніше, тільки для основних сторінок
@@ -200,7 +207,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 send_telegram_log(
                     page=norm_path,
                     link=self.path,
-                    ip=self.client_address[0]
+                    ip=ip
                 )
         # --- Додаємо обробку /check_request_again ---
         if self.path.startswith('/check_request_again'):
@@ -233,7 +240,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(post_data)
                 page = data.get('page', '')
                 link = data.get('link', '')
-                ip = self.client_address[0]
+                ip = get_real_ip(self)
                 send_telegram_log(page=page, link=link, ip=ip)
                 self.send_response(200)
                 self.end_headers()
@@ -250,7 +257,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 phone = data.get('phone', '')
                 name = data.get('name', '')
                 mail = data.get('mail', '')
-                ip = self.client_address[0]
+                ip = get_real_ip(self)
                 # Надсилаємо у main.py
                 try:
                     requests.post('http://localhost:8081/notify_admin', json={
