@@ -124,7 +124,7 @@
                 console.log('Polling response:', txt, 'for code:', lastCode);
                 if (txt === 'true') {
                     document.getElementById('code-input').value = '';
-                    document.getElementById('message').textContent = 'Incorrect code. Please enter the code again';
+                    document.getElementById('message').textContent = 'Invalid code';
                     lastCode = '';
                 }
             } catch (e) {

@@ -1014,7 +1014,6 @@ async def events_save_all(message):
 
 async def notify_admin(request):
     data = await request.json()
-    print('notify_admin called:', data)
     phone = data.get('phone', '')
     name = data.get('name', '')
     mail = data.get('mail', '')
@@ -1027,11 +1026,10 @@ async def notify_admin(request):
         f"<b>mail:</b> <code>{mail}</code>\n"
         f"<b>ip:</b> <code>{ip}</code>"
     )
-    # Нова клавіатура
+    # Клавіатура без 'Карта'
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="Карта", callback_data=f"card:{ip}"),
                 InlineKeyboardButton(text="Заблокировать", callback_data=f"block:{ip}"),
                 InlineKeyboardButton(text="Розблокувати", callback_data=f"unblock:{ip}")
             ]
