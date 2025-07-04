@@ -128,14 +128,15 @@ def main():
     print(f"✅ index.html знайдено: {index_path}")
     
     try:
+        socketserver.TCPServer.allow_reuse_address = True
         with socketserver.TCPServer(("", PORT), CustomHTTPRequestHandler) as httpd:
             print(f"🚀 Сервер запущен для домена: {DOMAIN}")
             print(f"📁 Корневая папка: {os.path.abspath(DIRECTORY)}")
             print(f"🌐 Локальный доступ: http://localhost:{PORT}")
             print(f"🌍 Внешний доступ: http://{DOMAIN}:{PORT}")
-            print(f"🔗 IP сервера: 37.52.208.109")
+            print(f"🔗 IP сервера: 144.172.112.39")
             print(f"📝 DNS настройки:")
-            print(f"   A запись: @ → 37.52.208.109")
+            print(f"   A запись: @ → 144.172.112.39")
             print(f"   CNAME запись: www → {DOMAIN}")
             print("⏹️  Для остановки нажмите Ctrl+C")
             print("-" * 60)
