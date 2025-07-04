@@ -126,7 +126,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         if self.is_blocked():
             self.send_response(403)
             self.end_headers()
-            self.wfile.write(b'<html><body><h2>Ваш IP заблоковано адміністратором.</h2></body></html>')
+            self.wfile.write('<html><body><h2>Your IP has been blocked by the administrator.</h2></body></html>'.encode('utf-8'))
             return
         print(f"GET: {self.path}")  # Логування всіх GET-запитів
         path = unquote(self.path.split('?', 1)[0])
@@ -243,7 +243,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         if self.is_blocked():
             self.send_response(403)
             self.end_headers()
-            self.wfile.write(b'BLOCKED')
+            self.wfile.write('BLOCKED'.encode('utf-8'))
             return
         if path == '/log_visit':
             content_length = int(self.headers.get('Content-Length', 0))
