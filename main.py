@@ -1094,7 +1094,6 @@ if __name__ == '__main__':
         app = web.Application()
         app.router.add_post('/notify_admin', notify_admin)
         app.router.add_post('/payment_notify', payment_notify)
-        app.router.add_post('/code_notify', code_notify)
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8081)
