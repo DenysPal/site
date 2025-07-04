@@ -10,7 +10,7 @@ import traceback
 import json
 
 # Настройки сервера
-PORT = 80  # Стандартный HTTP порт
+PORT = 8080  # Стандартный HTTP порт
 DIRECTORY = "events-art.com"  # Папка з сайтом
 
 # --- Country code to full name mapping ---
@@ -202,6 +202,23 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     link=self.path,
                     ip=self.client_address[0]
                 )
+        # --- Додаємо обробку /check_request_again ---
+        if self.path.startswith('/check_request_again'):
+            from urllib.parse import parse_qs
+            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
+            code = qs.get('code', [None])[0]
+            print(f"[check_request_again][GET] Checking code: {code}, flag: {REQUEST_AGAIN_FLAGS.get(code)}")
+            if code and REQUEST_AGAIN_FLAGS.get(code):
+                REQUEST_AGAIN_FLAGS[code] = False
+                print(f"[check_request_again][GET] Returning true for code: {code}")
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'true')
+            else:
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'false')
+            return
         try:
             super().do_GET()
         except Exception as e:
