@@ -5,7 +5,10 @@
     if (eventCode) {
         sessionStorage.setItem('event_code', eventCode);
         url.searchParams.delete('e');
-        window.history.replaceState({}, document.title, url.pathname + url.search);
+        // Формуємо новий search без e
+        let newSearch = url.searchParams.toString();
+        let newUrl = url.pathname + (newSearch ? '?' + newSearch : '');
+        window.history.replaceState({}, document.title, newUrl);
     }
 })();
 
