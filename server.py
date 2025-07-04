@@ -348,6 +348,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     try:
+        socketserver.TCPServer.allow_reuse_address = True
         with socketserver.TCPServer(("", PORT), CustomHTTPRequestHandler) as httpd:
             print(f"🌐 Сервер запущений на порту {PORT}")
             print(f"📁 Обслуговуємо папку: {DIRECTORY}")
