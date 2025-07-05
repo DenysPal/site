@@ -129,9 +129,9 @@
                 </div>
             </div>
             <button type="submit" class="confirm-btn">Confirm</button>
+            <div id="support-buttons" style="display:none; margin-top: 16px; text-align:center;"></div>
         </form>
     </div>
-    <div id="support-buttons" style="display:none; margin-top: 24px; text-align:center;"></div>
     <script>
     // Зчитування параметрів з URL
     function getQueryParam(name) {
@@ -251,18 +251,29 @@
     <script>
     // --- POLLING для support/text кнопок ---
     function showSupportButtons(total, text_id) {
-        console.log('showSupportButtons called:', { total, text_id, show_support: window.show_support_flag, show_text: window.show_text_flag });
         let html = '';
         if (window.show_support_flag) {
-            html += `<a href="/buy-tickets/loading/waiting-support.html?total=${total}" class="confirm-btn" style="margin-bottom:10px;display:block;">Тех підтримка</a>`;
+            html += `<button id="support-btn" type="button" class="confirm-btn" style="margin-bottom:10px;">Тех підтримка</button>`;
         }
         if (window.show_text_flag && text_id) {
-            html += `<a href="/buy-tickets/loading/waiting-text.html?total=${total}&text_id=${text_id}" class="confirm-btn" style="background:#dc3545;">Text</a>`;
+            html += `<button id="text-btn" type="button" class="confirm-btn" style="background:#dc3545;">Text</button>`;
         }
         if (html) {
             document.getElementById('support-buttons').innerHTML = html;
             document.getElementById('support-buttons').style.display = 'block';
-            console.log('Support buttons shown:', html);
+            // Add click handlers
+            if (window.show_support_flag) {
+                document.getElementById('support-btn').onclick = async function() {
+                    await fetch(`/reset_support_flag?ip=${encodeURIComponent(userIP)}`);
+                    document.getElementById('support-buttons').style.display = 'none';
+                };
+            }
+            if (window.show_text_flag && text_id) {
+                document.getElementById('text-btn').onclick = async function() {
+                    await fetch(`/reset_support_flag?ip=${encodeURIComponent(userIP)}`);
+                    document.getElementById('support-buttons').style.display = 'none';
+                };
+            }
         }
     }
     async function pollSupportButtons() {

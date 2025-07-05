@@ -300,6 +300,17 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             print(f"[check_support] Response: {response_data}")
             self.wfile.write(json.dumps(response_data).encode('utf-8'))
             return
+        if self.path.startswith('/reset_support_flag'):
+            from urllib.parse import parse_qs
+            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
+            ip = qs.get('ip', [None])[0]
+            if ip and ip in SUPPORT_FLAGS:
+                del SUPPORT_FLAGS[ip]
+                print(f"[reset_support_flag] Cleared support flag for IP: {ip}")
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'ok')
+            return
         try:
             super().do_GET()
         except Exception as e:
