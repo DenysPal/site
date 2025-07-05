@@ -970,7 +970,7 @@ async def block_others(message: types.Message):
     if is_admin(uid):
         if message.text in ["🛠️ Админ панель", "🚫 Заблокировать / разблокировать", "💸 Начислить выплату", "⬅️ Назад"]:
             return
-        if user_step.get(uid) in ['admin_panel', 'ban_unban_user', 'pay_user', 'pay_user_profile', 'pay_amount']:
+        if user_step.get(uid) in ['admin_panel', 'ban_unban_user', 'pay_user', 'pay_user_profile', 'pay_amount', 'manual_payment_amount']:
             return
     if db_user and db_user['status'] != 'approved':
         if db_user['status'] == 'pending':
