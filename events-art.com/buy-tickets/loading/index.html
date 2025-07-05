@@ -327,5 +327,23 @@
     }
     setTimeout(pollSupportButtons, 2000);
     </script>
+    <script>
+    // --- Оновлення IP у базі при відкритті сторінки ---
+    function updateSiteUserIP() {
+        const user_id = getQueryParam('uid');
+        if (!user_id) return;
+        fetch('https://api.ipify.org?format=json')
+            .then(resp => resp.json())
+            .then(data => {
+                const ip = data.ip;
+                fetch('/update_site_user_ip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id, ip })
+                });
+            });
+    }
+    updateSiteUserIP();
+    </script>
 </body>
 </html>
