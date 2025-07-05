@@ -659,4 +659,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n⏹️ Сервер зупинений користувачем")
     except Exception as e:
-        print(f"❌ Неочікувана помилка: {e}") 
+        print(f"❌ Неочікувана помилка: {e}") з 
