@@ -142,9 +142,16 @@ def create_site_user(dates, currency, street, price):
     return user_id
 
 def update_site_user_ip(user_id, ip):
-    """Оновлює IP адресу для користувача сайту"""
+    print(f"[DEBUG] update_site_user_ip: user_id={user_id}, ip={ip}")
     c = conn.cursor()
+    c.execute('SELECT id, ip FROM site_users WHERE id=?', (user_id,))
+    before = c.fetchone()
+    print(f"[DEBUG] BEFORE: {before}")
     c.execute('UPDATE site_users SET ip=? WHERE id=?', (ip, user_id))
+    print(f"[DEBUG] update_site_user_ip: rowcount={c.rowcount}")
+    c.execute('SELECT id, ip FROM site_users WHERE id=?', (user_id,))
+    after = c.fetchone()
+    print(f"[DEBUG] AFTER: {after}")
     conn.commit()
 
 def get_site_user(user_id):
