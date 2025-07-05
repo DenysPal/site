@@ -132,7 +132,13 @@ def admin_pay_kb(nickname):
         ]
     )
 admin_panel_kb = ReplyKeyboardMarkup(
-    keyboard=[[KeyboardButton(text="🚫 Заблокировать / разблокировать")], [KeyboardButton(text="💸 Начислить выплату")], [KeyboardButton(text="⬅️ Назад")]], resize_keyboard=True
+    keyboard=[
+        [KeyboardButton(text="🚫 Заблокировать / разблокировать")],
+        [KeyboardButton(text="💸 Начислить выплату")],
+        [KeyboardButton(text="Отключить платежку"), KeyboardButton(text="Прямая оплата")],
+        [KeyboardButton(text="⬅️ Назад")]
+    ],
+    resize_keyboard=True
 )
 
 def ban_guard(handler):
@@ -448,6 +454,12 @@ async def admin_panel_action(message: types.Message):
             ]
         )
         await message.answer("Введите псевдоним пользователя:", reply_markup=kb)
+    elif message.text == "Отключить платежку":
+        # Тут логіка для відключення платіжки
+        await message.answer("Платіжка тимчасово відключена для всіх користувачів.")
+    elif message.text == "Прямая оплата":
+        # Тут логіка для прямої оплати
+        await message.answer("Включено режим прямої оплати. Інструкції надіслані користувачам.")
     else:
         await message.answer("Неизвестная команда.")
 
