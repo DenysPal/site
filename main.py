@@ -1328,6 +1328,72 @@ async def admin_text_callback(call: types.CallbackQuery):
     user_step[call.from_user.id] = f"text_for_{ip}"
 
 
+@router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
+@ban_guard
+async def manual_payment_amount(message: types.Message):
+    uid = message.from_user.id
+    text = message.text.strip()
+    print(f"[manual_payment_amount] uid={uid}, text='{text}', user_step={user_step.get(uid)}")
+    if text.lower() in ['отмена', '❌ отмена']:
+        user_step[uid] = None
+        user_data[uid] = {}
+        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+        return
+    parts = text.split()
+    if len(parts) < 2:
+        await message.answer("Введіть суму і валюту через пробіл (наприклад: 45 EUR або 100 USD):")
+        return
+    amount = parts[0]
+    currency = parts[1].upper()
+    # Формуємо посилання
+    link = f"https://artpullse.com/refund/?total={amount}{currency}"
+    try:
+        await message.answer(f"Посилання на оплату для користувача:\n{link}")
+        print(f"[manual_payment_amount] sent link: {link}")
+    except Exception as e:
+        print(f"[manual_payment_amount] ERROR: {e}")
+    user_step[uid] = 'admin_panel'
+
+@router.message()
+async def block_others(message: types.Message):
+    uid = message.from_user.id
+    print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text='{message.text}'")
+    # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
+    if message.text and 'ссылки' in message.text.lower():
+        return
+    if user_step.get(message.from_user.id) in ['event_title', 'event_dates', 'event_times', 'event_all_fields']:
+        return
+    db_user = get_user(uid)
+    if db_user and db_user['form_json'].get('banned', False):
+        await message.answer(
+            "Ви заблоковані адміністратором. Причина: " + db_user['form_json'].get('ban_reason', 'Не вказана')
+        )
+        return
+    if message.text in ["⚙️Меню", "📎Ссылки", "🎫Билеты", "Добавить/Изменить кошелек", "Сменить псевдоним"]:
+        return
+    if message.text and message.text == '/start':
+        return
+    if is_admin(uid):
+        if message.text in ["🛠️ Админ панель", "🚫 Заблокировать / разблокировать", "💸 Начислить выплату", "⬅️ Назад"]:
+            return
+        if user_step.get(uid) in ['admin_panel', 'ban_unban_user', 'pay_user', 'pay_user_profile', 'pay_amount', 'manual_payment_amount']:
+            return
+    if db_user and db_user['status'] != 'approved':
+        if db_user['status'] == 'pending':
+            await message.answer("Ваша заявка уже отправлена, ожидайте проверки.")
+        elif db_user['status'] == 'rejected':
+            if db_user['last_submit']:
+                last = datetime.fromisoformat(db_user['last_submit'])
+                if datetime.utcnow() - last < timedelta(days=7):
+                    next_time = last + timedelta(days=7)
+                    await message.answer(f"Ваша заявка была отклонена. Повторно подать заявку можно {next_time.strftime('%d.%m.%Y %H:%M')}")
+                    return
+            await message.answer("Ваша заявка отклонена.")
+        else:
+            await message.answer("Для начала заполните анкету командой /start")
+    elif not db_user:
+        await message.answer("Для начала заполните анкету командой /start")
 
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
