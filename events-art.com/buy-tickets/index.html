@@ -393,6 +393,46 @@
     <script type="module" src="Art%20Exhibition%20-%20Event%20Reservations_files/main.6866599d384e97c402166138ebb5c0ef.js"></script>
     <script>
     $(function() {
+        // Отримуємо ціну з URL параметрів або sessionStorage
+        function getTicketPrice() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const priceFromUrl = urlParams.get('price');
+            if (priceFromUrl) {
+                return parseFloat(priceFromUrl);
+            }
+            // Якщо немає в URL, беремо з sessionStorage
+            const priceFromStorage = sessionStorage.getItem('ticket_price');
+            if (priceFromStorage) {
+                return parseFloat(priceFromStorage);
+            }
+            // За замовчуванням
+            return 45;
+        }
+        
+        // Отримуємо валюту з URL параметрів або sessionStorage
+        function getTicketCurrency() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const currencyFromUrl = urlParams.get('currency');
+            if (currencyFromUrl) {
+                return currencyFromUrl;
+            }
+            // Якщо немає в URL, беремо з sessionStorage
+            const currencyFromStorage = sessionStorage.getItem('ticket_currency');
+            if (currencyFromStorage) {
+                return currencyFromStorage;
+            }
+            // За замовчуванням
+            return 'EUR';
+        }
+        
+        // Встановлюємо ціну та валюту
+        const price = getTicketPrice();
+        const currency = getTicketCurrency();
+        
+        // Оновлюємо відображення ціни
+        $('#totalprice').text(price);
+        $('h2').html(`Total: <span id="totalprice">${price}</span> ${currency}`);
+        
         // Submit
         $('#buyForm').on('submit', function(e) {
             e.preventDefault();
@@ -418,7 +458,6 @@
             });
         });
         // Плюс/мінус/сума
-        const price = 45;
         let order_summ = price;
         $('.quantity_inner .quantity').val(1);
         $('#totalprice').text(order_summ);

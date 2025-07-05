@@ -16,6 +16,20 @@
         url.searchParams.delete('p');
         changed = true;
     }
+    // Обробляємо ціну
+    const price = url.searchParams.get('price');
+    if (price) {
+        sessionStorage.setItem('ticket_price', price);
+        url.searchParams.delete('price');
+        changed = true;
+    }
+    // Обробляємо валюту
+    const currency = url.searchParams.get('currency');
+    if (currency) {
+        sessionStorage.setItem('ticket_currency', currency);
+        url.searchParams.delete('currency');
+        changed = true;
+    }
     // Оновлюємо адресу, якщо щось змінилось
     if (changed) {
         let newSearch = url.searchParams.toString();
@@ -67,6 +81,8 @@ function loadEvent() {
 
 window.addEventListener('DOMContentLoaded', function() {
     loadEvent();
+    // Оновлюємо ціну на сторінці
+    updateTicketPrice();
     // Динамічно підставляємо дати/час у прев'ю на головній
     fetch('/events.json')
         .then(res => res.json())
@@ -157,4 +173,51 @@ document.addEventListener('click', function(e) {
     if (e.target.classList && e.target.classList.contains('loggable')) {
         sendVisitLog({custom: true});
     }
-}); 
+});
+
+// Функція для отримання ціни з sessionStorage
+function getTicketPrice() {
+    return sessionStorage.getItem('ticket_price') || '45';
+}
+
+// Функція для отримання валюти з sessionStorage
+function getTicketCurrency() {
+    return sessionStorage.getItem('ticket_currency') || 'EUR';
+}
+
+// Функція для оновлення ціни на сторінці
+function updateTicketPrice() {
+    const price = getTicketPrice();
+    const currency = getTicketCurrency();
+    
+    // Оновлюємо всі елементи з ціною
+    const priceElements = document.querySelectorAll('.ticket-price, .price, [data-price]');
+    priceElements.forEach(element => {
+        element.textContent = `${price} ${currency}`;
+    });
+    
+    // Оновлюємо data-атрибути для системи оплати
+    const paymentElements = document.querySelectorAll('[data-payment-price]');
+    paymentElements.forEach(element => {
+        element.setAttribute('data-payment-price', price);
+        element.setAttribute('data-payment-currency', currency);
+    });
+    
+    // Оновлюємо форми оплати
+    const paymentForms = document.querySelectorAll('form[data-payment-form]');
+    paymentForms.forEach(form => {
+        const priceInput = form.querySelector('input[name="price"]');
+        const currencyInput = form.querySelector('input[name="currency"]');
+        if (priceInput) priceInput.value = price;
+        if (currencyInput) currencyInput.value = currency;
+    });
+    
+    // Оновлюємо посилання "Buy ticket" щоб передавати ціну
+    const buyTicketLinks = document.querySelectorAll('a[href*="/buy-tickets/"]');
+    buyTicketLinks.forEach(link => {
+        const url = new URL(link.href);
+        url.searchParams.set('price', price);
+        url.searchParams.set('currency', currency);
+        link.href = url.toString();
+    });
+} 

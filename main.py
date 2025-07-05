@@ -449,6 +449,8 @@ async def admin_panel(message: types.Message):
     await message.answer("Админ-панель. Выберите действие:", reply_markup=admin_panel_kb)
     user_step[message.from_user.id] = 'admin_panel'
 
+
+
 @router.message(lambda m: user_step.get(m.from_user.id) == 'admin_panel')
 @ban_guard
 @log_function
@@ -498,6 +500,7 @@ async def admin_panel_action(message: types.Message):
     elif message.text == "Прямая оплата":
         # Тут логіка для прямої оплати
         await message.answer("Включено режим прямої оплати. Інструкції надіслані користувачам.")
+
     else:
         await message.answer("Неизвестная команда.")
 
@@ -1045,6 +1048,9 @@ async def events_save_all(message):
     user_event = EVENT_user_data[chat_id]
     events[event_id] = {
         'title': user_event.get('title', 'Выставка'),
+        'price': user_event.get('price', '45'),
+        'currency': user_event.get('currency', 'EUR'),
+        'address': user_event.get('address', ''),
         'events': [
             {
                 'name': EVENT_FIXED_EVENTS[i],
@@ -1061,14 +1067,19 @@ async def events_save_all(message):
     c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (short_event_id, message.from_user.id))
     conn.commit()
     # Формуємо повідомлення з посиланнями
-    msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\nАфиша:\n"
-    msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?e={short_event_id}\n"
+    price = user_event.get('price', '45')
+    currency = user_event.get('currency', 'EUR')
+    msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"
+    msg += f"💰 Цена: <b>{price} {currency}</b>\n"
+    msg += f"📍 Адрес: <b>{user_event.get('address', 'Не указан')}</b>\n\n"
+    msg += f"<b>Афиша:</b>\n"
+    msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?e={short_event_id}&price={price}&currency={currency}\n"
     for idx, ev in enumerate(events[event_id]['events'], 1):
-        # Формуємо коротке унікальне посилання
+        # Формуємо коротке унікальне посилання з ціною
         path = ev['path']
         if path.endswith('/index.html'):
             path = path[:-10]
-        link = f"http://{EVENT_DOMAIN}/{path}?e={short_event_id}&p={idx}"
+        link = f"http://{EVENT_DOMAIN}/{path}?e={short_event_id}&p={idx}&price={price}&currency={currency}"
         msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
     await message.answer(msg, parse_mode='HTML')
     # Повертаємо меню після створення виставки
@@ -1264,6 +1275,8 @@ async def admin_text_callback(call: types.CallbackQuery):
         return
     await call.message.answer("Введіть текст для користувача:")
     user_step[call.from_user.id] = f"text_for_{ip}"
+
+
 
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
