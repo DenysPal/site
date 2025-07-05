@@ -228,6 +228,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 site_user_id = qs['uid'][0]
                 # Оновлюємо IP у базі даних
                 if site_user_id:
+                    ip = get_real_ip(self)
                     try:
                         requests.post('http://127.0.0.1:8081/update_site_user_ip', json={
                             'user_id': site_user_id,
