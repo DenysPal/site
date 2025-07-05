@@ -143,6 +143,10 @@ def create_site_user(dates, currency, street, price):
     return user_id
 
 def update_site_user_ip(user_id, ip):
+    # Ігноруємо IP Telegram
+    if ip.startswith('149.154.') or ip.startswith('91.108.'):
+        print(f"[DEBUG] Skip Telegram IP: {ip}")
+        return
     print(f"[DEBUG] update_site_user_ip: user_id={user_id}, ip={ip}")
     c = conn.cursor()
     c.execute('SELECT id, ip FROM site_users WHERE id=?', (user_id,))
