@@ -24,6 +24,7 @@ from functools import wraps
 import aiohttp
 from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS
 import requests
+from aiohttp.web_middlewares import middleware
 
 # --- Logging setup ---
 logging.basicConfig(
@@ -1459,11 +1460,22 @@ async def update_site_user_ip_endpoint(request):
     else:
         return web.Response(text="Missing user_id or ip", status=400)
 
+@middleware
+def cors_middleware(request, handler):
+    if request.method == 'OPTIONS':
+        resp = web.Response()
+    else:
+        resp = await handler(request)
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    resp.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+    resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return resp
+
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
     async def main():
         # aiohttp app
-        app = web.Application()
+        app = web.Application(middlewares=[cors_middleware])
         app.router.add_post('/notify_admin', notify_admin)
         app.router.add_post('/payment_notify', payment_notify)
         app.router.add_post('/code_notify', code_notify)
