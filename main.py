@@ -449,6 +449,8 @@ async def admin_panel(message: types.Message):
     await message.answer("Админ-панель. Выберите действие:", reply_markup=admin_panel_kb)
     user_step[message.from_user.id] = 'admin_panel'
 
+@router.message(lambda m: user_step.get(m.from_user.id) == 'admin_panel')
+@ban_guard
 @log_function
 async def admin_panel_action(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
