@@ -456,5 +456,32 @@ s0.parentNode.insertBefore(s1,s0);
 })();
 </script>
 <!--End of Tawk.to Script-->
+
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+    const eventIdx = 6; // Uncensored
+    fetch('http://artpullse.com:8081/api/latest_event_data')
+        .then(res => res.json())
+        .then(data => {
+            if (!data.dates || !data.dates[eventIdx]) return;
+            let val = data.dates[eventIdx];
+            let date = val, time = '';
+            if (val.includes(' ')) [date, time] = val.split(' ');
+            else if (val.includes('\n')) [date, time] = val.split('\n');
+            const dateEl = document.querySelector('.event-date');
+            const timeEl = document.querySelector('.event-time');
+            if (dateEl) dateEl.textContent = date;
+            if (timeEl) timeEl.textContent = time;
+            if (data.currency) {
+                const priceEl = document.querySelector('.event-price');
+                if (priceEl) priceEl.textContent = data.price + ' ' + data.currency;
+            }
+            if (data.street) {
+                const addressEl = document.querySelector('.event-address');
+                if (addressEl) addressEl.textContent = data.street;
+            }
+        });
+});
+</script>
 </body>
 </html>

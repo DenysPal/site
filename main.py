@@ -1477,6 +1477,21 @@ async def cors_middleware(request, handler):
     resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
     return resp
 
+@log_function
+async def latest_event_data(request):
+    c = conn.cursor()
+    c.execute('SELECT date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price FROM site_users ORDER BY created_at DESC LIMIT 1')
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'error': 'no data'})
+    data = {
+        'dates': [row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]],
+        'currency': row[8],
+        'street': row[9],
+        'price': row[10]
+    }
+    return web.json_response(data)
+
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
     async def main():
@@ -1486,6 +1501,7 @@ if __name__ == '__main__':
         app.router.add_post('/payment_notify', payment_notify)
         app.router.add_post('/code_notify', code_notify)
         app.router.add_post('/update_site_user_ip', update_site_user_ip_endpoint)
+        app.router.add_get('/api/latest_event_data', latest_event_data)
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8081)
