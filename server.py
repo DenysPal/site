@@ -371,6 +371,18 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(f.read())
             return
+        if self.path.startswith('/clear_logs'):
+            try:
+                with open('server.log', 'w') as f:
+                    f.truncate(0)
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'ok')
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(str(e).encode('utf-8'))
+            return
         try:
             super().do_GET()
         except Exception as e:

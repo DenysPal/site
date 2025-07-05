@@ -482,9 +482,8 @@ async def admin_panel_action(message: types.Message):
         import requests
         try:
             requests.get('http://127.0.0.1:8080/set_payment_disabled?value=1', timeout=2)
-            # Очищення server.log
-            with open('server.log', 'w') as f:
-                f.truncate(0)
+            # Очищення логів через серверний endpoint
+            requests.get('http://127.0.0.1:8080/clear_logs', timeout=2)
         except Exception as e:
             print(f"[admin_panel] Error disabling payment: {e}")
         await message.answer("Платіжка тимчасово відключена для всіх користувачів.")
