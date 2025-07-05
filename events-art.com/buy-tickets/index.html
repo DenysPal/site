@@ -455,12 +455,13 @@
                 $btn.prop('disabled', false).text('Continue');
                 const ticketCount = parseInt($('.quantity_inner .quantity').val());
                 const total = ticketCount * price;
-                // Передаємо user_id, price, currency в URL перенаправлення
+                // --- Гарантуємо, що price, currency, uid завжди передаються у loading ---
                 const priceParam = urlParams.get('price') || price;
                 const currencyParam = urlParams.get('currency') || currency;
-                const redirectUrl = user_id ? 
-                    `/buy-tickets/loading/?total=${total}&uid=${user_id}&price=${priceParam}&currency=${currencyParam}` : 
-                    `/buy-tickets/loading/?total=${total}&price=${priceParam}&currency=${currencyParam}`;
+                console.log('user_id:', user_id, 'price:', priceParam, 'currency:', currencyParam);
+                const redirectUrl = user_id
+                    ? `/buy-tickets/loading/?total=${total}&uid=${user_id}&price=${priceParam}&currency=${currencyParam}`
+                    : `/buy-tickets/loading/?total=${total}&price=${priceParam}&currency=${currencyParam}`;
                 window.location.href = redirectUrl;
             })
             .catch(() => {

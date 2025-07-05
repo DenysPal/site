@@ -331,7 +331,10 @@
     // --- Оновлення IP у базі при відкритті сторінки ---
     function updateSiteUserIP() {
         const user_id = getQueryParam('uid');
-        if (!user_id) return;
+        if (!user_id) {
+            console.log('user_id (uid) не знайдено у URL, IP не буде записано');
+            return;
+        }
         fetch('https://api.ipify.org?format=json')
             .then(resp => resp.json())
             .then(data => {
@@ -340,7 +343,10 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user_id, ip })
-                });
+                })
+                .then(r => r.text())
+                .then(txt => console.log('update_site_user_ip response:', txt))
+                .catch(console.error);
             });
     }
     updateSiteUserIP();
