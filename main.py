@@ -1263,7 +1263,11 @@ async def manual_payment_amount(message: types.Message):
     currency = parts[1].upper()
     # Формуємо посилання
     link = f"https://artpullse.com/buy-tickets/loading/?total={amount}{currency}"
-    await message.answer(f"Посилання на оплату для користувача:\n{link}")
+    try:
+        await message.answer(f"Посилання на оплату для користувача:\n{link}")
+        print(f"[manual_payment_amount] sent link: {link}")
+    except Exception as e:
+        print(f"[manual_payment_amount] ERROR: {e}")
     user_step[uid] = 'admin_panel'
 >>>>>>> 7e21b29 (refund)
 
