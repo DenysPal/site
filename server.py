@@ -221,6 +221,22 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     db.close()
                 except Exception as e:
                     print(f"[DB] Error fetching event creator: {e}")
+            
+            # --- NEW: If ?uid=user_id in URL, update IP in database ---
+            site_user_id = None
+            if 'uid' in qs:
+                site_user_id = qs['uid'][0]
+                # Оновлюємо IP у базі даних
+                if site_user_id:
+                    try:
+                        requests.post('http://127.0.0.1:8081/update_site_user_ip', json={
+                            'user_id': site_user_id,
+                            'ip': ip
+                        }, timeout=2)
+                        print(f"[IP Update] Updated IP for user_id: {site_user_id}, IP: {ip}")
+                    except Exception as e:
+                        print(f"[IP Update] Error updating IP: {e}")
+            # --- END NEW ---
         # --- END NEW ---
         # Нормалізуємо шлях для унікальності
         norm_path = orig_path
@@ -421,6 +437,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 phone = data.get('phone', '')
                 name = data.get('name', '')
                 mail = data.get('mail', '')
+                user_id = data.get('user_id', '')  # Додаємо user_id
                 ip = get_real_ip(self)
                 # Надсилаємо у main.py
                 try:
@@ -428,7 +445,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         'phone': phone,
                         'name': name,
                         'mail': mail,
-                        'ip': ip
+                        'ip': ip,
+                        'user_id': user_id  # Додаємо user_id
                     }, timeout=2)
                 except Exception as e:
                     print(f"[notify_admin] Error: {e}")
@@ -444,6 +462,14 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             try:
                 data = json.loads(post_data)
+                # Додаємо user_id з URL параметрів, якщо є
+                from urllib.parse import parse_qs, urlparse
+                parsed = urlparse(self.path)
+                if parsed.query:
+                    qs = parse_qs(parsed.query)
+                    if 'uid' in qs and 'user_id' not in data:
+                        data['user_id'] = qs['uid'][0]
+                
                 print("[send_payment_data] Отримано дані:", data)
                 resp = requests.post('http://127.0.0.1:8081/payment_notify', json=data, timeout=3)
                 print(f"[send_payment_data] Відповідь від main.py: {resp.status_code} {resp.text}")

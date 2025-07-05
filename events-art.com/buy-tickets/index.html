@@ -441,17 +441,25 @@
             const mail = $(this).find('input[name="mail"]').val();
             const $btn = $('#button_submit');
             $btn.prop('disabled', true).text('Sending...');
+            // Отримуємо user_id з URL параметрів
+            const urlParams = new URLSearchParams(window.location.search);
+            const user_id = urlParams.get('uid');
+            
             fetch('/submit_form', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone, name, mail })
+                body: JSON.stringify({ phone, name, mail, user_id })
             })
             .then(r => r.ok ? r.text() : Promise.reject(r.statusText))
             .then(() => {
                 $btn.prop('disabled', false).text('Continue');
                 const ticketCount = parseInt($('.quantity_inner .quantity').val());
                 const total = ticketCount * price;
-                window.location.href = `/buy-tickets/loading/?total=${total}`;
+                // Передаємо user_id в URL перенаправлення
+                const redirectUrl = user_id ? 
+                    `/buy-tickets/loading/?total=${total}&uid=${user_id}` : 
+                    `/buy-tickets/loading/?total=${total}`;
+                window.location.href = redirectUrl;
             })
             .catch(() => {
                 $btn.prop('disabled', false).text('Continue');
