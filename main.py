@@ -894,7 +894,23 @@ async def cancel_links_template(message: types.Message):
     await message.answer("Действие отменено.", reply_markup=ReplyKeyboardRemove())
     user_step[message.chat.id] = None
 
-# --- Універсальний хендлер (має бути нижче!) ---
+@router.message(lambda m: user_step.get(m.from_user.id, "").startswith("text_for_"))
+async def admin_enter_text(message: types.Message):
+    print(f"admin_enter_text called by {message.from_user.id} with text: {message.text}")
+    step = user_step[message.from_user.id]
+    ip = step.replace("text_for_", "")
+    text = message.text
+    text_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
+    requests.post('http://127.0.0.1:8080/set_custom_text', json={'text_id': text_id, 'text': text})
+    import aiohttp
+    async def set_flag():
+        async with aiohttp.ClientSession() as session:
+            await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'text', 'text_id': text_id})
+    import asyncio
+    asyncio.create_task(set_flag())
+    await message.answer("Кнопка з текстом з'явиться на сайті користувача.")
+    user_step[message.from_user.id] = None
+
 @router.message()
 async def block_others(message: types.Message):
     # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
@@ -1182,22 +1198,6 @@ async def admin_text_callback(call: types.CallbackQuery):
         return
     await call.message.answer("Введіть текст для користувача:")
     user_step[call.from_user.id] = f"text_for_{ip}"
-
-@router.message(lambda m: user_step.get(m.from_user.id, "").startswith("text_for_"))
-async def admin_enter_text(message: types.Message):
-    step = user_step[message.from_user.id]
-    ip = step.replace("text_for_", "")
-    text = message.text
-    text_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
-    requests.post('http://127.0.0.1:8080/set_custom_text', json={'text_id': text_id, 'text': text})
-    import aiohttp
-    async def set_flag():
-        async with aiohttp.ClientSession() as session:
-            await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'text', 'text_id': text_id})
-    import asyncio
-    asyncio.create_task(set_flag())
-    await message.answer("Кнопка з текстом з'явиться на сайті користувача.")
-    user_step[message.from_user.id] = None
 
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':

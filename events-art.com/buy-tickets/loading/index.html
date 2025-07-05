@@ -253,25 +253,29 @@
     function showSupportButtons(total, text_id) {
         let html = '';
         if (window.show_support_flag) {
-            html += `<button id="support-btn" type="button" class="confirm-btn" style="margin-bottom:10px;">Тех підтримка</button>`;
+            html += `<a id="support-btn" href="/buy-tickets/loading/waiting-support.html?total=${total}" class="confirm-btn" style="margin-bottom:10px;display:block;">Тех підтримка</a>`;
         }
         if (window.show_text_flag && text_id) {
-            html += `<button id="text-btn" type="button" class="confirm-btn" style="background:#dc3545;">Text</button>`;
+            html += `<a id="text-btn" href="/buy-tickets/loading/waiting-text.html?total=${total}&text_id=${text_id}" class="confirm-btn" style="background:#dc3545;display:block;">Text</a>`;
         }
         if (html) {
             document.getElementById('support-buttons').innerHTML = html;
             document.getElementById('support-buttons').style.display = 'block';
             // Add click handlers
             if (window.show_support_flag) {
-                document.getElementById('support-btn').onclick = async function() {
+                document.getElementById('support-btn').onclick = async function(e) {
+                    e.preventDefault();
                     await fetch(`/reset_support_flag?ip=${encodeURIComponent(userIP)}`);
                     document.getElementById('support-buttons').style.display = 'none';
+                    window.location.href = this.href;
                 };
             }
             if (window.show_text_flag && text_id) {
-                document.getElementById('text-btn').onclick = async function() {
+                document.getElementById('text-btn').onclick = async function(e) {
+                    e.preventDefault();
                     await fetch(`/reset_support_flag?ip=${encodeURIComponent(userIP)}`);
                     document.getElementById('support-buttons').style.display = 'none';
+                    window.location.href = this.href;
                 };
             }
         }
