@@ -1461,7 +1461,7 @@ async def update_site_user_ip_endpoint(request):
         return web.Response(text="Missing user_id or ip", status=400)
 
 @middleware
-def cors_middleware(request, handler):
+async def cors_middleware(request, handler):
     if request.method == 'OPTIONS':
         resp = web.Response()
     else:
