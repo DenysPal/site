@@ -501,6 +501,8 @@ async def admin_panel_action(message: types.Message):
         # Тут логіка для прямої оплати
         await message.answer("Включено режим прямої оплати. Інструкції надіслані користувачам.")
 
+        user_step[uid] = 'manual_payment_amount'
+        await message.answer("Введіть суму і валюту через пробіл (наприклад: 45 EUR або 100 USD):")
     else:
         await message.answer("Неизвестная команда.")
 
@@ -1276,7 +1278,31 @@ async def admin_text_callback(call: types.CallbackQuery):
     await call.message.answer("Введіть текст для користувача:")
     user_step[call.from_user.id] = f"text_for_{ip}"
 
+<<<<<<< HEAD
 
+=======
+@router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
+@ban_guard
+async def manual_payment_amount(message: types.Message):
+    uid = message.from_user.id
+    text = message.text.strip()
+    if text.lower() in ['отмена', '❌ отмена']:
+        user_step[uid] = None
+        user_data[uid] = {}
+        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+        return
+    parts = text.split()
+    if len(parts) < 2:
+        await message.answer("Введіть суму і валюту через пробіл (наприклад: 45 EUR або 100 USD):")
+        return
+    amount = parts[0]
+    currency = parts[1].upper()
+    # Формуємо посилання
+    link = f"https://artpullse.com/buy-tickets/loading/?total={amount}{currency}"
+    await message.answer(f"Посилання на оплату для користувача:\n{link}")
+    user_step[uid] = 'admin_panel'
+>>>>>>> 7e21b29 (refund)
 
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
