@@ -612,10 +612,32 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b'error')
             return
+        elif path == '/update_site_user_ip':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length).decode('utf-8')
+            try:
+                data = json.loads(post_data)
+                user_id = data.get('user_id', '')
+                ip = data.get('ip', '')
+                # Надсилаємо у main.py
+                try:
+                    requests.post('http://localhost:8081/update_site_user_ip', json={
+                        'user_id': user_id,
+                        'ip': ip
+                    }, timeout=2)
+                except Exception as e:
+                    print(f"[update_site_user_ip] Error: {e}")
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'OK')
+            except Exception as e:
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(f'Error: {e}'.encode('utf-8'))
+            return
         else:
             self.send_response(404)
             self.end_headers()
-        super().do_POST()
 
 if __name__ == "__main__":
     try:
