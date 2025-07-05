@@ -136,7 +136,8 @@ admin_panel_kb = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="🚫 Заблокировать / разблокировать")],
         [KeyboardButton(text="💸 Начислить выплату")],
-        [KeyboardButton(text="Отключить платежку"), KeyboardButton(text="Прямая оплата")],
+        [KeyboardButton(text="Отключить платежку"), KeyboardButton(text="Включить платежку")],
+        [KeyboardButton(text="Прямая оплата")],
         [KeyboardButton(text="⬅️ Назад")]
     ],
     resize_keyboard=True
@@ -456,8 +457,21 @@ async def admin_panel_action(message: types.Message):
         )
         await message.answer("Введите псевдоним пользователя:", reply_markup=kb)
     elif message.text == "Отключить платежку":
-        # Тут логіка для відключення платіжки
+        # Вимкнути платіжку через сервер
+        import requests
+        try:
+            requests.get('http://127.0.0.1:8080/set_payment_disabled?value=1', timeout=2)
+        except Exception as e:
+            print(f"[admin_panel] Error disabling payment: {e}")
         await message.answer("Платіжка тимчасово відключена для всіх користувачів.")
+    elif message.text == "Включить платежку":
+        # Увімкнути платіжку через сервер
+        import requests
+        try:
+            requests.get('http://127.0.0.1:8080/set_payment_disabled?value=0', timeout=2)
+        except Exception as e:
+            print(f"[admin_panel] Error enabling payment: {e}")
+        await message.answer("Платежка включена для всех пользователей.")
     elif message.text == "Прямая оплата":
         # Тут логіка для прямої оплати
         await message.answer("Включено режим прямої оплати. Інструкції надіслані користувачам.")
