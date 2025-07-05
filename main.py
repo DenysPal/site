@@ -1453,11 +1453,13 @@ async def update_site_user_ip_endpoint(request):
     data = await request.json()
     user_id = data.get('user_id', '')
     ip = data.get('ip', '')
-    
+    if not ip:
+        ip = request.remote
     if user_id and ip:
         update_site_user_ip(user_id, ip)
         return web.Response(text="OK")
     else:
+        print(f"[IP Update] Error updating IP: user_id={user_id}, ip={ip}")
         return web.Response(text="Missing user_id or ip", status=400)
 
 @middleware
