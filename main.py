@@ -1270,6 +1270,7 @@ async def admin_text_callback(call: types.CallbackQuery):
 async def manual_payment_amount(message: types.Message):
     uid = message.from_user.id
     text = message.text.strip()
+    print(f"[manual_payment_amount] uid={uid}, text='{text}', user_step={user_step.get(uid)}")
     if text.lower() in ['отмена', '❌ отмена']:
         user_step[uid] = None
         user_data[uid] = {}
