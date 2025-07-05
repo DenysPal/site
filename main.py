@@ -931,6 +931,7 @@ async def cancel_links_template(message: types.Message):
     await message.answer("Действие отменено.", reply_markup=ReplyKeyboardRemove())
     user_step[message.chat.id] = None
 
+@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('text_for_'))
 @log_function
 async def admin_enter_text(message: types.Message):
     print(f"admin_enter_text called by {message.from_user.id} with text: {message.text}")
