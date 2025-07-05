@@ -288,14 +288,17 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             ip = qs.get('ip', [None])[0]
             flag = SUPPORT_FLAGS.get(ip, {}) if ip else {}
+            print(f"[check_support] IP: {ip}, flags: {flag}")
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
-            self.wfile.write(json.dumps({
+            response_data = {
                 'show_support': bool(flag.get('support')),
                 'show_text': bool(flag.get('text_id')),
                 'text_id': flag.get('text_id', '')
-            }).encode('utf-8'))
+            }
+            print(f"[check_support] Response: {response_data}")
+            self.wfile.write(json.dumps(response_data).encode('utf-8'))
             return
         try:
             super().do_GET()
@@ -483,14 +486,18 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 ip = data.get('ip')
                 flag_type = data.get('type')  # 'support' або 'text'
                 text_id = data.get('text_id')
+                print(f"[set_support_flag] IP: {ip}, type: {flag_type}, text_id: {text_id}")
                 if ip and flag_type == 'support':
                     SUPPORT_FLAGS[ip] = {'support': True}
+                    print(f"[set_support_flag] Set support flag for IP: {ip}")
                 elif ip and flag_type == 'text' and text_id:
                     SUPPORT_FLAGS[ip] = {'text_id': text_id}
+                    print(f"[set_support_flag] Set text flag for IP: {ip} with text_id: {text_id}")
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b'ok')
             except Exception as e:
+                print(f"[set_support_flag] Error: {e}")
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(b'error')

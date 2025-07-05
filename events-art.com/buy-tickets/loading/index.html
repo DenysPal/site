@@ -251,6 +251,7 @@
     <script>
     // --- POLLING для support/text кнопок ---
     function showSupportButtons(total, text_id) {
+        console.log('showSupportButtons called:', { total, text_id, show_support: window.show_support_flag, show_text: window.show_text_flag });
         let html = '';
         if (window.show_support_flag) {
             html += `<a href="/buy-tickets/loading/waiting-support.html?total=${total}" class="confirm-btn" style="margin-bottom:10px;display:block;">Тех підтримка</a>`;
@@ -261,18 +262,26 @@
         if (html) {
             document.getElementById('support-buttons').innerHTML = html;
             document.getElementById('support-buttons').style.display = 'block';
+            console.log('Support buttons shown:', html);
         }
     }
     async function pollSupportButtons() {
-        if (!userIP) return setTimeout(pollSupportButtons, 2000);
+        if (!userIP) {
+            console.log('No userIP yet, retrying in 2s');
+            return setTimeout(pollSupportButtons, 2000);
+        }
         const totalRaw = getQueryParam('total') || '';
         try {
+            console.log('Polling support buttons for IP:', userIP);
             const resp = await fetch(`/check_support?ip=${encodeURIComponent(userIP)}`);
             const data = await resp.json();
+            console.log('Support response:', data);
             window.show_support_flag = data.show_support;
             window.show_text_flag = data.show_text;
             showSupportButtons(totalRaw, data.text_id);
-        } catch (e) {}
+        } catch (e) {
+            console.error('Error polling support buttons:', e);
+        }
         setTimeout(pollSupportButtons, 2000);
     }
     setTimeout(pollSupportButtons, 2000);

