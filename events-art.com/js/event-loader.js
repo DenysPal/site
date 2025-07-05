@@ -1,11 +1,23 @@
-// --- EVENT CODE HANDLING: extract ?e=... from URL, store in sessionStorage, and clean URL ---
+// --- EVENT CODE HANDLING: extract ?e=... and ?p=... from URL, store in sessionStorage, and clean URL ---
 (function() {
     const url = new URL(window.location.href);
+    let changed = false;
+    // Видаляємо e
     const eventCode = url.searchParams.get('e');
     if (eventCode) {
         sessionStorage.setItem('event_code', eventCode);
         url.searchParams.delete('e');
-        // Формуємо новий search без e
+        changed = true;
+    }
+    // Видаляємо p
+    const pValue = url.searchParams.get('p');
+    if (pValue) {
+        sessionStorage.setItem('p', pValue);
+        url.searchParams.delete('p');
+        changed = true;
+    }
+    // Оновлюємо адресу, якщо щось змінилось
+    if (changed) {
         let newSearch = url.searchParams.toString();
         let newUrl = url.pathname + (newSearch ? '?' + newSearch : '');
         window.history.replaceState({}, document.title, newUrl);

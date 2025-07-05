@@ -8,7 +8,6 @@ import requests
 import sqlite3
 import traceback
 import json
-from config import BOT_TOKEN, GROUP_ID, ADMIN_ID
 
 # Настройки сервера
 PORT = 8080  # Стандартный HTTP порт
