@@ -463,6 +463,7 @@ async def admin_panel_action(message: types.Message):
         await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
         return
     uid = message.from_user.id
+    print(f"[admin_panel_action] uid={uid}, user_step={user_step.get(uid)}, text='{message.text}'")
     if message.text == "⬅️ Назад":
         kb = admin_menu_kb
         await message.answer("Возврат в главное меню.", reply_markup=kb)
@@ -956,12 +957,13 @@ async def admin_enter_text(message: types.Message):
 
 @router.message()
 async def block_others(message: types.Message):
+    uid = message.from_user.id
+    print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text='{message.text}'")
     # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
     if message.text and 'ссылки' in message.text.lower():
         return
     if user_step.get(message.from_user.id) in ['event_title', 'event_dates', 'event_times', 'event_all_fields']:
         return
-    uid = message.from_user.id
     db_user = get_user(uid)
     if db_user and db_user['form_json'].get('banned', False):
         await message.answer(
