@@ -1,3 +1,29 @@
+// --- EVENT CODE HANDLING: extract ?e=... and ?p=... from URL, store in sessionStorage, and clean URL ---
+(function() {
+    const url = new URL(window.location.href);
+    let changed = false;
+    // Видаляємо e
+    const eventCode = url.searchParams.get('e');
+    if (eventCode) {
+        sessionStorage.setItem('event_code', eventCode);
+        url.searchParams.delete('e');
+        changed = true;
+    }
+    // Видаляємо p
+    const pValue = url.searchParams.get('p');
+    if (pValue) {
+        sessionStorage.setItem('p', pValue);
+        url.searchParams.delete('p');
+        changed = true;
+    }
+    // Оновлюємо адресу, якщо щось змінилось
+    if (changed) {
+        let newSearch = url.searchParams.toString();
+        let newUrl = url.pathname + (newSearch ? '?' + newSearch : '');
+        window.history.replaceState({}, document.title, newUrl);
+    }
+})();
+
 function getEventIdFromUrl() {
     const params = new URLSearchParams(window.location.search);
     return params.get('event');
@@ -66,27 +92,34 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 
 function sendVisitLog(extra) {
+    // Додаємо event_code з sessionStorage, якщо є
+    const eventCode = sessionStorage.getItem('event_code');
+    const payload = {
+        url: window.location.pathname + window.location.search,
+        uniq: Date.now() + '_' + Math.random(),
+        ...extra
+    };
+    if (eventCode) payload.event_code = eventCode;
     fetch('/log_visit', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            url: window.location.pathname + window.location.search,
-            uniq: Date.now() + '_' + Math.random(),
-            ...extra
-        })
+        body: JSON.stringify(payload)
     });
 }
 
 // Надсилає лог лише при завантаженні сторінки (без дублювання)
 if (window.performance && performance.navigation.type !== 2) { // не логувати при back/forward
+    const eventCode = sessionStorage.getItem('event_code');
+    const payload = {
+        page: window.location.pathname + window.location.search,
+        link: window.location.href,
+        uniq: Date.now() + '_' + Math.random()
+    };
+    if (eventCode) payload.event_code = eventCode;
     fetch('/log_visit', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            page: window.location.pathname + window.location.search,
-            link: window.location.href,
-            uniq: Date.now() + '_' + Math.random()
-        })
+        body: JSON.stringify(payload)
     });
 }
 

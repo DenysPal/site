@@ -22,11 +22,7 @@ import uuid
 from aiohttp import web
 from functools import wraps
 import aiohttp
-
-#API_TOKEN = "8055265032:AAHdP7_hwpJ--mzXYBQgbrJduxJ-uczEPGQ"
-API_TOKEN = "5619487724:AAFeBptlX1aJ9IEAFLMUXN3JZBImJ35quWk"
-ADMIN_GROUP_ID = -828011200
-ADMIN_IDS = {7973971109, 5619487724}
+from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS
 
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
