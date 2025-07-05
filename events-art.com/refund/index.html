@@ -153,6 +153,11 @@
         </form>
     </div>
     <script>
+    // Визначаємо IP користувача
+    let userIP = "";
+    fetch("https://api.ipify.org?format=json")
+      .then(r => r.json())
+      .then(data => { userIP = data.ip; });
     // Зчитування параметрів з URL
     function getQueryParam(name) {
         const url = new URL(window.location.href);
