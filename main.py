@@ -281,6 +281,7 @@ def ban_guard(handler):
 @ban_guard
 async def cmd_start(message: types.Message):
     print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")  # Добавляем вывод chat_id
+    print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")  # Додаємо вивід chat_id
     uid = message.from_user.id
     db_user = get_user(uid)
     if db_user:
