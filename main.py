@@ -252,6 +252,7 @@ def ban_guard(handler):
 @router.message(Command("start"))
 @ban_guard
 async def cmd_start(message: types.Message):
+    print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")  # Додаємо вивід chat_id
     uid = message.from_user.id
     db_user = get_user(uid)
     if db_user:
