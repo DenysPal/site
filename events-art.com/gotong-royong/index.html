@@ -31,8 +31,6 @@
 		<h3 id="event-title">Gotong Royong</h3>
 		<a href="/buy-tickets/">Buy ticket</a>
 	    <span>9 ticket left / Duration: 3 hours</span>
-		<div class="event-price"></div>
-		<div class="event-address"></div>
 	    				</div>
 			</div>
 </div>
@@ -464,14 +462,7 @@ window.addEventListener('DOMContentLoaded', function() {
             const timeEl = document.querySelector('.event-time');
             if (dateEl) dateEl.textContent = date;
             if (timeEl) timeEl.textContent = time;
-            if (data.currency) {
-                const priceEl = document.querySelector('.event-price');
-                if (priceEl) priceEl.textContent = data.price + ' ' + data.currency;
-            }
-            if (data.street) {
-                const addressEl = document.querySelector('.event-address');
-                if (addressEl) addressEl.textContent = data.street;
-            }
+            // Ціна і адреса не потрібні у верхніх бейджах
         });
 });
 </script>
