@@ -335,19 +335,18 @@ async def process_experience(message: types.Message):
     user_step[uid] = 'screenshots'
     await message.answer("🖼 Отправьте скриншоты ваших профитов (до 3х)\nМожно пропустить", reply_markup=skip_kb)
 
+
 @router.message(lambda m: user_step.get(m.from_user.id) == 'screenshots' and m.text and 'пропустить' in m.text.strip().lower())
 @ban_guard
+
+@router.message(lambda m: m.text and m.text.strip().lower() == "пропустить")
 async def skip_screenshots(message: types.Message):
-    if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
-        uid = message.from_user.id
-        user_step[uid] = None
-        user_data[uid] = {}
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
-        return
     uid = message.from_user.id
-    if 'screenshots' not in user_data[uid]:
-        user_data[uid]['screenshots'] = []
+    # Діагностика
+    print(f"[DEBUG] skip_screenshots handler triggered for user {uid}, user_step: {user_step.get(uid)}")
+    # Дозволяємо пропускати незалежно від user_step
+    if 'screenshots' not in user_data.get(uid, {}):
+        user_data.setdefault(uid, {})['screenshots'] = []
     await finish_form(message)
     return
 
