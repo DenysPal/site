@@ -1148,8 +1148,17 @@ async def events_save_all(message):
     currency = user_event.get('currency', 'EUR')
     street = user_event.get('address', '')
     dates = user_event.get('dates', [''] * 8)
+    times = user_event.get('times', [''] * 8)
     
-    site_user_id = create_site_user(dates, currency, street, price)
+    # Об'єднуємо дату і час у формат "дата час"
+    combined_dates = []
+    for i in range(8):
+        if dates[i] and times[i]:
+            combined_dates.append(f"{dates[i]} {times[i]}")
+        else:
+            combined_dates.append(dates[i] if dates[i] else '')
+    
+    site_user_id = create_site_user(combined_dates, currency, street, price)
     
     # Формуємо повідомлення з посиланнями
     msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"

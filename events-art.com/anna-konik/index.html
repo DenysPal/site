@@ -451,20 +451,37 @@ setTimeout(function() {
     fetch('/api/latest_event_data')
         .then(res => res.json())
         .then(data => {
-            if (!data.dates || !data.dates[eventIdx]) return;
+            console.log('API Response:', data); // Діагностика
+            if (!data.dates || !data.dates[eventIdx]) {
+                console.log('No data for eventIdx:', eventIdx);
+                return;
+            }
             let val = data.dates[eventIdx];
+            console.log('Raw value:', val); // Діагностика
             let date = val, time = '';
-            if (val.includes(' ')) [date, time] = val.split(' ');
-            else if (val.includes('\n')) [date, time] = val.split('\n');
+            if (val.includes(' ')) {
+                [date, time] = val.split(' ', 1); // Розділяємо тільки по першому пробілу
+            } else if (val.includes('\n')) {
+                [date, time] = val.split('\n');
+            }
+            console.log('Parsed date:', date, 'time:', time); // Діагностика
+            
             const dateEl = document.querySelector('.event-date');
             const timeEl = document.querySelector('.event-time');
-            if (dateEl) dateEl.textContent = date;
-            if (timeEl) timeEl.textContent = time;
+            
+            if (dateEl) {
+                dateEl.textContent = date;
+                console.log('Set date to:', date);
+            }
+            if (timeEl) {
+                timeEl.textContent = time;
+                console.log('Set time to:', time);
+            }
         })
         .catch(error => {
             console.error('Помилка завантаження даних події:', error);
         });
-}, 100); // Затримка 100мс, щоб event-loader.js встиг виконатися
+}, 500); // Збільшуємо затримку до 500мс
 </script>
 
 </body>
