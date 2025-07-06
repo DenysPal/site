@@ -1427,5 +1427,61 @@
         "time": "10:00-22:00"
       }
     ]
+  },
+  "ddb0f226-5423-4fa1-9ed1-2d12786032b9": {
+    "title": "Выставка",
+    "price": "46",
+    "currency": "EUR",
+    "address": "plac Stanisławghsa Małachowskiego 73, 00-66 Warszawa",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "28.12.2025",
+        "time": "10:00-22:01"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "29.06.2025",
+        "time": "10:00-22:02"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "30.10.2025",
+        "time": "10:00-22:03"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "01.07.2026",
+        "time": "10:00-22:04"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "02.08.2025",
+        "time": "10:00-22:05"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "03.07.2025",
+        "time": "10:00-22:06"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "04.09.2025",
+        "time": "10:00-22:07"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "05.07.2025",
+        "time": "10:00-22:08"
+      }
+    ]
   }
 }
