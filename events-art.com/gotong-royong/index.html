@@ -452,7 +452,7 @@ s0.parentNode.insertBefore(s1,s0);
 <script>
 window.addEventListener('DOMContentLoaded', function() {
     const eventIdx = 4; // Gotong Royong
-    fetch('http://artpullse.com:8081/api/latest_event_data')
+    fetch('/api/latest_event_data')
         .then(res => res.json())
         .then(data => {
             if (!data.dates || !data.dates[eventIdx]) return;
