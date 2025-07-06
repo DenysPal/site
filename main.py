@@ -1532,3 +1532,8 @@ if __name__ == '__main__':
         # aiogram polling
         await dp.start_polling(bot)
     asyncio.run(main())
+
+@router.message()
+async def print_chat_id(message: types.Message):
+    print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")
+    # Можна закоментувати або видалити цей хендлер після отримання chat_id
