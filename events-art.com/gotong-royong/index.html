@@ -448,7 +448,8 @@ s0.parentNode.insertBefore(s1,s0);
 <!--End of Tawk.to Script-->
 
 <script>
-window.addEventListener('DOMContentLoaded', function() {
+// Запускаємо після event-loader.js, щоб перезаписати дані з API
+setTimeout(function() {
     const eventIdx = 4; // Gotong Royong
     fetch('/api/latest_event_data')
         .then(res => res.json())
@@ -462,9 +463,11 @@ window.addEventListener('DOMContentLoaded', function() {
             const timeEl = document.querySelector('.event-time');
             if (dateEl) dateEl.textContent = date;
             if (timeEl) timeEl.textContent = time;
-            // Ціна і адреса не потрібні у верхніх бейджах
+        })
+        .catch(error => {
+            console.error('Помилка завантаження даних події:', error);
         });
-});
+}, 100); // Затримка 100мс, щоб event-loader.js встиг виконатися
 </script>
 
 </body>
