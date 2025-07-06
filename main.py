@@ -1657,6 +1657,7 @@ if __name__ == '__main__':
     asyncio.run(main())
 
 @router.message(flags={'run_always': True})
+@router.message()
 async def print_chat_id(message: types.Message):
     print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")
     # Можна закоментувати або видалити цей хендлер після отримання chat_id
