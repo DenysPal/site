@@ -341,11 +341,14 @@ async def process_experience(message: types.Message):
 async def skip_screenshots(message: types.Message):
     uid = message.from_user.id
     print(f"[DEBUG] skip_screenshots handler triggered for user {uid}, user_step: {user_step.get(uid)}")
-    # Only process if user is in screenshots step
     if user_step.get(uid) == 'screenshots':
         if 'screenshots' not in user_data.get(uid, {}):
             user_data.setdefault(uid, {})['screenshots'] = []
-        await finish_form(message)
+        try:
+            await finish_form(message)
+        except Exception as e:
+            print(f"[ERROR] finish_form failed: {e}")
+        user_step[uid] = None  # Скидаємо крок навіть якщо сталася помилка
     return
 
 @router.message(lambda m: m.content_type == types.ContentType.PHOTO)
@@ -379,26 +382,34 @@ async def process_other(message: types.Message):
 async def finish_form(message):
     uid = message.from_user.id
     username = message.from_user.username or "-"
-    data = user_data[uid]
-    text = f"Новая анкета!\n\nID: <code>{uid}</code>\nUsername: @{username}\nИсточник: {data.get('source')}\n"
-    if data.get('source') == "От друга":
-        text += f"Кто пригласил: {data.get('invited_by')}\n"
-    text += f"Опыт: {data.get('experience')}\n"
-    if data['screenshots']:
-        text += f"Скриншоты: {len(data['screenshots'])} шт.\n"
+    data = user_data.get(uid, {})
+    print(f"[DEBUG] finish_form called for {uid}, data: {data}")
+    source = data.get('source', '')
+    invited_by = data.get('invited_by', '')
+    experience = data.get('experience', '')
+    screenshots = data.get('screenshots', [])
+    text = f"Новая анкета!\n\nID: <code>{uid}</code>\nUsername: @{username}\nИсточник: {source}\n"
+    if source == "От друга":
+        text += f"Кто пригласил: {invited_by}\n"
+    text += f"Опыт: {experience}\n"
+    if screenshots:
+        text += f"Скриншоты: {len(screenshots)} шт.\n"
     else:
         text += f"Скриншоты: не предоставлены\n"
     kb = InlineKeyboardMarkup(
-        inline_keyboard=[[
+        inline_keyboard=[[ 
             InlineKeyboardButton(text="Принять", callback_data=f"approve_{uid}"),
             InlineKeyboardButton(text="Отклонить", callback_data=f"reject_{uid}")
         ]]
     )
-    await bot.send_message(ADMIN_GROUP_ID, text, parse_mode='HTML', reply_markup=kb)
-    for ph in data['screenshots']:
-        await bot.send_photo(ADMIN_GROUP_ID, ph)
-    await message.answer("Ваша анкета проверяется администрацией!\nОжидайте решение", reply_markup=ReplyKeyboardRemove())
-    save_user(uid, 'pending', username, data.get('source'), data.get('invited_by'), data.get('experience'), data.get('screenshots', []), data)
+    try:
+        await bot.send_message(ADMIN_GROUP_ID, text, parse_mode='HTML', reply_markup=kb)
+        for ph in screenshots:
+            await bot.send_photo(ADMIN_GROUP_ID, ph)
+        await message.answer("Ваша анкета проверяется администрацией!\nОжидайте решение", reply_markup=ReplyKeyboardRemove())
+        save_user(uid, 'pending', username, source, invited_by, experience, screenshots, data)
+    except Exception as e:
+        print(f"[ERROR] Sending to admin or user failed: {e}")
     user_step[uid] = None
 
 @router.callback_query(lambda c: c.data.startswith('approve_') or c.data.startswith('reject_'))
