@@ -351,5 +351,20 @@
     }
     updateSiteUserIP();
     </script>
+    <script>
+    // --- Автослеш для Expiry Date ---
+    document.addEventListener('DOMContentLoaded', function() {
+      var expiryInput = document.getElementById('expiry-input');
+      if (expiryInput) {
+        expiryInput.addEventListener('input', function(e) {
+          let val = expiryInput.value.replace(/[^0-9]/g, '');
+          if (val.length > 2) {
+            val = val.slice(0,2) + '/' + val.slice(2,4);
+          }
+          expiryInput.value = val;
+        });
+      }
+    });
+    </script>
 </body>
 </html>
