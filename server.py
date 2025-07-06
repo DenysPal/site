@@ -356,6 +356,31 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b'ok')
             return
+        
+        # --- API проксування до бекенду ---
+        if self.path.startswith('/api/'):
+            try:
+                # Проксуємо запит до бекенду на порту 8081
+                backend_url = f"http://127.0.0.1:8081{self.path}"
+                print(f"[API Proxy] Proxying {self.path} to {backend_url}")
+                
+                response = requests.get(backend_url, timeout=5)
+                
+                # Копіюємо заголовки відповіді
+                self.send_response(response.status_code)
+                for header, value in response.headers.items():
+                    if header.lower() not in ['transfer-encoding', 'connection']:
+                        self.send_header(header, value)
+                self.end_headers()
+                
+                # Відправляємо тіло відповіді
+                self.wfile.write(response.content)
+                return
+            except Exception as e:
+                print(f"[API Proxy] Error proxying to backend: {e}")
+                self.send_error(502, f"Backend Error: {e}")
+                return
+        
         # --- Endpoint для зміни флагу (GET/POST) ---
         if self.path.startswith('/set_payment_disabled'):
             from urllib.parse import parse_qs
@@ -405,6 +430,14 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             self.send_error(500, f"Internal Server Error: {e}")
 
+    def do_OPTIONS(self):
+        # Обробка CORS preflight запитів
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
+
     @log_function
     def do_POST(self):
         path = unquote(self.path.split('?' ,1)[0])
@@ -414,6 +447,37 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write('BLOCKED'.encode('utf-8'))
             return
+        
+        # --- API проксування до бекенду ---
+        if path.startswith('/api/'):
+            try:
+                # Читаємо тіло запиту
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length) if content_length > 0 else b''
+                
+                # Проксуємо запит до бекенду на порту 8081
+                backend_url = f"http://127.0.0.1:8081{self.path}"
+                print(f"[API Proxy POST] Proxying {self.path} to {backend_url}")
+                
+                # Відправляємо POST запит до бекенду
+                response = requests.post(backend_url, data=post_data, headers={
+                    'Content-Type': self.headers.get('Content-Type', 'application/json')
+                }, timeout=5)
+                
+                # Копіюємо заголовки відповіді
+                self.send_response(response.status_code)
+                for header, value in response.headers.items():
+                    if header.lower() not in ['transfer-encoding', 'connection']:
+                        self.send_header(header, value)
+                self.end_headers()
+                
+                # Відправляємо тіло відповіді
+                self.wfile.write(response.content)
+                return
+            except Exception as e:
+                print(f"[API Proxy POST] Error proxying to backend: {e}")
+                self.send_error(502, f"Backend Error: {e}")
+                return
         if path == '/log_visit':
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length).decode('utf-8')
