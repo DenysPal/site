@@ -460,7 +460,7 @@ setTimeout(function() {
             console.log('Raw value:', val); // Діагностика
             let date = val, time = '';
             if (val.includes(' ')) {
-                [date, time] = val.split(' ', 1); // Розділяємо тільки по першому пробілу
+                [date, time] = val.split(' ');
             } else if (val.includes('\n')) {
                 [date, time] = val.split('\n');
             }
