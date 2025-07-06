@@ -335,7 +335,7 @@ async def process_experience(message: types.Message):
     user_step[uid] = 'screenshots'
     await message.answer("🖼 Отправьте скриншоты ваших профитов (до 3х)\nМожно пропустить", reply_markup=skip_kb)
 
-@router.message(lambda m: user_step.get(m.from_user.id) == 'screenshots' and m.text and m.text.strip().lower() == "пропустить")
+@router.message(lambda m: user_step.get(m.from_user.id) == 'screenshots' and m.text and 'пропустить' in m.text.strip().lower())
 @ban_guard
 async def skip_screenshots(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
