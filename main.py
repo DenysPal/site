@@ -342,9 +342,8 @@ async def process_experience(message: types.Message):
 @router.message(lambda m: m.text and m.text.strip().lower() == "пропустить")
 async def skip_screenshots(message: types.Message):
     uid = message.from_user.id
-    # Діагностика
     print(f"[DEBUG] skip_screenshots handler triggered for user {uid}, user_step: {user_step.get(uid)}")
-    # Дозволяємо пропускати незалежно від user_step
+    user_step[uid] = None
     if 'screenshots' not in user_data.get(uid, {}):
         user_data.setdefault(uid, {})['screenshots'] = []
     await finish_form(message)
@@ -365,6 +364,7 @@ async def process_screenshots(message: types.Message):
 @router.message(lambda m: user_step.get(m.from_user.id) == 'screenshots')
 @ban_guard
 async def process_other(message: types.Message):
+    print(f"[DEBUG] process_other handler triggered for user {message.from_user.id}, text: {message.text}")
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
         uid = message.from_user.id
         user_step[uid] = None
@@ -1025,6 +1025,7 @@ async def admin_enter_text(message: types.Message):
 
 @router.message()
 async def block_others(message: types.Message):
+    print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
     # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
     if message.text and 'ссылки' in message.text.lower():
         return
