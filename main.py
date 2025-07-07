@@ -148,10 +148,26 @@ def update_site_user_ip(user_id, ip):
     if ip.startswith('149.154.') or ip.startswith('91.108.'):
         print(f"[DEBUG] Skip Telegram IP: {ip}")
         return
+    
     print(f"[DEBUG] update_site_user_ip: user_id={user_id}, ip={ip}")
     c = conn.cursor()
+    
+    # Перевіряємо, чи існує запис з таким user_id
     c.execute('SELECT id, ip FROM site_users WHERE id=?', (user_id,))
     before = c.fetchone()
+    
+    if not before:
+        print(f"[DEBUG] Site user with id={user_id} not found in site_users table")
+        # Спробуємо знайти по IP
+        c.execute('SELECT id, ip FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
+        ip_record = c.fetchone()
+        if ip_record:
+            print(f"[DEBUG] Found existing record with same IP: {ip_record}")
+            return
+        else:
+            print(f"[DEBUG] No existing record found for IP {ip}, cannot update")
+            return
+    
     print(f"[DEBUG] BEFORE: {before}")
     c.execute('UPDATE site_users SET ip=? WHERE id=?', (ip, user_id))
     print(f"[DEBUG] update_site_user_ip: rowcount={c.rowcount}")
@@ -1572,12 +1588,28 @@ async def event_links(request):
     event_code = request.query.get('event_code', '')
     if not event_code:
         return web.json_response({'error': 'missing event_code'}, status=400)
+    
+    print(f"[DEBUG] event_links request for event_code: {event_code}")
+    
     c = conn.cursor()
     c.execute('SELECT user_id FROM event_links WHERE event_code=?', (event_code,))
     row = c.fetchone()
+    
     if not row:
-        return web.json_response({'error': 'not found'}, status=404)
+        print(f"[DEBUG] Event code {event_code} not found in event_links table")
+        return web.json_response({'error': 'event_code not found'}, status=404)
+    
     site_user_id = row[0]
+    print(f"[DEBUG] Found site_user_id: {site_user_id} for event_code: {event_code}")
+    
+    # Перевіряємо, чи існує цей site_user_id у таблиці site_users
+    c.execute('SELECT id FROM site_users WHERE id=?', (site_user_id,))
+    site_user_exists = c.fetchone()
+    
+    if not site_user_exists:
+        print(f"[DEBUG] Site user {site_user_id} not found in site_users table")
+        return web.json_response({'error': 'site_user_id not found in site_users'}, status=404)
+    
     return web.json_response({'site_user_id': site_user_id})
 
 # --- запуск aiohttp і aiogram в одному event loop ---
