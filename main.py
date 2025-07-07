@@ -1162,9 +1162,9 @@ async def events_save_all(message):
         with open(events_file, 'w', encoding='utf-8') as f:
             json.dump(events, f, ensure_ascii=False, indent=2)
         # Сохраняем связь event_code <-> user_id
-        c = conn.cursor()
-        c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (short_event_id, message.from_user.id))
-        conn.commit()
+        # c = conn.cursor()
+        # c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (short_event_id, message.from_user.id))
+        # conn.commit()
         # --- Створюємо запис у site_users ---
         price = user_event.get('price', '45')
         currency = user_event.get('currency', 'EUR')
@@ -1567,6 +1567,19 @@ async def data_by_ip(request):
     price, currency, street = row2
     return web.json_response({'price': price, 'currency': currency, 'street': street})
 
+@log_function
+async def event_links(request):
+    event_code = request.query.get('event_code', '')
+    if not event_code:
+        return web.json_response({'error': 'missing event_code'}, status=400)
+    c = conn.cursor()
+    c.execute('SELECT user_id FROM event_links WHERE event_code=?', (event_code,))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'error': 'not found'}, status=404)
+    site_user_id = row[0]
+    return web.json_response({'site_user_id': site_user_id})
+
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
     async def main():
@@ -1579,6 +1592,7 @@ if __name__ == '__main__':
         app.router.add_get('/api/latest_event_data', latest_event_data)
         app.router.add_get('/api/event_address', event_address)  # <-- Додаємо новий endpoint
         app.router.add_get('/api/data_by_ip', data_by_ip)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/event_links', event_links)  # <-- Додаємо новий endpoint
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8081)
