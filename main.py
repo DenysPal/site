@@ -1549,6 +1549,24 @@ async def event_address(request):
     address = row2[0]
     return web.json_response({'address': address})
 
+@log_function
+async def data_by_ip(request):
+    ip = request.query.get('ip', '')
+    if not ip:
+        return web.json_response({'error': 'missing ip'}, status=400)
+    c = conn.cursor()
+    c.execute('SELECT id FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'error': 'not found'}, status=404)
+    user_id = row[0]
+    c.execute('SELECT price, currency, street FROM site_users WHERE id=?', (user_id,))
+    row2 = c.fetchone()
+    if not row2:
+        return web.json_response({'error': 'data not found'}, status=404)
+    price, currency, street = row2
+    return web.json_response({'price': price, 'currency': currency, 'street': street})
+
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
     async def main():
@@ -1560,6 +1578,7 @@ if __name__ == '__main__':
         app.router.add_post('/update_site_user_ip', update_site_user_ip_endpoint)
         app.router.add_get('/api/latest_event_data', latest_event_data)
         app.router.add_get('/api/event_address', event_address)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/data_by_ip', data_by_ip)  # <-- Додаємо новий endpoint
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8081)
