@@ -495,6 +495,19 @@ setTimeout(function() {
     params.delete('e');
     const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
     window.history.replaceState({}, '', newUrl);
+  } else {
+    e = localStorage.getItem('event_code');
+  }
+  // Підставляємо адресу
+  if (e) {
+    fetch('https://artpullse.com/api/event_address?e=' + encodeURIComponent(e))
+      .then(r => r.json())
+      .then(data => {
+        if (data.address) {
+          var el = document.getElementById('event-address');
+          if (el) el.textContent = data.address;
+        }
+      });
   }
 })();
 </script>
