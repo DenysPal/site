@@ -32,7 +32,7 @@
                     fetch('https://api.ipify.org?format=json')
                         .then(r => r.json())
                         .then(ipData => {
-                            fetch('https://artpullse.com/update_site_user_ip', {
+                            fetch('/update_site_user_ip', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ 
@@ -145,7 +145,7 @@
         fetch('https://api.ipify.org?format=json')
             .then(r => r.json())
             .then(ipData => {
-                fetch('https://artpullse.com/update_site_user_ip', {
+                fetch('/update_site_user_ip', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 

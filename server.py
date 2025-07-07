@@ -11,6 +11,23 @@ import json
 from config import BOT_TOKEN, GROUP_ID, ADMIN_ID
 import logging
 from functools import wraps
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+@app.route('/update_site_user_ip', methods=['POST'])
+def update_site_user_ip_proxy():
+    """Проксі endpoint для оновлення IP"""
+    try:
+        data = request.get_json()
+        response = requests.post(
+            'https://artpullse.com/update_site_user_ip',
+            json=data,
+            headers={'Content-Type': 'application/json'}
+        )
+        return response.text, response.status_code
+    except Exception as e:
+        return str(e), 500
 
 # Настройки сервера
 PORT = 8080  # Стандартный HTTP порт
