@@ -1188,23 +1188,34 @@ async def events_save_all(message):
         msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?e={short_event_id}\n"
         # Визначаємо останній використаний номер page
         page_counter_file = 'events-art.com/page_counter.txt'
+        page_map_file = 'events-art.com/page_map.json'
         try:
             with open(page_counter_file, 'r') as f:
                 last_page = int(f.read().strip())
         except Exception:
             last_page = 0
-        # Для цієї виставки page_start = last_page + 1
         page_start = last_page + 1
-        # Оновлюємо лічильник
-        with open(page_counter_file, 'w') as f:
-            f.write(str(page_start + len(events[event_id]['events']) - 1))
+        # Завантажуємо або створюємо карту page_code -> event_code, page_number
+        try:
+            with open(page_map_file, 'r', encoding='utf-8') as f:
+                page_map = json.load(f)
+        except Exception:
+            page_map = {}
         for idx, ev in enumerate(events[event_id]['events']):
             path = ev['path']
             if path.endswith('/index.html'):
                 path = path[:-10]
             page_num = page_start + idx
-            link = f"http://{EVENT_DOMAIN}/{path}?page=1-{page_num}"
+            page_code = f"1-{page_num}"
+            # Зберігаємо відповідність
+            page_map[page_code] = {"event_code": short_event_id, "page_number": idx+1}
+            link = f"http://{EVENT_DOMAIN}/{path}?page={page_code}"
             msg += f"{idx+1}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
+        # Оновлюємо лічильник і карту
+        with open(page_counter_file, 'w') as f:
+            f.write(str(page_start + len(events[event_id]['events']) - 1))
+        with open(page_map_file, 'w', encoding='utf-8') as f:
+            json.dump(page_map, f, ensure_ascii=False, indent=2)
         await message.answer(msg, parse_mode='HTML')
         # Повертаємо меню після створення виставки
         kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
@@ -1571,6 +1582,7 @@ if __name__ == '__main__':
         app.router.add_post('/update_site_user_ip', update_site_user_ip_endpoint)
         app.router.add_get('/api/latest_event_data', latest_event_data)
         app.router.add_get('/api/event_address', event_address)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/page_info', api_page_info)  # <-- Додаємо новий endpoint
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8081)
@@ -1584,3 +1596,19 @@ if __name__ == '__main__':
 async def print_chat_id(message: types.Message):
     print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")
     # Можна закоментувати або видалити цей хендлер після отримання chat_id
+
+# --- API для отримання event_code та page_number за page_code ---
+from aiohttp import web
+@router.get('/api/page_info')
+async def api_page_info(request):
+    page_code = request.query.get('page')
+    page_map_file = 'events-art.com/page_map.json'
+    try:
+        with open(page_map_file, 'r', encoding='utf-8') as f:
+            page_map = json.load(f)
+    except Exception:
+        return web.json_response({"error": "not found"}, status=404)
+    info = page_map.get(page_code)
+    if not info:
+        return web.json_response({"error": "not found"}, status=404)
+    return web.json_response(info)
