@@ -1190,7 +1190,7 @@ async def events_save_all(message):
             path = ev['path']
             if path.endswith('/index.html'):
                 path = path[:-10]
-            link = f"http://{EVENT_DOMAIN}/{path}?e={short_event_id}&page=1-{idx}"
+            link = f"http://{EVENT_DOMAIN}/{path}?page=1-{idx}"
             msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
         await message.answer(msg, parse_mode='HTML')
         # Повертаємо меню після створення виставки
