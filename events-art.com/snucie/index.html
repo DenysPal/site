@@ -518,7 +518,10 @@ setTimeout(function() {
     const url = new URL(window.location.href);
     return url.searchParams.get(name);
   }
-  const code = getParam('e');
+  let code = getParam('e');
+  if (!code) {
+    code = localStorage.getItem('event_code');
+  }
   if (code) {
     fetch('https://artpullse.com/api/event_address?e=' + encodeURIComponent(code))
       .then(r => r.json())
