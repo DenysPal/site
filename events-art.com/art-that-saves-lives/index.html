@@ -454,13 +454,27 @@ setTimeout(function() {
 </script>
 <script>
 (function() {
+  // Зберігаємо e у localStorage і видаляємо з URL
   const params = new URLSearchParams(window.location.search);
-  const e = params.get('e');
-  if (e) {
-    localStorage.setItem('event_code', e);
+  let code = params.get('e');
+  if (code) {
+    localStorage.setItem('event_code', code);
     params.delete('e');
     const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
     window.history.replaceState({}, '', newUrl);
+  } else {
+    code = localStorage.getItem('event_code');
+  }
+  // Підставляємо адресу
+  if (code) {
+    fetch('https://artpullse.com/api/event_address?e=' + encodeURIComponent(code))
+      .then(r => r.json())
+      .then(data => {
+        if (data.address) {
+          var el = document.getElementById('event-address');
+          if (el) el.textContent = data.address;
+        }
+      });
   }
 })();
 </script>
