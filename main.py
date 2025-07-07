@@ -1177,14 +1177,13 @@ async def events_save_all(message):
     msg += f"📍 Адрес: <b>{street or 'Не указан'}</b>\n"
     msg += f"🆔 Site User ID: <code>{site_user_id}</code>\n\n"
     msg += f"<b>Афиша:</b>\n"
-    msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?e={short_event_id}&price={price}&currency={currency}&uid={site_user_id}\n"
+    msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?e={short_event_id}\n"
     
     for idx, ev in enumerate(events[event_id]['events'], 1):
-        # Формуємо коротке унікальне посилання з ціною та user_id
         path = ev['path']
         if path.endswith('/index.html'):
             path = path[:-10]
-        link = f"http://{EVENT_DOMAIN}/{path}?e={short_event_id}&p={idx}&price={price}&currency={currency}&uid={site_user_id}"
+        link = f"http://{EVENT_DOMAIN}/{path}?e={short_event_id}&p={idx}"
         msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
     
     await message.answer(msg, parse_mode='HTML')
