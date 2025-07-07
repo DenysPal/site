@@ -1219,17 +1219,8 @@ async def notify_admin(request):
         f"🌐 IP: {ip}\n"
         f"🌍 Страна: {country}"
     )
-    # Клавіатура для блокування/розблокування
-    kb = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="Заблокировать", callback_data=f"block:{ip}"),
-                InlineKeyboardButton(text="Розблокувати", callback_data=f"unblock:{ip}")
-            ]
-        ]
-    )
     try:
-        await bot.send_message(ADMIN_GROUP_ID, msg, reply_markup=kb)
+        await bot.send_message(ADMIN_GROUP_ID, msg)
         print('Message sent to admin group')
     except Exception as e:
         print('Error sending message:', e)
