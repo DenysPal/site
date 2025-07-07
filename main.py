@@ -1196,6 +1196,10 @@ async def events_save_all(message):
         # Повертаємо меню після створення виставки
         kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
         await message.answer("Головне меню:", reply_markup=kb)
+        # Зберігаємо зв'язок event_code <-> site_user_id
+        c = conn.cursor()
+        c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (short_event_id, site_user_id))
+        conn.commit()
     except Exception as e:
         print(f"[EVENTS] Помилка у events_save_all: {e}")
         await message.answer(f"❗️ Виникла помилка при створенні івенту: {e}")
