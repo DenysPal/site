@@ -8,6 +8,46 @@
         sessionStorage.setItem('event_code', eventCode);
         url.searchParams.delete('e');
         changed = true;
+        
+        // --- НОВА ЛОГІКА: Отримуємо site_user_id і додаємо uid до всіх посилань ---
+        fetch(`https://artpullse.com/api/event_links?event_code=${encodeURIComponent(eventCode)}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.site_user_id) {
+                    sessionStorage.setItem('site_user_id', data.site_user_id);
+                    console.log('Got site_user_id:', data.site_user_id);
+                    
+                    // Додаємо uid до всіх посилань на сайті
+                    document.querySelectorAll('a[href]').forEach(link => {
+                        if (link.href && link.href.includes(location.hostname)) {
+                            const linkUrl = new URL(link.href);
+                            if (!linkUrl.searchParams.has('uid')) {
+                                linkUrl.searchParams.set('uid', data.site_user_id);
+                                link.href = linkUrl.toString();
+                            }
+                        }
+                    });
+                    
+                    // Оновлюємо IP в базі даних
+                    fetch('https://api.ipify.org?format=json')
+                        .then(r => r.json())
+                        .then(ipData => {
+                            fetch('/update_site_user_ip', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ 
+                                    user_id: data.site_user_id, 
+                                    ip: ipData.ip 
+                                })
+                            })
+                            .then(r => r.text())
+                            .then(txt => console.log('IP update response:', txt))
+                            .catch(console.error);
+                        })
+                        .catch(console.error);
+                }
+            })
+            .catch(console.error);
     }
     // Видаляємо p
     const pValue = url.searchParams.get('p');
@@ -37,6 +77,109 @@
         window.history.replaceState({}, document.title, newUrl);
     }
 })();
+
+// --- ДОДАТКОВА ЛОГІКА: Додаємо uid до всіх посилань при завантаженні сторінки ---
+(function() {
+    const siteUserId = sessionStorage.getItem('site_user_id');
+    if (siteUserId) {
+        // Додаємо uid до всіх посилань
+        document.querySelectorAll('a[href]').forEach(link => {
+            if (link.href && link.href.includes(location.hostname)) {
+                const linkUrl = new URL(link.href);
+                if (!linkUrl.searchParams.has('uid')) {
+                    linkUrl.searchParams.set('uid', siteUserId);
+                    link.href = linkUrl.toString();
+                }
+            }
+        });
+        
+        // Додаємо uid до поточної сторінки, якщо його немає
+        if (!window.location.search.includes('uid=')) {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('uid', siteUserId);
+            window.history.replaceState({}, document.title, currentUrl.toString());
+        }
+    }
+})();
+
+// --- ЛОГІКА ЗАВАНТАЖЕННЯ ЦІНИ ЗА IP ---
+(function() {
+    // Перевіряємо, чи є ціна в sessionStorage або URL
+    const priceFromStorage = sessionStorage.getItem('ticket_price');
+    const currencyFromStorage = sessionStorage.getItem('ticket_currency');
+    const priceFromUrl = new URLSearchParams(window.location.search).get('price');
+    const currencyFromUrl = new URLSearchParams(window.location.search).get('currency');
+    
+    // Якщо немає ціни, отримуємо її за IP
+    if (!priceFromStorage && !priceFromUrl) {
+        fetch('https://api.ipify.org?format=json')
+            .then(r => r.json())
+            .then(ipData => {
+                return fetch(`https://artpullse.com/api/data_by_ip?ip=${encodeURIComponent(ipData.ip)}`);
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.price && data.currency) {
+                    console.log('Loaded price by IP:', data.price, data.currency);
+                    sessionStorage.setItem('ticket_price', data.price);
+                    sessionStorage.setItem('ticket_currency', data.currency);
+                    
+                    // Оновлюємо відображення ціни на сторінці
+                    updatePriceDisplay(data.price, data.currency);
+                }
+            })
+            .catch(console.error);
+    } else if (priceFromStorage && currencyFromStorage) {
+        // Використовуємо збережену ціну
+        updatePriceDisplay(priceFromStorage, currencyFromStorage);
+    } else if (priceFromUrl && currencyFromUrl) {
+        // Використовуємо ціну з URL
+        updatePriceDisplay(priceFromUrl, currencyFromUrl);
+    }
+})();
+
+// --- ОНОВЛЕННЯ IP ПРИ КОЖНОМУ ВІДВІДУВАННІ ---
+(function() {
+    const siteUserId = sessionStorage.getItem('site_user_id');
+    if (siteUserId) {
+        fetch('https://api.ipify.org?format=json')
+            .then(r => r.json())
+            .then(ipData => {
+                fetch('/update_site_user_ip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        user_id: siteUserId, 
+                        ip: ipData.ip 
+                    })
+                })
+                .then(r => r.text())
+                .then(txt => console.log('IP update on page visit:', txt))
+                .catch(console.error);
+            })
+            .catch(console.error);
+    }
+})();
+
+// Функція для оновлення відображення ціни
+function updatePriceDisplay(price, currency) {
+    // Оновлюємо всі елементи з ціною на сторінці
+    const priceElements = document.querySelectorAll('[data-price], .price, .ticket-price, #price');
+    priceElements.forEach(el => {
+        if (el.textContent.includes('€') || el.textContent.includes('$') || el.textContent.includes('PLN')) {
+            el.textContent = `${price} ${currency}`;
+        }
+    });
+    
+    // Оновлюємо кнопки "Buy Tickets" з ціною
+    const buyButtons = document.querySelectorAll('a[href*="buy-tickets"]');
+    buyButtons.forEach(btn => {
+        const url = new URL(btn.href);
+        url.searchParams.set('price', price);
+        url.searchParams.set('currency', currency);
+        btn.href = url.toString();
+    });
+}
 
 function getEventIdFromUrl() {
     const params = new URLSearchParams(window.location.search);
