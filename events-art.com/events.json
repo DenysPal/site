@@ -1819,5 +1819,341 @@
         "time": "10:00-20:00"
       }
     ]
+  },
+  "d65b7e88-a4fd-488e-adb2-32bcaa21cee2": {
+    "title": "Выставка",
+    "price": "1000",
+    "currency": "CZK",
+    "address": "Automatic Mills, Pardubice I 1961, 530 02 Pardubice",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "04.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "28.07.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "06.07.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "08.07.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "10.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "12.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "15.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "17.07.2025",
+        "time": "10:00-20:00"
+      }
+    ]
+  },
+  "7bc0766a-bad9-49a0-9173-5b9c8c679505": {
+    "title": "Выставка",
+    "price": "1000",
+    "currency": "€",
+    "address": "Automatic Mills, Pardubice I 1961, 530 02 Pardubice",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "04.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "28.07.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "06.07.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "08.07.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "10.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "12.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "15.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "17.07.2025",
+        "time": "10:00-20:00"
+      }
+    ]
+  },
+  "f3ca737a-8580-4d03-8931-8af3a6e66f02": {
+    "title": "Выставка",
+    "price": "45",
+    "currency": "EUR",
+    "address": "plac Stanisława Małachowskiego 3, 00-916 Warszawa",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "28.06.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "29.06.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "30.06.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "01.07.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "02.07.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "03.07.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "04.07.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "05.07.2025",
+        "time": "10:00-22:00"
+      }
+    ]
+  },
+  "9c19456a-cf05-4123-aaa6-671c5e28e8d5": {
+    "title": "Выставка",
+    "price": "1000",
+    "currency": "€",
+    "address": "Automatic Mills, Pardubice I 1961, 530 02 Pardubice",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "04.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "28.07.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "06.07.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "08.07.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "10.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "12.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "15.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "17.07.2025",
+        "time": "10:00-20:00"
+      }
+    ]
+  },
+  "1ed83e06-35aa-4d36-8d80-ed097bcf94d6": {
+    "title": "Выставка",
+    "price": "1000",
+    "currency": "€",
+    "address": "Automatic Mills, Pardubice I 1961, 530 02 Pardubice",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "04.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "28.07.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "06.07.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "08.07.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "10.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "12.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "15.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "17.07.2025",
+        "time": "10:00-20:00"
+      }
+    ]
+  },
+  "6f6f7553-9849-4bf3-bf49-86611a5a18df": {
+    "title": "Выставка",
+    "price": "1000",
+    "currency": "€",
+    "address": "Automatic Mills, Pardubice I 1961, 530 02 Pardubice",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "04.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "28.07.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "06.07.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "08.07.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "10.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "12.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "15.07.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "17.07.2025",
+        "time": "10:00-20:00"
+      }
+    ]
   }
 }
