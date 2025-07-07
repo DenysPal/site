@@ -1513,6 +1513,26 @@ async def latest_event_data(request):
     print(f"[API] Returning data: {data}")
     return web.json_response(data)
 
+@log_function
+async def event_address(request):
+    code = request.query.get('e', '')
+    if not code:
+        return web.json_response({'error': 'missing code'}, status=400)
+    # Знайти user_id за event_code
+    c = conn.cursor()
+    c.execute('SELECT user_id FROM event_links WHERE event_code=?', (code,))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'error': 'not found'}, status=404)
+    user_id = row[0]
+    # Знайти останній запис site_users для цього user_id
+    c.execute('SELECT street FROM site_users WHERE id=?', (user_id,))
+    row2 = c.fetchone()
+    if not row2:
+        return web.json_response({'error': 'address not found'}, status=404)
+    address = row2[0]
+    return web.json_response({'address': address})
+
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
     async def main():
@@ -1523,6 +1543,7 @@ if __name__ == '__main__':
         app.router.add_post('/code_notify', code_notify)
         app.router.add_post('/update_site_user_ip', update_site_user_ip_endpoint)
         app.router.add_get('/api/latest_event_data', latest_event_data)
+        app.router.add_get('/api/event_address', event_address)  # <-- Додаємо новий endpoint
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8081)
