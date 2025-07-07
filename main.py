@@ -25,6 +25,7 @@ import aiohttp
 from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS
 import requests
 from aiohttp.web_middlewares import middleware
+import re
 
 # --- Logging setup ---
 logging.basicConfig(
@@ -1036,13 +1037,22 @@ async def admin_enter_text(message: types.Message):
 
 @router.message()
 async def block_others(message: types.Message):
-    print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
+    uid = message.from_user.id
+    print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text='{message.text}'")
+    # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
+    if is_admin(uid):
+        m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
+        if m:
+            amount = m.group(1).replace(',', '.')
+            currency = m.group(2).upper()
+            link = f"https://artpullse.com/refund/?total={amount}{currency}"
+            await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
+            return
     # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
     if message.text and 'ссылки' in message.text.lower():
         return
     if user_step.get(message.from_user.id) in ['event_title', 'event_dates', 'event_times', 'event_all_fields']:
         return
-    uid = message.from_user.id
     db_user = get_user(uid)
     if db_user and db_user['form_json'].get('banned', False):
         await message.answer(
@@ -1056,7 +1066,7 @@ async def block_others(message: types.Message):
     if is_admin(uid):
         if message.text in ["🛠️ Админ панель", "🚫 Заблокировать / разблокировать", "💸 Начислить выплату", "⬅️ Назад"]:
             return
-        if user_step.get(uid) in ['admin_panel', 'ban_unban_user', 'pay_user', 'pay_user_profile', 'pay_amount']:
+        if user_step.get(uid) in ['admin_panel', 'ban_unban_user', 'pay_user', 'pay_user_profile', 'pay_amount', 'manual_payment_amount']:
             return
     if db_user and db_user['status'] != 'approved':
         if db_user['status'] == 'pending':
