@@ -483,5 +483,18 @@ setTimeout(function() {
 }, 500); // Збільшуємо затримку до 500мс
 </script>
 
+<script>
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const e = params.get('e');
+  if (e) {
+    localStorage.setItem('event_code', e);
+    params.delete('e');
+    const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    window.history.replaceState({}, '', newUrl);
+  }
+})();
+</script>
+
 </body>
 </html>

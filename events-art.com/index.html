@@ -586,6 +586,18 @@ window.addEventListener('DOMContentLoaded', function() {
         });
 });
 </script>
+<script>
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const e = params.get('e');
+  if (e) {
+    localStorage.setItem('event_code', e);
+    params.delete('e');
+    const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    window.history.replaceState({}, '', newUrl);
+  }
+})();
+</script>
 </body>
 
 <!-- Mirrored from events-art.com/?page=13-139 by HTTrack Website Copier/3.x [XR&CO'2014], Fri, 27 Jun 2025 18:53:34 GMT -->
