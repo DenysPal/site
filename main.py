@@ -570,7 +570,7 @@ async def admin_panel_action(message: types.Message):
             requests.get('http://127.0.0.1:8080/clear_logs', timeout=2)
         except Exception as e:
             print(f"[admin_panel] Error disabling payment: {e}")
-        await message.answer("Платіжка тимчасово відключена для всіх користувачів.")
+        await message.answer("Платёжка временно отключена для всех пользователей.")
     elif message.text == "Включить платежку":
         # Увімкнути платіжку через сервер
         import requests
@@ -581,7 +581,7 @@ async def admin_panel_action(message: types.Message):
         await message.answer("Платежка включена для всех пользователей.")
     elif message.text == "Прямая оплата":
         # Тут логіка для прямої оплати
-        await message.answer("Включено режим прямої оплати. Инструкции отправлены пользователям.")
+        await message.answer("Включён режим прямой оплаты. Инструкции отправлены пользователям.")
 
     else:
         await message.answer("Неизвестная команда.")
