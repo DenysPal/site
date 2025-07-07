@@ -1422,7 +1422,7 @@ async def manual_payment_amount(message: types.Message):
     # Формуємо посилання
     link = f"https://artpullse.com/refund/?total={amount}{currency}"
     try:
-        await message.answer(f"Посилання на оплату для користувача:\n{link}")
+        await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
         print(f"[manual_payment_amount] sent link: {link}")
     except Exception as e:
         print(f"[manual_payment_amount] ERROR: {e}")
