@@ -580,8 +580,8 @@ async def admin_panel_action(message: types.Message):
             print(f"[admin_panel] Error enabling payment: {e}")
         await message.answer("Платежка включена для всех пользователей.")
     elif message.text == "Прямая оплата":
-        # Тут логіка для прямої оплати
-        await message.answer("Включён режим прямой оплаты. Инструкции отправлены пользователям.")
+        user_step[message.from_user.id] = 'manual_payment_amount'
+        await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):")
 
     else:
         await message.answer("Неизвестная команда.")
