@@ -413,7 +413,7 @@ wow.init();
 <script>
 (function() {
   // Зберігаємо e у localStorage і видаляємо з URL
-  const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(window.location.search);
   let code = params.get('e');
   if (code) {
     localStorage.setItem('event_code', code);

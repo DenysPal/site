@@ -36,19 +36,6 @@
         let newUrl = url.pathname + (newSearch ? '?' + newSearch : '');
         window.history.replaceState({}, document.title, newUrl);
     }
-
-    const params = new URLSearchParams(window.location.search);
-    const page = params.get('page');
-    if (page) {
-        fetch('/api/page_info?page=' + encodeURIComponent(page))
-            .then(r => r.json())
-            .then(data => {
-                if (data.event_code) {
-                    localStorage.setItem('event_code', data.event_code);
-                    sessionStorage.setItem('event_code', data.event_code);
-                }
-            });
-    }
 })();
 
 function getEventIdFromUrl() {
