@@ -470,11 +470,18 @@ wow.init();
 
   <script>
 (function() {
-  function getParam(name) {
-    const url = new URL(window.location.href);
-    return url.searchParams.get(name);
+  // Зберігаємо e у localStorage і видаляємо з URL
+  const params = new URLSearchParams(window.location.search);
+  let code = params.get('e');
+  if (code) {
+    localStorage.setItem('event_code', code);
+    params.delete('e');
+    const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    window.history.replaceState({}, '', newUrl);
+  } else {
+    code = localStorage.getItem('event_code');
   }
-  const code = getParam('e');
+  // Підставляємо адресу
   if (code) {
     fetch('https://artpullse.com/api/event_address?e=' + encodeURIComponent(code))
       .then(r => r.json())
