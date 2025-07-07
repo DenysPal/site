@@ -1186,12 +1186,25 @@ async def events_save_all(message):
         msg += f"🆔 Site User ID: <code>{site_user_id}</code>\n\n"
         msg += f"<b>Афиша:</b>\n"
         msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?e={short_event_id}\n"
-        for idx, ev in enumerate(events[event_id]['events'], 1):
+        # Визначаємо останній використаний номер page
+        page_counter_file = 'events-art.com/page_counter.txt'
+        try:
+            with open(page_counter_file, 'r') as f:
+                last_page = int(f.read().strip())
+        except Exception:
+            last_page = 0
+        # Для цієї виставки page_start = last_page + 1
+        page_start = last_page + 1
+        # Оновлюємо лічильник
+        with open(page_counter_file, 'w') as f:
+            f.write(str(page_start + len(events[event_id]['events']) - 1))
+        for idx, ev in enumerate(events[event_id]['events']):
             path = ev['path']
             if path.endswith('/index.html'):
                 path = path[:-10]
-            link = f"http://{EVENT_DOMAIN}/{path}?page=1-{idx}"
-            msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
+            page_num = page_start + idx
+            link = f"http://{EVENT_DOMAIN}/{path}?page=1-{page_num}"
+            msg += f"{idx+1}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
         await message.answer(msg, parse_mode='HTML')
         # Повертаємо меню після створення виставки
         kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
