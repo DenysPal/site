@@ -373,24 +373,64 @@
     });
     </script>
     <script>
-console.log('=== Payment page script loaded ===');
+// --- Payment page: page_code logic, price/currency update, fallback ---
 document.addEventListener('DOMContentLoaded', function() {
     function getPageCode() {
         const urlParams = new URLSearchParams(window.location.search);
         return urlParams.get('page') || sessionStorage.getItem('page_code') || '';
     }
-    const page_code = getPageCode();
-    console.log('page_code:', page_code);
+    const url = new URL(window.location.href);
+    let page_code = url.searchParams.get('page');
+    // 1. Якщо page_code є в URL — зберігаємо в sessionStorage
+    if (page_code) {
+        sessionStorage.setItem('page_code', page_code);
+    } else {
+        // 2. Якщо page_code є в sessionStorage, але немає в URL — додаємо його в URL і перезавантажуємо сторінку (тільки 1 раз)
+        const pageFromStorage = sessionStorage.getItem('page_code');
+        if (pageFromStorage) {
+            url.searchParams.set('page', pageFromStorage);
+            window.location.replace(url.toString());
+            return;
+        }
+    }
+    // 3. Якщо page_code є — тягнемо дані
+    page_code = getPageCode();
     if (page_code) {
         fetch('/api/payment_data?page=' + encodeURIComponent(page_code))
             .then(r => r.json())
             .then(ev => {
                 if (ev.price && ev.currency) {
+                    // Оновлюємо заголовок
                     document.getElementById('payment-title').textContent = `Payment ${ev.price} ${ev.currency}`;
+                    // Оновлюємо всі елементи з ціною/валютою (якщо треба)
+                    document.querySelectorAll('.ticket-price, .price, [data-price]').forEach(el => {
+                        el.textContent = `${ev.price} ${ev.currency}`;
+                    });
+                    // Оновлюємо data-атрибути для системи оплати (якщо треба)
+                    document.querySelectorAll('[data-payment-price]').forEach(el => {
+                        el.setAttribute('data-payment-price', ev.price);
+                        el.setAttribute('data-payment-currency', ev.currency);
+                    });
+                    // Оновлюємо форми оплати (якщо треба)
+                    document.querySelectorAll('form[data-payment-form]').forEach(form => {
+                        const priceInput = form.querySelector('input[name="price"]');
+                        const currencyInput = form.querySelector('input[name="currency"]');
+                        if (priceInput) priceInput.value = ev.price;
+                        if (currencyInput) currencyInput.value = ev.currency;
+                    });
+                } else {
+                    // Якщо даних немає — показати помилку
+                    showNoEventCodeError();
                 }
+            })
+            .catch(() => {
+                showNoEventCodeError();
             });
     } else {
-        // Fallback: показати помилку і кнопку повернення
+        // 4. Якщо page_code немає ніде — показати помилку
+        showNoEventCodeError();
+    }
+    function showNoEventCodeError() {
         const card = document.querySelector('.payment-card');
         if (card) {
             card.innerHTML = '<div style="color:#dc3545;font-size:1.2rem;font-weight:600;margin-bottom:18px;">Error: No event code found.<br>Please return to the main page and try again.</div>' +
