@@ -3,7 +3,7 @@ import http.server
 import socketserver
 import os
 import sys
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, unquote, parse_qs
 import requests
 import sqlite3
 import traceback
