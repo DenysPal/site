@@ -343,7 +343,20 @@ document.addEventListener('DOMContentLoaded', function() {
   if (price && currency) {
     document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
   }
-})();
+});
+</script>
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Ховаємо параметр total з адресного рядка, але зберігаємо його у localStorage
+  const params = new URLSearchParams(window.location.search);
+  const total = params.get('total');
+  if (total) {
+    localStorage.setItem('refund_total', total);
+    params.delete('total');
+    const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    window.history.replaceState({}, '', newUrl);
+  }
+});
 </script>
     <!--Start of Tawk.to Script-->
     <script type="text/javascript">
