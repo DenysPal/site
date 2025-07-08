@@ -372,5 +372,34 @@
       }
     });
     </script>
+    <script>
+// --- Підтягуємо дані по page_code ---
+document.addEventListener('DOMContentLoaded', function() {
+    function getPageCode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('page') || sessionStorage.getItem('page_code') || '';
+    }
+    const page_code = getPageCode();
+    if (page_code) {
+        // 1. Отримуємо site_user_id
+        fetch('/api/event_links?page=' + encodeURIComponent(page_code))
+            .then(r => r.json())
+            .then(data => {
+                if (data.site_user_id) {
+                    // 2. Отримуємо дані по site_user_id
+                    fetch('/api/latest_event_data')
+                        .then(r => r.json())
+                        .then(ev => {
+                            if (ev.price && ev.currency) {
+                                // Оновлюємо заголовок
+                                document.getElementById('payment-title').textContent = `Payment ${ev.price} ${ev.currency}`;
+                            }
+                            // Якщо треба, підставляємо адресу чи інші дані
+                        });
+                }
+            });
+    }
+});
+</script>
 </body>
 </html>
