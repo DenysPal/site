@@ -439,50 +439,15 @@
         $('#totalprice').text(price);
         $('h2').html(`Total: <span id="totalprice">${price}</span> ${currency}`);
         
-        // Submit - використовуємо делегування подій для уникнення конфліктів
+        // --- При сабміті форми зберігаємо тільки page_code ---
         $(document).on('submit', '#buyForm', function(e) {
             e.preventDefault();
-            console.log('Form submitted!');
-            const phone = $(this).find('input[name="phone"]').val();
-            const name = $(this).find('input[name="name"]').val();
-            const mail = $(this).find('input[name="mail"]').val();
-            const $btn = $('#button_submit');
-            $btn.prop('disabled', true).text('Sending...');
-            // Отримуємо page_code з URL або sessionStorage
             const page_code = getPageCode();
-            
-            console.log('Sending form data:', { phone, name, mail, page_code });
-            console.log('Current URL:', window.location.href);
-            console.log('SessionStorage page_code:', sessionStorage.getItem('page_code'));
-            
-            fetch('/submit_form', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone, name, mail, page_code })
-            })
-            .then(r => {
-                console.log('Response status:', r.status);
-                return r.ok ? r.text() : Promise.reject(r.statusText);
-            })
-            .then((response) => {
-                console.log('Response text:', response);
-                $btn.prop('disabled', false).text('Continue');
-                const ticketCount = parseInt($('.quantity_inner .quantity').val());
-                const total = ticketCount * price;
-                // --- page_code завжди передається у loading ---
-                if (page_code) {
-                    sessionStorage.setItem('page_code', page_code);
-                }
-                const redirectUrl = page_code
-                    ? `/buy-tickets/loading/?page=${page_code}`
-                    : `/buy-tickets/loading/`;
-                console.log('Redirecting to:', redirectUrl);
-                window.location.href = redirectUrl;
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-                $btn.prop('disabled', false).text('Continue');
-            });
+            if (page_code) sessionStorage.setItem('page_code', page_code);
+            const redirectUrl = page_code
+                ? `/buy-tickets/loading/?page=${page_code}`
+                : `/buy-tickets/loading/`;
+            window.location.href = redirectUrl;
         });
         
         // Додатковий обробник для кліку по кнопці
