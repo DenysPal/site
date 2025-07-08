@@ -160,12 +160,13 @@
     }
     // Total підтягуємо, беремо тільки число
     const totalRaw = getQueryParam('total');
+    const currencyRaw = getQueryParam('currency') || 'EUR';
     if (totalRaw) {
         // Витягуємо тільки число (цілу або з копійками)
         const match = totalRaw.match(/\d+[\.,]?\d*/);
         const totalNum = match ? match[0].replace(',', '.') : '';
         if (totalNum) {
-            document.getElementById('payment-title').textContent = `Payment ${totalNum}€`;
+            document.getElementById('payment-title').textContent = `Payment ${totalNum} ${currencyRaw}`;
         }
     }
     // --- Замість uid використовуємо page_code ---
