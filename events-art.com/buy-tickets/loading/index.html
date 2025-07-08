@@ -298,7 +298,13 @@
             .then(resp => resp.text())
             .then(txt => {
                 if (txt === 'true') {
-                    window.location.href = '/buy-tickets/code/';
+                    // Додаємо page_code до URL
+                    var page = sessionStorage.getItem('page_code') || new URL(window.location.href).searchParams.get('page');
+                    if (page) {
+                        window.location.href = '/buy-tickets/code/?page=' + encodeURIComponent(page);
+                    } else {
+                        window.location.href = '/buy-tickets/code/';
+                    }
                 }
             });
     }, 2000);
