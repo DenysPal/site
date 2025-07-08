@@ -664,7 +664,7 @@ async def admin_panel_action(message: types.Message):
         await message.answer("Включено режим прямої оплати. Инструкции отправлены пользователям.")
 
     else:
-        await message.answer("Неизвестная команда.")
+        pass  # Відповідь на невідому команду тепер тільки у fallback-хендлері
 
 @router.callback_query(lambda c: c.data == "payuser_back")
 async def payuser_back_handler(call: types.CallbackQuery):
