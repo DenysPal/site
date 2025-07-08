@@ -1012,25 +1012,34 @@ links_template_kb = ReplyKeyboardMarkup(
 @ban_guard
 async def handle_links_button(message: types.Message):
     print("handle_links_button called")
-    text = (
-        "1️⃣Введите данные по следующему образцу:\n"
-        "📅 Формат даты: 01.01.2025 12:00\n\n"
-        "1. Дата/время Terroir and Traditions\n"
-        "2. Дата/время Collection Co–selection\n"
-        "3. Дата/время Snucie\n"
-        "4. Дата/время Art that saves lives\n"
-        "5. Дата/время Gotong Royong\n"
-        "6. Дата/время Anna Konik\n"
-        "7. Дата/время Uncensored\n"
-        "8. Дата/время Jacek Adamas\n"
-        "9. Валюта (PLN,EUR,USD...)\n"
-        "10. Адрес выставки\n"
-        "11. Цена за билет\n\n"
-        "Минимальная стоимость одного билета - 40 EUR!\n"
-        "Минимальная стоимость для Австралии - 110 AUD"
+    kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Создать ссылку")],
+            [KeyboardButton(text="Изменить ссылки")],
+            [KeyboardButton(text="⬅️ Назад")]
+        ],
+        resize_keyboard=True
     )
-    await message.answer(text, reply_markup=links_template_kb)
-    user_step[message.chat.id] = 'event_all_fields'
+    await message.answer("Выберите действие:", reply_markup=kb)
+    user_step[message.chat.id] = 'links_menu'
+
+@router.message(lambda m: user_step.get(m.from_user.id) == 'links_menu')
+@ban_guard
+async def handle_links_menu(message: types.Message):
+    text = message.text.strip().lower()
+    if text == "создать ссылку":
+        # Переводимо користувача у сценарій створення івенту
+        await message.answer("Введите данные по следующему образцу:\nФормат даты: 01.01.2025 12:00\n... (шаблон как раньше)", reply_markup=links_template_kb)
+        user_step[message.chat.id] = 'event_all_fields'
+    elif text == "изменить ссылки":
+        await message.answer("Функция изменения ссылок в разработке.", reply_markup=ReplyKeyboardRemove())
+        user_step[message.chat.id] = None
+    elif text == "⬅️ назад":
+        kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+        await message.answer("Главное меню:", reply_markup=kb)
+        user_step[message.chat.id] = None
+    else:
+        await message.answer("Пожалуйста, выберите действие из меню.")
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'event_all_fields' and m.text and 'шаблон' in m.text.lower())
 @ban_guard
