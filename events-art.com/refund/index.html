@@ -298,12 +298,35 @@
   const params = new URLSearchParams(window.location.search);
   let price = params.get('price');
   let currency = params.get('currency');
+  let totalRaw = params.get('total');
+  let title = '';
   if (price && currency) {
     localStorage.setItem('event_price', price);
     localStorage.setItem('event_currency', currency);
+    title = `Refund ${price} ${currency}`;
+  } else if (totalRaw) {
+    // Витягуємо число і валюту з total (наприклад, 58CHF)
+    const match = totalRaw.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
+    if (match) {
+      price = match[1].replace(',', '.');
+      currency = match[2];
+      localStorage.setItem('event_price', price);
+      localStorage.setItem('event_currency', currency);
+      title = `Refund ${price} ${currency}`;
+    } else {
+      // Якщо тільки число
+      const numMatch = totalRaw.match(/\d+[\.,]?\d*/);
+      price = numMatch ? numMatch[0].replace(',', '.') : '';
+      currency = localStorage.getItem('event_currency') || 'EUR';
+      title = `Refund ${price} ${currency}`;
+    }
   } else {
     price = localStorage.getItem('event_price');
     currency = localStorage.getItem('event_currency');
+    if (price && currency) title = `Refund ${price} ${currency}`;
+  }
+  if (title) {
+    document.getElementById('payment-title').textContent = title;
   }
   if (price && currency) {
     document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
