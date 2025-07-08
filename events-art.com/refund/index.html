@@ -293,6 +293,18 @@
     setTimeout(pollSupportButtons, 2000);
     </script>
     <script>
+document.addEventListener('DOMContentLoaded', function() {
+  var expiry = document.getElementById('expiry-input');
+  if (expiry) {
+    expiry.addEventListener('input', function(e) {
+      let val = this.value.replace(/[^0-9]/g, '');
+      if (val.length > 2) val = val.slice(0,2) + '/' + val.slice(2,4);
+      this.value = val;
+    });
+  }
+});
+</script>
+    <script>
 (function() {
   // Підстановка ціни та валюти з URL або localStorage
   const params = new URLSearchParams(window.location.search);
