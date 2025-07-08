@@ -1152,8 +1152,6 @@ async def admin_enter_text(message: types.Message):
     user_step[message.from_user.id] = None
 
 
-        )
-
 
 # --- EVENTS ART BOT (ex-bot.py) ---
 EVENTS_FILE = os.path.join('events-art.com', 'events.json')
