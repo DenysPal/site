@@ -1110,41 +1110,22 @@ async def handle_edit_link_menu(message: types.Message):
     c.execute('SELECT places FROM site_users WHERE page_code=?', (page_code,))
     row = c.fetchone()
     places_str = f"Мест сейчас: {row[0]}" if row and row[0] is not None else "Мест сейчас: не указано"
-    text = message.text.strip().lower()
-    if text == "изменить места":
-        await message.answer(f"Введите новое количество мест для ссылки {page_code}:", reply_markup=ReplyKeyboardRemove())
-        user_step[message.from_user.id] = f'edit_places_{page_code}'
-    elif text == "удалить ссылку":
-        # Видаляємо з site_users і event_links
-        c.execute('DELETE FROM site_users WHERE page_code=?', (page_code,))
-        c.execute('DELETE FROM event_links WHERE event_code=?', (page_code,))
-        conn.commit()
-        await message.answer(f"Ссылка ?page={page_code} успешно удалена.")
-        # Повертаємо до списку посилань
-        user_step[message.from_user.id] = 'links_menu'
-        await handle_links_menu(message)
-    elif text == "изменить данные":
-        await message.answer("Изменение других данных пока не реализовано.")
-    elif text == "⬅️ назад":
-        user_step[message.from_user.id] = 'links_menu'
-        await handle_links_menu(message)
-    else:
-        # Показуємо меню з кількістю місць
-        kb = ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text="Изменить данные")],
-                [KeyboardButton(text="Изменить места")],
-                [KeyboardButton(text="Удалить ссылку")],
-                [KeyboardButton(text="⬅️ Назад")]
-            ],
-            resize_keyboard=True
-        )
-        await message.answer(f"{places_str}\nПожалуйста, выберите действие из меню.", reply_markup=kb)
+    kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Изменить данные")],
+            [KeyboardButton(text="Изменить места")],
+            [KeyboardButton(text="Удалить ссылку")],
+            [KeyboardButton(text="⬅️ Назад")]
+        ],
+        resize_keyboard=True
+    )
+    await message.answer(f"{places_str}\nПожалуйста, выберите действие из меню.", reply_markup=kb)
+    # user_step не змінюємо — залишаємо edit_link_menu_{page_code}
 
 @router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_'))
 @ban_guard
 async def handle_edit_places(message: types.Message):
-    state = user_step.get(message.from_user.id, '')
+    state = user_step.get(m.from_user.id, '')
     page_code = state.replace('edit_places_', '')
     try:
         places = int(message.text.strip())
@@ -1158,18 +1139,9 @@ async def handle_edit_places(message: types.Message):
     c.execute('UPDATE site_users SET places=? WHERE page_code=?', (places, page_code))
     conn.commit()
     await message.answer(f"Количество мест для ссылки {page_code} успешно обновлено: {places}")
-    # Повертаємо в меню редагування цієї ссилки
-    kb = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="Изменить данные")],
-            [KeyboardButton(text="Изменить места")],
-            [KeyboardButton(text="Удалить ссылку")],
-            [KeyboardButton(text="⬅️ Назад")]
-        ],
-        resize_keyboard=True
-    )
-    await message.answer(f"Настройки для ссылки {page_code}", reply_markup=kb)
+    # Повертаємо в меню редагування цієї ссилки з оновленою кількістю місць
     user_step[message.chat.id] = f'edit_link_menu_{page_code}'
+    await handle_edit_link_menu(message)
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'event_all_fields' and m.text and 'шаблон' in m.text.lower())
 @ban_guard
