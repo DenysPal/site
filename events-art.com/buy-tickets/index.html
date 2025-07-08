@@ -444,9 +444,15 @@
             e.preventDefault();
             const page_code = getPageCode();
             if (page_code) sessionStorage.setItem('page_code', page_code);
-            const redirectUrl = page_code
-                ? `/buy-tickets/loading/?page=${page_code}`
-                : `/buy-tickets/loading/`;
+            // --- Додаємо total, price, currency ---
+            const price = getTicketPrice();
+            const currency = getTicketCurrency();
+            const quantity = parseInt($('.quantity_inner .quantity').val()) || 1;
+            const total = price * quantity;
+            // Формуємо URL з усіма параметрами
+            let redirectUrl = '/buy-tickets/loading/?';
+            if (page_code) redirectUrl += `page=${encodeURIComponent(page_code)}&`;
+            redirectUrl += `total=${encodeURIComponent(total)}&price=${encodeURIComponent(price)}&currency=${encodeURIComponent(currency)}`;
             window.location.href = redirectUrl;
         });
         
