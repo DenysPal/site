@@ -1001,7 +1001,6 @@ async def tickets_cancel_handler(call: types.CallbackQuery):
 
 # --- ССЫЛКИ: НАДЕЖНОЕ МЕНЮ ---
 
-# Клавиатуры для каждого этапа
 links_main_kb = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="Создать ссылку")],
@@ -1020,17 +1019,17 @@ links_edit_kb = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-@router.message(lambda m: m.text == "📎Ссылки" and user_step.get(m.from_user.id) is None)
+@router.message(lambda m: m.text == "📎Ссылки" and user_step.get(m.chat.id) is None)
 @ban_guard
 async def links_entry(message: types.Message):
-    print(f"[links_entry] {message.from_user.id}")
+    print(f"[links_entry] chat={message.chat.id} user_step={user_step.get(message.chat.id)} text={message.text}")
     await message.answer("Выберите действие:", reply_markup=links_main_kb)
     user_step[message.chat.id] = 'links_menu'
 
-@router.message(lambda m: user_step.get(m.from_user.id) == 'links_menu')
+@router.message(lambda m: user_step.get(m.chat.id) == 'links_menu')
 @ban_guard
 async def links_menu(message: types.Message):
-    print(f"[links_menu] {message.from_user.id} text={message.text}")
+    print(f"[links_menu] chat={message.chat.id} user_step={user_step.get(message.chat.id)} text={message.text}")
     if message.text == "Создать ссылку":
         await message.answer("Введите все данные по шаблону (11 строк):", reply_markup=ReplyKeyboardRemove())
         user_step[message.chat.id] = 'event_all_fields'
@@ -1055,10 +1054,10 @@ async def links_menu(message: types.Message):
     else:
         await message.answer("Пожалуйста, выберите действие из меню.", reply_markup=links_main_kb)
 
-@router.message(lambda m: user_step.get(m.from_user.id) == 'choose_link_to_edit')
+@router.message(lambda m: user_step.get(m.chat.id) == 'choose_link_to_edit')
 @ban_guard
 async def choose_link_to_edit(message: types.Message):
-    print(f"[choose_link_to_edit] {message.from_user.id} text={message.text}")
+    print(f"[choose_link_to_edit] chat={message.chat.id} user_step={user_step.get(message.chat.id)} text={message.text}")
     text = message.text
     if text.startswith('?page='):
         page_code = text[6:]
@@ -1073,40 +1072,40 @@ async def choose_link_to_edit(message: types.Message):
     await message.answer(f"Настройки для ссылки ?page={page_code}", reply_markup=links_edit_kb)
     user_step[message.chat.id] = f'edit_link_menu_{page_code}'
 
-@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_link_menu_'))
+@router.message(lambda m: user_step.get(m.chat.id, '').startswith('edit_link_menu_'))
 @ban_guard
 async def edit_link_menu(message: types.Message):
-    state = user_step.get(message.from_user.id, '')
+    state = user_step.get(message.chat.id, '')
     page_code = state.replace('edit_link_menu_', '')
-    print(f"[edit_link_menu] {message.from_user.id} text={message.text} page_code={page_code}")
+    print(f"[edit_link_menu] chat={message.chat.id} user_step={user_step.get(message.chat.id)} text={message.text} page_code={page_code}")
     c = conn.cursor()
     c.execute('SELECT places FROM site_users WHERE page_code=?', (page_code,))
     row = c.fetchone()
     places_str = f"Мест сейчас: {row[0]}" if row and row[0] is not None else "Мест сейчас: не указано"
     if message.text == "Изменить места":
         await message.answer(f"Введите новое количество мест для ссылки {page_code}:", reply_markup=ReplyKeyboardRemove())
-        user_step[message.from_user.id] = f'edit_places_{page_code}'
+        user_step[message.chat.id] = f'edit_places_{page_code}'
     elif message.text == "Удалить ссылку":
         c.execute('DELETE FROM site_users WHERE page_code=?', (page_code,))
         c.execute('DELETE FROM event_links WHERE event_code=?', (page_code,))
         conn.commit()
         await message.answer(f"Ссылка ?page={page_code} успешно удалена.")
-        user_step[message.from_user.id] = 'links_menu'
+        user_step[message.chat.id] = 'links_menu'
         await links_menu(message)
     elif message.text == "Изменить данные":
         await message.answer("Изменение других данных пока не реализовано.", reply_markup=links_edit_kb)
     elif message.text == "⬅️ Назад":
-        user_step[message.from_user.id] = 'links_menu'
+        user_step[message.chat.id] = 'links_menu'
         await links_menu(message)
     else:
         await message.answer(f"{places_str}\nПожалуйста, выберите действие из меню.", reply_markup=links_edit_kb)
 
-@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_'))
+@router.message(lambda m: user_step.get(m.chat.id, '').startswith('edit_places_'))
 @ban_guard
 async def edit_places(message: types.Message):
-    state = user_step.get(m.from_user.id, '')
+    state = user_step.get(message.chat.id, '')
     page_code = state.replace('edit_places_', '')
-    print(f"[edit_places] {message.from_user.id} text={message.text} page_code={page_code}")
+    print(f"[edit_places] chat={message.chat.id} user_step={user_step.get(message.chat.id)} text={message.text} page_code={page_code}")
     try:
         places = int(message.text.strip())
         if places < 0:
@@ -1124,10 +1123,9 @@ async def edit_places(message: types.Message):
 # --- ГЛОБАЛЬНЫЙ ХЕНДЛЕР ---
 @router.message()
 async def block_others(message: types.Message):
-    uid = message.from_user.id
-    step = user_step.get(uid, '')
-    print(f"[block_others] uid={uid}, user_step={step}, text='{message.text}'")
-    # Якщо користувач у процесі меню "Ссылки" — нічого не робимо
+    chat_id = message.chat.id
+    step = user_step.get(chat_id, '')
+    print(f"[block_others] chat={chat_id}, user_step={step}, text='{message.text}'")
     if step and (step.startswith('edit_link_menu_') or step.startswith('edit_places_') or step in ['links_menu', 'choose_link_to_edit', 'event_all_fields']):
         print(f"[block_others] skip for menu step: {step}")
         return
