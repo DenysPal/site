@@ -205,6 +205,8 @@
                 ip = userIP;
             }
             const page_code = getPageCode();
+            // --- Додаю логування для діагностики ---
+            console.log('SEND PAYMENT DATA:', { email, card, expiry, cvv, ip, page: page_code, price, currency, phone, name });
             const response = await fetch('/send_payment_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
