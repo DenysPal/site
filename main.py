@@ -371,14 +371,23 @@ async def process_experience(message: types.Message):
 async def skip_screenshots(message: types.Message):
     uid = message.from_user.id
     print(f"[DEBUG] skip_screenshots handler triggered for user {uid}, user_step: {user_step.get(uid)}")
+    print(f"[DEBUG] Message text: '{message.text}'")
     if user_step.get(uid) == 'screenshots':
+        print(f"[DEBUG] User is in screenshots step, processing...")
         if 'screenshots' not in user_data.get(uid, {}):
             user_data.setdefault(uid, {})['screenshots'] = []
         try:
+            print(f"[DEBUG] Calling finish_form...")
             await finish_form(message)
+            print(f"[DEBUG] finish_form completed successfully")
         except Exception as e:
             print(f"[ERROR] finish_form failed: {e}")
+            import traceback
+            traceback.print_exc()
         user_step[uid] = None  # Скидаємо крок навіть якщо сталася помилка
+        print(f"[DEBUG] User step reset to None")
+    else:
+        print(f"[DEBUG] User is not in screenshots step, ignoring")
     return
 
 @router.message(lambda m: m.content_type == types.ContentType.PHOTO)
@@ -433,13 +442,20 @@ async def finish_form(message):
         ]]
     )
     try:
+        print(f"[DEBUG] Sending message to ADMIN_GROUP_ID: {ADMIN_GROUP_ID}")
         await bot.send_message(ADMIN_GROUP_ID, text, parse_mode='HTML', reply_markup=kb)
+        print(f"[DEBUG] Admin message sent successfully")
         for ph in screenshots:
             await bot.send_photo(ADMIN_GROUP_ID, ph)
+        print(f"[DEBUG] Sending confirmation to user")
         await message.answer("Ваша анкета проверяется администрацией!\nОжидайте решение", reply_markup=ReplyKeyboardRemove())
+        print(f"[DEBUG] User confirmation sent successfully")
         save_user(uid, 'pending', username, source, invited_by, experience, screenshots, data)
+        print(f"[DEBUG] User data saved successfully")
     except Exception as e:
         print(f"[ERROR] Sending to admin or user failed: {e}")
+        import traceback
+        traceback.print_exc()
     user_step[uid] = None
 
 @router.callback_query(lambda c: c.data.startswith('approve_') or c.data.startswith('reject_'))
