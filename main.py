@@ -1247,12 +1247,12 @@ async def events_save_all(message):
         msg += f"🆔 Site User ID: <code>{site_user_id}</code>\n"
         msg += f"🔖 Page Code: <code>{page_code}</code>\n\n"
         msg += f"<b>Афиша:</b>\n"
-        msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?e={short_event_id}\n"
+        msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?page={page_code}\n"
         for idx, ev in enumerate(events[event_id]['events'], 1):
             path = ev['path']
             if path.endswith('/index.html'):
                 path = path[:-10]
-            link = f"http://{EVENT_DOMAIN}/{path}?e={short_event_id}&page={page_code}&price={price}&currency={currency}"
+            link = f"http://{EVENT_DOMAIN}/{path}?page={page_code}"
             msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
         await message.answer(msg, parse_mode='HTML')
         
@@ -1260,9 +1260,9 @@ async def events_save_all(message):
         kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
         await message.answer("Головне меню:", reply_markup=kb)
         
-        # Зберігаємо зв'язок event_code <-> site_user_id
+        # Зберігаємо зв'язок page_code <-> site_user_id (замість event_code)
         c = conn.cursor()
-        c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (short_event_id, site_user_id))
+        c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (page_code, site_user_id))
         conn.commit()
         
     except Exception as e:
@@ -1477,17 +1477,26 @@ async def latest_event_data(request):
 
 @log_function
 async def event_address(request):
-    code = request.query.get('e', '')
-    if not code:
-        return web.json_response({'error': 'missing code'}, status=400)
-    # Знайти user_id за event_code
+    # Підтримуємо як новий формат ?page= так і старий ?e=
+    page_code = request.query.get('page', '') or request.query.get('e', '')
+    if not page_code:
+        return web.json_response({'error': 'missing page or e parameter'}, status=400)
+    # Знайти user_id за page_code
     c = conn.cursor()
-    c.execute('SELECT user_id FROM event_links WHERE event_code=?', (code,))
+    # Спочатку шукаємо в event_links (для нових записів)
+    c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
     row = c.fetchone()
-    if not row:
-        return web.json_response({'error': 'not found'}, status=404)
-    user_id = row[0]
-    # Знайти останній запис site_users для цього user_id
+    if row:
+        user_id = row[0]
+    else:
+        # Якщо не знайдено в event_links, шукаємо в site_users
+        c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
+        row = c.fetchone()
+        if not row:
+            return web.json_response({'error': 'not found'}, status=404)
+        user_id = row[0]
+    
+    # Знайти запис site_users для цього user_id
     c.execute('SELECT street FROM site_users WHERE id=?', (user_id,))
     row2 = c.fetchone()
     if not row2:
@@ -1515,22 +1524,30 @@ async def data_by_ip(request):
 
 @log_function
 async def event_links(request):
-    event_code = request.query.get('event_code', '')
-    if not event_code:
-        return web.json_response({'error': 'missing event_code'}, status=400)
+    # Підтримуємо як новий формат ?page= так і старий ?e=
+    page_code = request.query.get('page', '') or request.query.get('e', '')
+    if not page_code:
+        return web.json_response({'error': 'missing page or e parameter'}, status=400)
     
-    print(f"[DEBUG] event_links request for event_code: {event_code}")
+    print(f"[DEBUG] event_links request for page_code: {page_code}")
     
     c = conn.cursor()
-    c.execute('SELECT user_id FROM event_links WHERE event_code=?', (event_code,))
+    # Спочатку шукаємо в event_links (для нових записів)
+    c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
     row = c.fetchone()
     
-    if not row:
-        print(f"[DEBUG] Event code {event_code} not found in event_links table")
-        return web.json_response({'error': 'event_code not found'}, status=404)
-    
-    site_user_id = row[0]
-    print(f"[DEBUG] Found site_user_id: {site_user_id} for event_code: {event_code}")
+    if row:
+        site_user_id = row[0]
+        print(f"[DEBUG] Found site_user_id: {site_user_id} for page_code: {page_code} in event_links")
+    else:
+        # Якщо не знайдено в event_links, шукаємо в site_users
+        c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
+        row = c.fetchone()
+        if not row:
+            print(f"[DEBUG] Page code {page_code} not found in any table")
+            return web.json_response({'error': 'page_code not found'}, status=404)
+        site_user_id = row[0]
+        print(f"[DEBUG] Found site_user_id: {site_user_id} for page_code: {page_code} in site_users")
     
     # Перевіряємо, чи існує цей site_user_id у таблиці site_users
     c.execute('SELECT id FROM site_users WHERE id=?', (site_user_id,))
@@ -1541,18 +1558,6 @@ async def event_links(request):
         return web.json_response({'error': 'site_user_id not found in site_users'}, status=404)
     
     return web.json_response({'site_user_id': site_user_id})
-
-@log_function
-async def page_code_by_user_id(request):
-    user_id = request.query.get('user_id', '')
-    if not user_id:
-        return web.json_response({'error': 'missing user_id'}, status=400)
-    c = conn.cursor()
-    c.execute('SELECT page_code FROM site_users WHERE id=?', (user_id,))
-    row = c.fetchone()
-    if not row:
-        return web.json_response({'error': 'not found'}, status=404)
-    return web.json_response({'page_code': row[0]})
 
 # --- API: user_id by page_code ---
 @log_function
@@ -1580,7 +1585,6 @@ if __name__ == '__main__':
         app.router.add_get('/api/event_address', event_address)  # <-- Додаємо новий endpoint
         app.router.add_get('/api/data_by_ip', data_by_ip)  # <-- Додаємо новий endpoint
         app.router.add_get('/api/event_links', event_links)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/page_code_by_user_id', page_code_by_user_id)
         app.router.add_get('/api/user_id_by_page_code', user_id_by_page_code)
         runner = web.AppRunner(app)
         await runner.setup()

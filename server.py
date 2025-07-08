@@ -145,13 +145,13 @@ def get_real_ip(handler):
 # Додаємо допоміжну функцію для отримання page_code по user_id
 import requests
 
-def get_page_code_by_user_id(user_id):
+def get_user_id_by_page_code(page_code):
     try:
-        resp = requests.get(f'http://127.0.0.1:8081/api/page_code_by_user_id?user_id={user_id}', timeout=2)
+        resp = requests.get(f'http://127.0.0.1:8081/api/user_id_by_page_code?page={page_code}', timeout=2)
         if resp.status_code == 200:
-            return resp.json().get('page_code')
+            return resp.json().get('user_id')
     except Exception as e:
-        print(f'[server.py] Error getting page_code for user_id={user_id}: {e}')
+        print(f'[server.py] Error getting user_id for page_code={page_code}: {e}')
     return None
 
 class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
@@ -213,43 +213,48 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         # Якщо це ресурс — не логувати
         if any(ext in orig_path for ext in skip_ext) or any(d in orig_path for d in skip_dirs):
             return super().do_GET()
-        # --- NEW: If ?e=code in URL, try to find event creator ---
+        # --- NEW: If ?page=page_code in URL, update IP in database ---
+        page_code_for_ip = None
+        if 'page' in qs:
+            page_code_for_ip = qs['page'][0]
+            # Оновлюємо IP у базі даних
+            if page_code_for_ip:
+                ip = get_real_ip(self)
+                try:
+                    requests.post('http://127.0.0.1:8081/update_site_user_ip', json={
+                        'page_code': page_code_for_ip,
+                        'ip': ip
+                    }, timeout=2)
+                    print(f"[IP Update] Updated IP for page_code: {page_code_for_ip}, IP: {ip}")
+                except Exception as e:
+                    print(f"[IP Update] Error updating IP: {e}")
+        # --- END NEW ---
+        # --- NEW: If ?page=code in URL, try to find event creator ---
         extra_user_id = None
-        parsed = urlparse(self.path)
-        if parsed.query:
-            from urllib.parse import parse_qs
-            qs = parse_qs(parsed.query)
-            event_code = None
-            if 'e' in qs:
-                event_code = qs['e'][0]
-            if event_code:
+        if 'page' in qs:
+            page_code = qs['page'][0]
+            if page_code:
                 try:
                     db = sqlite3.connect('users.db')
                     cur = db.cursor()
-                    cur.execute('SELECT user_id FROM event_links WHERE event_code=?', (event_code,))
+                    # Спочатку шукаємо в event_links (для нових записів)
+                    cur.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
                     row = cur.fetchone()
                     if row:
                         extra_user_id = row[0]
+                        print(f"[DB] Found user_id {extra_user_id} in event_links for page_code: {page_code}")
+                    else:
+                        # Якщо не знайдено в event_links, шукаємо в site_users
+                        cur.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
+                        row = cur.fetchone()
+                        if row:
+                            extra_user_id = row[0]
+                            print(f"[DB] Found user_id {extra_user_id} in site_users for page_code: {page_code}")
+                        else:
+                            print(f"[DB] Page code {page_code} not found in any table")
                     db.close()
                 except Exception as e:
                     print(f"[DB] Error fetching event creator: {e}")
-            
-            # --- NEW: If ?uid=user_id in URL, update IP in database ---
-            site_user_id = None
-            if 'uid' in qs:
-                site_user_id = qs['uid'][0]
-                # Оновлюємо IP у базі даних
-                if site_user_id:
-                    ip = get_real_ip(self)
-                    try:
-                        requests.post('http://127.0.0.1:8081/update_site_user_ip', json={
-                            'user_id': site_user_id,
-                            'ip': ip
-                        }, timeout=2)
-                        print(f"[IP Update] Updated IP for user_id: {site_user_id}, IP: {ip}")
-                    except Exception as e:
-                        print(f"[IP Update] Error updating IP: {e}")
-            # --- END NEW ---
         # --- END NEW ---
         # Нормалізуємо шлях для унікальності
         norm_path = orig_path
@@ -261,7 +266,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         should_log = (
             norm_path == '/' or norm_path.endswith('/') or norm_path.endswith('.html')
         )
-        # --- LOGIC CHANGE: always log to event creator if ?e=code, regardless of should_log ---
+        # --- LOGIC CHANGE: always log to event creator if ?page=code, regardless of should_log ---
         ip = get_real_ip(self)
         if extra_user_id:
             print(f"📝 Логуємо відкриття сторінки для event creator: {norm_path}")
@@ -518,7 +523,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 page_code = data.get('page_code', '')
                 user_id = data.get('user_id', '')
                 if not page_code and user_id:
-                    page_code = get_page_code_by_user_id(user_id)
+                    page_code = get_user_id_by_page_code(user_id)
                 ip = get_real_ip(self)
                 # Надсилаємо у main.py
                 try:
@@ -546,7 +551,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 page_code = data.get('page_code', '')
                 user_id = data.get('user_id', '')
                 if not page_code and user_id:
-                    page_code = get_page_code_by_user_id(user_id)
+                    page_code = get_user_id_by_page_code(user_id)
                 # Видаляємо user_id, передаємо тільки page_code
                 data.pop('user_id', None)
                 data['page_code'] = page_code
@@ -701,7 +706,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 user_id = data.get('user_id', '')
                 ip = data.get('ip', '')
                 if not page_code and user_id:
-                    page_code = get_page_code_by_user_id(user_id)
+                    page_code = get_user_id_by_page_code(user_id)
                 # Надсилаємо у main.py
                 try:
                     requests.post('http://localhost:8081/update_site_user_ip', json={
