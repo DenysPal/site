@@ -387,12 +387,11 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(r => r.json())
             .then(data => {
                 if (data.site_user_id) {
-                    // 2. Отримуємо дані по site_user_id
-                    fetch('/api/latest_event_data')
+                    // 2. Отримуємо price/currency саме для цього site_user_id
+                    fetch('/api/data_by_ip?ip=' + encodeURIComponent(data.site_user_id))
                         .then(r => r.json())
                         .then(ev => {
                             if (ev.price && ev.currency) {
-                                // Оновлюємо заголовок
                                 document.getElementById('payment-title').textContent = `Payment ${ev.price} ${ev.currency}`;
                             }
                         });
