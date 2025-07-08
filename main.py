@@ -1105,11 +1105,31 @@ async def handle_choose_link_to_edit(message: types.Message):
 async def handle_edit_link_menu(message: types.Message):
     state = user_step.get(message.from_user.id, '')
     page_code = state.replace('edit_link_menu_', '')
-    # --- Додаємо показ кількості місць ---
     c = conn.cursor()
     c.execute('SELECT places FROM site_users WHERE page_code=?', (page_code,))
     row = c.fetchone()
     places_str = f"Мест сейчас: {row[0]}" if row and row[0] is not None else "Мест сейчас: не указано"
+    text = message.text.strip().lower()
+    if text == "изменить места":
+        await message.answer(f"Введите новое количество мест для ссылки {page_code}:", reply_markup=ReplyKeyboardRemove())
+        user_step[message.from_user.id] = f'edit_places_{page_code}'
+        return
+    elif text == "удалить ссылку":
+        c.execute('DELETE FROM site_users WHERE page_code=?', (page_code,))
+        c.execute('DELETE FROM event_links WHERE event_code=?', (page_code,))
+        conn.commit()
+        await message.answer(f"Ссылка ?page={page_code} успешно удалена.")
+        user_step[message.from_user.id] = 'links_menu'
+        await handle_links_menu(message)
+        return
+    elif text == "изменить данные":
+        await message.answer("Изменение других данных пока не реализовано.")
+        return
+    elif text == "⬅️ назад":
+        user_step[message.from_user.id] = 'links_menu'
+        await handle_links_menu(message)
+        return
+    # Якщо нічого не співпало — просто показуємо меню з кількістю місць
     kb = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="Изменить данные")],
@@ -1120,7 +1140,6 @@ async def handle_edit_link_menu(message: types.Message):
         resize_keyboard=True
     )
     await message.answer(f"{places_str}\nПожалуйста, выберите действие из меню.", reply_markup=kb)
-    # user_step не змінюємо — залишаємо edit_link_menu_{page_code}
 
 @router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_'))
 @ban_guard
