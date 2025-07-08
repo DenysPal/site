@@ -193,4 +193,13 @@ setTimeout(function() {
   }
 })();
 </script>
+<script>
+(function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const page = urlParams.get('page');
+  if (page) {
+    sessionStorage.setItem('page_code', page);
+  }
+})();
+</script>
 </body></html>

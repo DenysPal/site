@@ -397,22 +397,10 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 
 <script>
 (function() {
-  // Отримуємо page_code з URL або sessionStorage
-  const params = new URLSearchParams(window.location.search);
-  let page_code = params.get('page');
-  if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
-  }
-  // Підставляємо адресу
-  if (page_code) {
-    fetch('https://artpullse.com/api/event_address?page=' + encodeURIComponent(page_code))
-      .then(r => r.json())
-      .then(data => {
-        if (data.address) {
-          var el = document.getElementById('event-address');
-          if (el) el.textContent = data.address;
-        }
-      });
+  const urlParams = new URLSearchParams(window.location.search);
+  const page = urlParams.get('page');
+  if (page) {
+    sessionStorage.setItem('page_code', page);
   }
 })();
 </script>
