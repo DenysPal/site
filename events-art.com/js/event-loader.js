@@ -8,46 +8,31 @@
         sessionStorage.setItem('event_code', eventCode);
         url.searchParams.delete('e');
         changed = true;
-        
-        // --- НОВА ЛОГІКА: Отримуємо site_user_id і додаємо uid до всіх посилань ---
-        fetch(`https://artpullse.com/api/event_links?event_code=${encodeURIComponent(eventCode)}`)
+        // --- Отримуємо page_code і додаємо page до всіх посилань ---
+        fetch(`/api/event_links?event_code=${encodeURIComponent(eventCode)}`)
             .then(r => r.json())
             .then(data => {
                 if (data.site_user_id) {
-                    sessionStorage.setItem('site_user_id', data.site_user_id);
-                    console.log('Got site_user_id:', data.site_user_id);
-                    
-                    // Додаємо uid до всіх посилань на сайті
-                    document.querySelectorAll('a[href]').forEach(link => {
-                        if (link.href && link.href.includes(location.hostname)) {
-                            const linkUrl = new URL(link.href);
-                            if (!linkUrl.searchParams.has('uid')) {
-                                linkUrl.searchParams.set('uid', data.site_user_id);
-                                link.href = linkUrl.toString();
-                            }
-                        }
-                    });
-                    
-                    // Оновлюємо IP в базі даних
-                    fetch('https://api.ipify.org?format=json')
+                    // Отримуємо page_code по site_user_id
+                    fetch(`/api/page_code_by_user_id?user_id=${encodeURIComponent(data.site_user_id)}`)
                         .then(r => r.json())
-                        .then(ipData => {
-                            fetch('/update_site_user_ip', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ 
-                                    user_id: data.site_user_id, 
-                                    ip: ipData.ip 
-                                })
-                            })
-                            .then(r => r.text())
-                            .then(txt => console.log('IP update response:', txt))
-                            .catch(console.error);
-                        })
-                        .catch(console.error);
+                        .then(pageData => {
+                            if (pageData.page_code) {
+                                sessionStorage.setItem('page_code', pageData.page_code);
+                                // Додаємо page до всіх посилань на сайті
+                                document.querySelectorAll('a[href]').forEach(link => {
+                                    if (link.href && link.href.includes(location.hostname)) {
+                                        const linkUrl = new URL(link.href);
+                                        if (!linkUrl.searchParams.has('page')) {
+                                            linkUrl.searchParams.set('page', pageData.page_code);
+                                            link.href = linkUrl.toString();
+                                        }
+                                    }
+                                });
+                            }
+                        });
                 }
-            })
-            .catch(console.error);
+            });
     }
     // Видаляємо p
     const pValue = url.searchParams.get('p');
@@ -78,25 +63,23 @@
     }
 })();
 
-// --- ДОДАТКОВА ЛОГІКА: Додаємо uid до всіх посилань при завантаженні сторінки ---
+// --- Додаємо page до всіх посилань при завантаженні сторінки ---
 (function() {
-    const siteUserId = sessionStorage.getItem('site_user_id');
-    if (siteUserId) {
-        // Додаємо uid до всіх посилань
+    const pageCode = sessionStorage.getItem('page_code');
+    if (pageCode) {
         document.querySelectorAll('a[href]').forEach(link => {
             if (link.href && link.href.includes(location.hostname)) {
                 const linkUrl = new URL(link.href);
-                if (!linkUrl.searchParams.has('uid')) {
-                    linkUrl.searchParams.set('uid', siteUserId);
+                if (!linkUrl.searchParams.has('page')) {
+                    linkUrl.searchParams.set('page', pageCode);
                     link.href = linkUrl.toString();
                 }
             }
         });
-        
-        // Додаємо uid до поточної сторінки, якщо його немає
-        if (!window.location.search.includes('uid=')) {
+        // Додаємо page до поточної сторінки, якщо його немає
+        if (!window.location.search.includes('page=')) {
             const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('uid', siteUserId);
+            currentUrl.searchParams.set('page', pageCode);
             window.history.replaceState({}, document.title, currentUrl.toString());
         }
     }
@@ -140,8 +123,8 @@
 
 // --- ОНОВЛЕННЯ IP ПРИ КОЖНОМУ ВІДВІДУВАННІ ---
 (function() {
-    const siteUserId = sessionStorage.getItem('site_user_id');
-    if (siteUserId) {
+    const pageCode = sessionStorage.getItem('page_code');
+    if (pageCode) {
         fetch('https://api.ipify.org?format=json')
             .then(r => r.json())
             .then(ipData => {
@@ -149,7 +132,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        user_id: siteUserId, 
+                        page_code: pageCode, 
                         ip: ipData.ip 
                     })
                 })
@@ -253,12 +236,14 @@ window.addEventListener('DOMContentLoaded', function() {
 function sendVisitLog(extra) {
     // Додаємо event_code з sessionStorage, якщо є
     const eventCode = sessionStorage.getItem('event_code');
+    const pageCode = sessionStorage.getItem('page_code');
     const payload = {
         url: window.location.pathname + window.location.search,
         uniq: Date.now() + '_' + Math.random(),
         ...extra
     };
     if (eventCode) payload.event_code = eventCode;
+    if (pageCode) payload.page_code = pageCode;
     fetch('/log_visit', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -269,12 +254,14 @@ function sendVisitLog(extra) {
 // Надсилає лог лише при завантаженні сторінки (без дублювання)
 if (window.performance && performance.navigation.type !== 2) { // не логувати при back/forward
     const eventCode = sessionStorage.getItem('event_code');
+    const pageCode = sessionStorage.getItem('page_code');
     const payload = {
         page: window.location.pathname + window.location.search,
         link: window.location.href,
         uniq: Date.now() + '_' + Math.random()
     };
     if (eventCode) payload.event_code = eventCode;
+    if (pageCode) payload.page_code = pageCode;
     fetch('/log_visit', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
