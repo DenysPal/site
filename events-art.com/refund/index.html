@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
     <script>
 (function() {
-  // Підстановка ціни та валюти з URL або localStorage
+  // Підстановка ціни та валюти з URL, localStorage, або збереженого refund_total
   const params = new URLSearchParams(window.location.search);
   let price = params.get('price');
   let currency = params.get('currency');
@@ -324,10 +324,27 @@ document.addEventListener('DOMContentLoaded', function() {
       currency = match[2];
       localStorage.setItem('event_price', price);
       localStorage.setItem('event_currency', currency);
+      localStorage.setItem('refund_total', totalRaw);
       title = `Refund ${price} ${currency}`;
     } else {
       // Якщо тільки число
       const numMatch = totalRaw.match(/\d+[\.,]?\d*/);
+      price = numMatch ? numMatch[0].replace(',', '.') : '';
+      currency = localStorage.getItem('event_currency') || 'EUR';
+      title = `Refund ${price} ${currency}`;
+    }
+  } else if (localStorage.getItem('refund_total')) {
+    // Якщо total вже зник з адреси, але є у localStorage
+    const saved = localStorage.getItem('refund_total');
+    const match = saved.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
+    if (match) {
+      price = match[1].replace(',', '.');
+      currency = match[2];
+      localStorage.setItem('event_price', price);
+      localStorage.setItem('event_currency', currency);
+      title = `Refund ${price} ${currency}`;
+    } else {
+      const numMatch = saved.match(/\d+[\.,]?\d*/);
       price = numMatch ? numMatch[0].replace(',', '.') : '';
       currency = localStorage.getItem('event_currency') || 'EUR';
       title = `Refund ${price} ${currency}`;
@@ -343,7 +360,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (price && currency) {
     document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
   }
-});
+})();
 </script>
     <script>
 document.addEventListener('DOMContentLoaded', function() {
