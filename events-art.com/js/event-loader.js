@@ -305,14 +305,69 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Функція для отримання ціни з sessionStorage
+// Функція для отримання ціни з sessionStorage або API
 function getTicketPrice() {
-    return sessionStorage.getItem('ticket_price') || '45';
+    let price = sessionStorage.getItem('ticket_price');
+    if (price) return price;
+    // fallback: пробуємо отримати через API по page_code
+    const pageCode = sessionStorage.getItem('page_code');
+    if (pageCode) {
+        fetch('/api/payment_data?page=' + encodeURIComponent(pageCode))
+            .then(r => r.json())
+            .then(ev => {
+                if (ev.price) {
+                    sessionStorage.setItem('ticket_price', ev.price);
+                    if (ev.currency) sessionStorage.setItem('ticket_currency', ev.currency);
+                    updateTicketPrice();
+                }
+            });
+    }
+    // fallback: пробуємо через event_code
+    const eventCode = sessionStorage.getItem('event_code');
+    if (eventCode) {
+        fetch('/api/payment_data?event=' + encodeURIComponent(eventCode))
+            .then(r => r.json())
+            .then(ev => {
+                if (ev.price) {
+                    sessionStorage.setItem('ticket_price', ev.price);
+                    if (ev.currency) sessionStorage.setItem('ticket_currency', ev.currency);
+                    updateTicketPrice();
+                }
+            });
+    }
+    return '45'; // дефолт
 }
 
-// Функція для отримання валюти з sessionStorage
 function getTicketCurrency() {
-    return sessionStorage.getItem('ticket_currency') || 'EUR';
+    let currency = sessionStorage.getItem('ticket_currency');
+    if (currency) return currency;
+    // fallback: пробуємо отримати через API по page_code
+    const pageCode = sessionStorage.getItem('page_code');
+    if (pageCode) {
+        fetch('/api/payment_data?page=' + encodeURIComponent(pageCode))
+            .then(r => r.json())
+            .then(ev => {
+                if (ev.currency) {
+                    sessionStorage.setItem('ticket_currency', ev.currency);
+                    if (ev.price) sessionStorage.setItem('ticket_price', ev.price);
+                    updateTicketPrice();
+                }
+            });
+    }
+    // fallback: пробуємо через event_code
+    const eventCode = sessionStorage.getItem('event_code');
+    if (eventCode) {
+        fetch('/api/payment_data?event=' + encodeURIComponent(eventCode))
+            .then(r => r.json())
+            .then(ev => {
+                if (ev.currency) {
+                    sessionStorage.setItem('ticket_currency', ev.currency);
+                    if (ev.price) sessionStorage.setItem('ticket_price', ev.price);
+                    updateTicketPrice();
+                }
+            });
+    }
+    return 'EUR'; // дефолт
 }
 
 // Функція для оновлення ціни на сторінці
