@@ -1109,13 +1109,29 @@ async def handle_edit_link_menu(message: types.Message):
     if text == "изменить места":
         await message.answer(f"Введите новое количество мест для ссылки {page_code}:", reply_markup=ReplyKeyboardRemove())
         user_step[message.from_user.id] = f'edit_places_{page_code}'
+    elif text == "удалить ссылку":
+        # Видаляємо з site_users і event_links
+        c = conn.cursor()
+        c.execute('DELETE FROM site_users WHERE page_code=?', (page_code,))
+        c.execute('DELETE FROM event_links WHERE event_code=?', (page_code,))
+        conn.commit()
+        await message.answer(f"Ссылка ?page={page_code} успешно удалена.")
+        # Повертаємо до списку посилань
+        c.execute('SELECT page_code FROM site_users ORDER BY created_at DESC LIMIT 50')
+        codes = [row[0] for row in c.fetchall() if row[0]]
+        kb = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text=f"?page={code}")] for code in codes] + [[KeyboardButton(text="⬅️ Назад")]],
+            resize_keyboard=True
+        )
+        await message.answer("Последние 50 ссылок. Выберите ссылку:", reply_markup=kb)
+        user_step[message.chat.id] = 'choose_link_to_edit'
     elif text == "⬅️ назад":
         # Повертаємо до вибору ссилки
         c = conn.cursor()
         c.execute('SELECT page_code FROM site_users ORDER BY created_at DESC LIMIT 50')
         codes = [row[0] for row in c.fetchall() if row[0]]
         kb = ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text=code)] for code in codes] + [[KeyboardButton(text="⬅️ Назад")]],
+            keyboard=[[KeyboardButton(text=f"?page={code}")] for code in codes] + [[KeyboardButton(text="⬅️ Назад")]],
             resize_keyboard=True
         )
         await message.answer("Последние 50 ссылок. Выберите ссылку:", reply_markup=kb)
