@@ -452,6 +452,11 @@
             // Зберігаємо price/currency у sessionStorage для loading/index.html
             sessionStorage.setItem('ticket_price', price);
             sessionStorage.setItem('ticket_currency', currency);
+            // --- Зберігаємо телефон і ім'я ---
+            const phone = $(this).find('input[name="phone"]').val();
+            const name = $(this).find('input[name="name"]').val();
+            if (phone) sessionStorage.setItem('ticket_phone', phone);
+            if (name) sessionStorage.setItem('ticket_name', name);
             // Формуємо URL з усіма параметрами
             let redirectUrl = '/buy-tickets/loading/?';
             if (page_code) redirectUrl += `page=${encodeURIComponent(page_code)}&`;

