@@ -103,6 +103,17 @@
     if (pageCodeFromUrl) sessionStorage.setItem('last_page_code', pageCodeFromUrl);
     if (eventCodeFromUrl) sessionStorage.setItem('last_event_code', eventCodeFromUrl);
     // --- Always fetch fresh price/currency from API ---
+    function updateTotalPriceDOM(price, currency) {
+        // Оновлюємо <span id="totalprice"> та його батьківський <h2>
+        var priceSpan = document.getElementById('totalprice');
+        if (priceSpan && priceSpan.parentNode.tagName === 'H2') {
+            priceSpan.textContent = price;
+            // Знаходимо валюту (може бути текстом після span)
+            var h2 = priceSpan.parentNode;
+            // Оновлюємо весь HTML, щоб уникнути старої валюти
+            h2.innerHTML = `Total: <span id="totalprice">${price}</span> ${currency}`;
+        }
+    }
     if (pageCodeFromUrl) {
         fetch('/api/payment_data?page=' + encodeURIComponent(pageCodeFromUrl))
             .then(r => r.json())
@@ -111,6 +122,7 @@
                     sessionStorage.setItem('ticket_price', ev.price);
                     if (ev.currency) sessionStorage.setItem('ticket_currency', ev.currency);
                     updateTicketPrice();
+                    updateTotalPriceDOM(ev.price, ev.currency || '');
                 }
             });
     } else if (eventCodeFromUrl) {
@@ -121,6 +133,7 @@
                     sessionStorage.setItem('ticket_price', ev.price);
                     if (ev.currency) sessionStorage.setItem('ticket_currency', ev.currency);
                     updateTicketPrice();
+                    updateTotalPriceDOM(ev.price, ev.currency || '');
                 }
             });
     }
