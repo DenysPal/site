@@ -354,6 +354,10 @@ async def process_experience(message: types.Message):
     await message.answer("🖼 Отправьте скриншоты ваших профитов (до 3х)\nМожно пропустить", reply_markup=skip_kb)
 
 
+
+@router.message(lambda m: m.text and m.text.strip().lower() == "пропустить")
+
+@router.message(lambda m: user_step.get(m.from_user.id) == 'screenshots' and m.text and 'пропустить' in m.text.strip().lower())
 @router.message(lambda m: m.text and m.text.strip().lower() == "пропустить")
 @ban_guard
 async def skip_screenshots(message: types.Message):
@@ -367,6 +371,15 @@ async def skip_screenshots(message: types.Message):
         except Exception as e:
             print(f"[ERROR] finish_form failed: {e}")
         user_step[uid] = None  # Скидаємо крок навіть якщо сталася помилка
+    user_step[uid] = None
+    if 'screenshots' not in user_data.get(uid, {}):
+        user_data.setdefault(uid, {})['screenshots'] = []
+    await finish_form(message)
+    # Only process if user is in screenshots step
+    if user_step.get(uid) == 'screenshots':
+        if 'screenshots' not in user_data.get(uid, {}):
+            user_data.setdefault(uid, {})['screenshots'] = []
+        await finish_form(message)
     return
 
 @router.message(lambda m: m.content_type == types.ContentType.PHOTO)
@@ -1064,6 +1077,7 @@ async def block_others(message: types.Message):
             link = f"https://artpullse.com/refund/?total={amount}{currency}"
             await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
             return
+    print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
     # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
     if message.text and 'ссылки' in message.text.lower():
         return
