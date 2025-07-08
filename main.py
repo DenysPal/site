@@ -1109,12 +1109,13 @@ async def handle_edit_link_menu(message: types.Message):
     c.execute('SELECT places FROM site_users WHERE page_code=?', (page_code,))
     row = c.fetchone()
     places_str = f"Мест сейчас: {row[0]}" if row and row[0] is not None else "Мест сейчас: не указано"
-    text = message.text.strip().lower()
-    if text == "изменить места":
+    text = message.text.strip().lower().replace('ё', 'е')
+    print(f"[DEBUG] handle_edit_link_menu: text='{message.text}', normalized='{text}'")
+    if "изменить места" in text:
         await message.answer(f"Введите новое количество мест для ссылки {page_code}:", reply_markup=ReplyKeyboardRemove())
         user_step[message.from_user.id] = f'edit_places_{page_code}'
         return
-    elif text == "удалить ссылку":
+    elif "удалить ссылку" in text:
         c.execute('DELETE FROM site_users WHERE page_code=?', (page_code,))
         c.execute('DELETE FROM event_links WHERE event_code=?', (page_code,))
         conn.commit()
@@ -1122,10 +1123,10 @@ async def handle_edit_link_menu(message: types.Message):
         user_step[message.from_user.id] = 'links_menu'
         await handle_links_menu(message)
         return
-    elif text == "изменить данные":
+    elif "изменить данные" in text:
         await message.answer("Изменение других данных пока не реализовано.")
         return
-    elif text == "⬅️ назад":
+    elif "назад" in text:
         user_step[message.from_user.id] = 'links_menu'
         await handle_links_menu(message)
         return
