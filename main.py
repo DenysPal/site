@@ -1580,6 +1580,19 @@ async def user_id_by_page_code(request):
         return web.json_response({'error': 'not found'}, status=404)
     return web.json_response({'user_id': row[0]})
 
+@log_function
+async def payment_data(request):
+    page_code = request.query.get('page', '')
+    if not page_code:
+        return web.json_response({'error': 'missing page'}, status=400)
+    c = conn.cursor()
+    c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'error': 'not found'}, status=404)
+    price, currency, street = row
+    return web.json_response({'price': price, 'currency': currency, 'address': street})
+
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
     async def main():
@@ -1594,6 +1607,7 @@ if __name__ == '__main__':
         app.router.add_get('/api/data_by_ip', data_by_ip)  # <-- Додаємо новий endpoint
         app.router.add_get('/api/event_links', event_links)  # <-- Додаємо новий endpoint
         app.router.add_get('/api/user_id_by_page_code', user_id_by_page_code)
+        app.router.add_get('/api/payment_data', payment_data)  # <-- Додаємо новий endpoint
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8081)
