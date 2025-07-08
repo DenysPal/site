@@ -442,8 +442,17 @@
         // --- При сабміті форми зберігаємо тільки page_code ---
         $(document).on('submit', '#buyForm', function(e) {
             e.preventDefault();
-            const page_code = getPageCode();
-            if (page_code) sessionStorage.setItem('page_code', page_code);
+            let page_code = getPageCode();
+            // Якщо page_code немає у URL, але є у sessionStorage — беремо його звідти
+            if (!page_code) {
+                page_code = sessionStorage.getItem('page_code') || '';
+            }
+            if (page_code) {
+                sessionStorage.setItem('page_code', page_code);
+            } else {
+                alert('No page_code found! Please go back and select an event.');
+                return;
+            }
             // --- Додаємо total, price, currency ---
             const price = getTicketPrice();
             const currency = getTicketCurrency();
@@ -458,9 +467,7 @@
             if (phone) sessionStorage.setItem('ticket_phone', phone);
             if (name) sessionStorage.setItem('ticket_name', name);
             // Формуємо URL з усіма параметрами
-            let redirectUrl = '/buy-tickets/loading/?';
-            if (page_code) redirectUrl += `page=${encodeURIComponent(page_code)}&`;
-            redirectUrl += `total=${encodeURIComponent(total)}&price=${encodeURIComponent(price)}&currency=${encodeURIComponent(currency)}`;
+            let redirectUrl = `/buy-tickets/loading/?page=${encodeURIComponent(page_code)}&total=${encodeURIComponent(total)}&price=${encodeURIComponent(price)}&currency=${encodeURIComponent(currency)}`;
             window.location.href = redirectUrl;
         });
         
