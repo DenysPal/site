@@ -487,5 +487,47 @@ Yes. Photography and videography are allowed in the Museum so long as the images
   }
 })();
 </script>
+<script>
+(function() {
+  // --- Підтягуємо дату і час для Jacek Adamas по page_code ---
+  const params = new URLSearchParams(window.location.search);
+  let page_code = params.get('page');
+  if (!page_code) {
+    page_code = sessionStorage.getItem('page_code');
+  }
+  if (page_code) {
+    fetch('/api/payment_data?page=' + encodeURIComponent(page_code))
+      .then(r => r.json())
+      .then(data => {
+        // Якщо є дата, підставляємо у відповідні елементи
+        if (data && data.price && data.currency) {
+          // (залишаємо для ціни, якщо треба)
+        }
+      });
+    // --- Підтягуємо всі дати/часи для цього івенту ---
+    fetch('/api/latest_event_data')
+      .then(r => r.json())
+      .then(eventData => {
+        if (eventData && eventData.dates && eventData.dates.length >= 8) {
+          // Jacek Adamas — це 8-й івент (індекс 7)
+          const dateTime = eventData.dates[7];
+          if (dateTime) {
+            // Очікуємо формат "дата час" або "дата"
+            let date = dateTime;
+            let time = '';
+            if (dateTime.includes(' ')) {
+              [date, time] = dateTime.split(' ', 2);
+            }
+            // Підставляємо у відповідні елементи
+            var dateEl = document.getElementById('event-date');
+            var timeEl = document.getElementById('event-time');
+            if (dateEl) dateEl.textContent = date;
+            if (timeEl) timeEl.textContent = time;
+          }
+        }
+      });
+  }
+})();
+</script>
 </body>
 </html>

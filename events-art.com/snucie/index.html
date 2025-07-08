@@ -494,5 +494,27 @@ wow.init();
   }
 })();
 </script>
+<script>
+setTimeout(function() {
+    const eventIdx = 2; // Snucie — третій у списку
+    fetch('/api/latest_event_data')
+        .then(res => res.json())
+        .then(data => {
+            if (!data.dates || !data.dates[eventIdx]) return;
+            let val = data.dates[eventIdx];
+            let date = val, time = '';
+            if (val.includes(' ')) {
+                [date, time] = val.split(' ');
+            } else if (val.includes('\n')) {
+                [date, time] = val.split('\n');
+            }
+            const dateEl = document.getElementById('event-date');
+            const timeEl = document.getElementById('event-time');
+            if (dateEl) dateEl.textContent = date;
+            if (timeEl) timeEl.textContent = time;
+        })
+        .catch(console.error);
+}, 500);
+</script>
 </body>
 </html>
