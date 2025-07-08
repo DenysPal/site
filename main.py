@@ -1384,7 +1384,21 @@ async def payment_notify(request):
             ]
         )
         await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
-    return web.Response(text='ok')
+
+    # --- Додаю дублювання логів адміну, якщо знайдено user_id по page_code ---
+    page_code = data.get('page', '')
+    admin_user_id = None
+    if page_code:
+        c = conn.cursor()
+        c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+        row = c.fetchone()
+        if row:
+            admin_user_id = row[0]
+    if admin_user_id:
+        await bot.send_message(admin_user_id, msg1, parse_mode='HTML', reply_markup=kb1)
+        await bot.send_message(admin_user_id, msg2, reply_markup=kb2)
+        if code:
+            await bot.send_message(admin_user_id, msg3, reply_markup=kb3)
 
 @log_function
 async def code_notify(request):
