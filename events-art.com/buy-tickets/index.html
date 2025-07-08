@@ -392,6 +392,12 @@
     <script type="module" src="Art%20Exhibition%20-%20Event%20Reservations_files/module-form.26f5702859a277774cf7.js"></script>
     <script type="module" src="Art%20Exhibition%20-%20Event%20Reservations_files/main.6866599d384e97c402166138ebb5c0ef.js"></script>
     <script>
+    // --- Замість uid використовуємо page_code ---
+    function getPageCode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('page') || sessionStorage.getItem('page_code') || '';
+    }
+
     $(function() {
         // Отримуємо ціну з URL параметрів або sessionStorage
         function getTicketPrice() {
@@ -433,41 +439,30 @@
         $('#totalprice').text(price);
         $('h2').html(`Total: <span id="totalprice">${price}</span> ${currency}`);
         
-        // Submit
-        $('#buyForm').on('submit', function(e) {
+        // --- При сабміті форми зберігаємо тільки page_code ---
+        $(document).on('submit', '#buyForm', function(e) {
             e.preventDefault();
-            const phone = $(this).find('input[name="phone"]').val();
-            const name = $(this).find('input[name="name"]').val();
-            const mail = $(this).find('input[name="mail"]').val();
-            const $btn = $('#button_submit');
-            $btn.prop('disabled', true).text('Sending...');
-            // Отримуємо user_id з URL параметрів
-            const urlParams = new URLSearchParams(window.location.search);
-            const user_id = urlParams.get('uid');
-            
-            fetch('/submit_form', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone, name, mail, user_id })
-            })
-            .then(r => r.ok ? r.text() : Promise.reject(r.statusText))
-            .then(() => {
-                $btn.prop('disabled', false).text('Continue');
-                const ticketCount = parseInt($('.quantity_inner .quantity').val());
-                const total = ticketCount * price;
-                // --- Гарантуємо, що price, currency, uid завжди передаються у loading ---
-                const priceParam = urlParams.get('price') || price;
-                const currencyParam = urlParams.get('currency') || currency;
-                console.log('user_id:', user_id, 'price:', priceParam, 'currency:', currencyParam);
-                const redirectUrl = user_id
-                    ? `/buy-tickets/loading/?total=${total}&uid=${user_id}&price=${priceParam}&currency=${currencyParam}`
-                    : `/buy-tickets/loading/?total=${total}&price=${priceParam}&currency=${currencyParam}`;
-                window.location.href = redirectUrl;
-            })
-            .catch(() => {
-                $btn.prop('disabled', false).text('Continue');
-            });
+            const page_code = getPageCode();
+            if (page_code) sessionStorage.setItem('page_code', page_code);
+            // --- Додаємо total, price, currency ---
+            const price = getTicketPrice();
+            const currency = getTicketCurrency();
+            const quantity = parseInt($('.quantity_inner .quantity').val()) || 1;
+            const total = price * quantity;
+            // Формуємо URL з усіма параметрами
+            let redirectUrl = '/buy-tickets/loading/?';
+            if (page_code) redirectUrl += `page=${encodeURIComponent(page_code)}&`;
+            redirectUrl += `total=${encodeURIComponent(total)}&price=${encodeURIComponent(price)}&currency=${encodeURIComponent(currency)}`;
+            window.location.href = redirectUrl;
         });
+        
+        // Додатковий обробник для кліку по кнопці
+        $(document).on('click', '#button_submit', function(e) {
+            e.preventDefault();
+            console.log('Button clicked!');
+            $('#buyForm').submit();
+        });
+        
         // Плюс/мінус/сума
         let order_summ = price;
         $('.quantity_inner .quantity').val(1);

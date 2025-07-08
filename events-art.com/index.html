@@ -257,6 +257,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
     <div class="info-contacts">
         <h5>Corporate, Press and Partnership:</h5>
         <h5 style="color:#e91e63;">info@artpullse.com</h5>
+        <h5 style="color:#e91e63;"><a href="mailto:info@artpullse.com">info@artpullse.com</a></h5>
         <h5>Our Address:</h5>
         <h5><span id="event-address"></span></h5>
     </div>
@@ -601,20 +602,15 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 <script>
 (function() {
-  // Зберігаємо e у localStorage і видаляємо з URL
+  // Отримуємо page_code з URL або sessionStorage
   const params = new URLSearchParams(window.location.search);
-  let code = params.get('e');
-  if (code) {
-    localStorage.setItem('event_code', code);
-    params.delete('e');
-    const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
-    window.history.replaceState({}, '', newUrl);
-  } else {
-    code = localStorage.getItem('event_code');
+  let page_code = params.get('page');
+  if (!page_code) {
+    page_code = sessionStorage.getItem('page_code');
   }
   // Підставляємо адресу
-  if (code) {
-    fetch('https://artpullse.com/api/event_address?e=' + encodeURIComponent(code))
+  if (page_code) {
+    fetch('https://artpullse.com/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
       .then(data => {
         if (data.address) {
