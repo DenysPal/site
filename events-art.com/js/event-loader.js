@@ -144,6 +144,44 @@
     }
 })();
 
+// --- FRESH PRICE LOGIC: always update price/currency if page_code or event_code changes ---
+(function() {
+    const url = new URL(window.location.href);
+    const pageCodeFromUrl = url.searchParams.get('page') || sessionStorage.getItem('page_code');
+    const eventCodeFromUrl = url.searchParams.get('event_code') || sessionStorage.getItem('event_code');
+    const lastPageCode = sessionStorage.getItem('last_page_code');
+    const lastEventCode = sessionStorage.getItem('last_event_code');
+    if ((pageCodeFromUrl && lastPageCode && pageCodeFromUrl !== lastPageCode) ||
+        (eventCodeFromUrl && lastEventCode && eventCodeFromUrl !== lastEventCode)) {
+        sessionStorage.removeItem('ticket_price');
+        sessionStorage.removeItem('ticket_currency');
+    }
+    if (pageCodeFromUrl) sessionStorage.setItem('last_page_code', pageCodeFromUrl);
+    if (eventCodeFromUrl) sessionStorage.setItem('last_event_code', eventCodeFromUrl);
+    // --- Always fetch fresh price/currency from API ---
+    if (pageCodeFromUrl) {
+        fetch('/api/payment_data?page=' + encodeURIComponent(pageCodeFromUrl))
+            .then(r => r.json())
+            .then(ev => {
+                if (ev.price) {
+                    sessionStorage.setItem('ticket_price', ev.price);
+                    if (ev.currency) sessionStorage.setItem('ticket_currency', ev.currency);
+                    updateTicketPrice();
+                }
+            });
+    } else if (eventCodeFromUrl) {
+        fetch('/api/payment_data?event=' + encodeURIComponent(eventCodeFromUrl))
+            .then(r => r.json())
+            .then(ev => {
+                if (ev.price) {
+                    sessionStorage.setItem('ticket_price', ev.price);
+                    if (ev.currency) sessionStorage.setItem('ticket_currency', ev.currency);
+                    updateTicketPrice();
+                }
+            });
+    }
+})();
+
 // Функція для оновлення відображення ціни
 function updatePriceDisplay(price, currency) {
     // Оновлюємо всі елементи з ціною на сторінці
