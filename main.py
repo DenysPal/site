@@ -1049,7 +1049,7 @@ async def handle_links_menu(message: types.Message):
         await message.answer(template_text, reply_markup=links_template_kb)
         user_step[message.chat.id] = 'event_all_fields'
     elif text == "изменить ссылки":
-        # --- Показати список останніх 50 page_code з пагінацією ---
+        # --- Показати список останніх 50 page_code з номерами як ?page=13-140 ---
         c = conn.cursor()
         c.execute('SELECT page_code FROM site_users ORDER BY created_at DESC LIMIT 50')
         codes = [row[0] for row in c.fetchall() if row[0]]
@@ -1057,9 +1057,9 @@ async def handle_links_menu(message: types.Message):
             await message.answer("Нет доступных ссылок для изменения.")
             user_step[message.chat.id] = None
             return
-        # Формуємо кнопки
+        # Формуємо кнопки у вигляді ?page=13-140
         kb = ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text=code)] for code in codes] + [[KeyboardButton(text="⬅️ Назад")]],
+            keyboard=[[KeyboardButton(text=f"?page={code}")] for code in codes] + [[KeyboardButton(text="⬅️ Назад")]],
             resize_keyboard=True
         )
         await message.answer("Последние 50 ссылок. Выберите ссылку:", reply_markup=kb)
@@ -1074,7 +1074,12 @@ async def handle_links_menu(message: types.Message):
 @router.message(lambda m: user_step.get(m.from_user.id) == 'choose_link_to_edit')
 @ban_guard
 async def handle_choose_link_to_edit(message: types.Message):
-    page_code = message.text.strip()
+    # Парсимо page_code з кнопки виду ?page=13-140
+    text = message.text.strip()
+    if text.startswith('?page='):
+        page_code = text[6:]
+    else:
+        page_code = text
     # Перевіряємо, чи існує такий page_code
     c = conn.cursor()
     c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
@@ -1092,7 +1097,7 @@ async def handle_choose_link_to_edit(message: types.Message):
         ],
         resize_keyboard=True
     )
-    await message.answer(f"Настройки для ссылки {page_code}", reply_markup=kb)
+    await message.answer(f"Настройки для ссылки ?page={page_code}", reply_markup=kb)
     user_step[message.chat.id] = f'edit_link_menu_{page_code}'
 
 @router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_link_menu_'))
