@@ -1192,79 +1192,74 @@ async def events_start(message: types.Message):
 async def events_save_all(message):
     chat_id = message.chat.id
     try:
-    event_id = str(uuid.uuid4())
-    short_event_id = event_id[:6]
-    events_file = os.path.join('events-art.com', 'events.json')
-    # Завантажуємо існуючі події
-    try:
-        with open(events_file, 'r', encoding='utf-8') as f:
-            events = json.load(f)
+        event_id = str(uuid.uuid4())
+        short_event_id = event_id[:6]
+        events_file = os.path.join('events-art.com', 'events.json')
+        # Завантажуємо існуючі події
+        try:
+            with open(events_file, 'r', encoding='utf-8') as f:
+                events = json.load(f)
         except Exception as e:
             print(f"[EVENTS] Не вдалося прочитати events.json: {e}")
-        events = {}
-    # Додаємо нову подію
+            events = {}
+        # Додаємо нову подію
         user_event = EVENT_user_data.get(chat_id)
         if not user_event:
             await message.answer("❗️ Дані івенту не знайдено. Спробуйте ще раз з початку.")
             print(f"[EVENTS] EVENT_user_data порожній для chat_id={chat_id}")
             return
-    events[event_id] = {
-        'title': user_event.get('title', 'Выставка'),
-        'price': user_event.get('price', '45'),
-        'currency': user_event.get('currency', 'EUR'),
-        'address': user_event.get('address', ''),
-        'events': [
-            {
-                'name': EVENT_FIXED_EVENTS[i],
-                'path': EVENT_FIXED_PATHS[i],
-                'date': user_event['dates'][i],
-                'time': user_event['times'][i]
-            } for i in range(8)
-        ]
-    }
-    with open(events_file, 'w', encoding='utf-8') as f:
-        json.dump(events, f, ensure_ascii=False, indent=2)
-    
-    # --- Створюємо запис у site_users ---
-    price = user_event.get('price', '45')
-    currency = user_event.get('currency', 'EUR')
-    street = user_event.get('address', '')
-    dates = user_event.get('dates', [''] * 8)
-    times = user_event.get('times', [''] * 8)
-    # Об'єднуємо дату і час у формат "дата час"
-    combined_dates = []
-    for i in range(8):
-        if dates[i] and times[i]:
-            combined_dates.append(f"{dates[i]} {times[i]}")
-        else:
-            combined_dates.append(dates[i] if dates[i] else '')
+        events[event_id] = {
+            'title': user_event.get('title', 'Выставка'),
+            'price': user_event.get('price', '45'),
+            'currency': user_event.get('currency', 'EUR'),
+            'address': user_event.get('address', ''),
+            'events': [
+                {
+                    'name': EVENT_FIXED_EVENTS[i],
+                    'path': EVENT_FIXED_PATHS[i],
+                    'date': user_event['dates'][i],
+                    'time': user_event['times'][i]
+                } for i in range(8)
+            ]
+        }
+        with open(events_file, 'w', encoding='utf-8') as f:
+            json.dump(events, f, ensure_ascii=False, indent=2)
+        # --- Створюємо запис у site_users ---
+        price = user_event.get('price', '45')
+        currency = user_event.get('currency', 'EUR')
+        street = user_event.get('address', '')
+        dates = user_event.get('dates', [''] * 8)
+        times = user_event.get('times', [''] * 8)
+        # Об'єднуємо дату і час у формат "дата час"
+        combined_dates = []
+        for i in range(8):
+            if dates[i] and times[i]:
+                combined_dates.append(f"{dates[i]} {times[i]}")
+            else:
+                combined_dates.append(dates[i] if dates[i] else '')
         site_user_id, page_code = create_site_user(combined_dates, currency, street, price)
-    
-    # Формуємо повідомлення з посиланнями
-    msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"
+        # Формуємо повідомлення з посиланнями
+        msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"
         msg += f"💵 Цена: <b>{price} {currency}</b>\n"
-    msg += f"📍 Адрес: <b>{street or 'Не указан'}</b>\n"
+        msg += f"📍 Адрес: <b>{street or 'Не указан'}</b>\n"
         msg += f"🆔 Site User ID: <code>{site_user_id}</code>\n"
         msg += f"🔖 Page Code: <code>{page_code}</code>\n\n"
-    msg += f"<b>Афиша:</b>\n"
+        msg += f"<b>Афиша:</b>\n"
         msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?page={page_code}\n"
-    for idx, ev in enumerate(events[event_id]['events'], 1):
-        path = ev['path']
-        if path.endswith('/index.html'):
-            path = path[:-10]
+        for idx, ev in enumerate(events[event_id]['events'], 1):
+            path = ev['path']
+            if path.endswith('/index.html'):
+                path = path[:-10]
             link = f"http://{EVENT_DOMAIN}/{path}?page={page_code}"
-        msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
-    await message.answer(msg, parse_mode='HTML')
-    
-    # Повертаємо меню після створення виставки
-    kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
-    await message.answer("Головне меню:", reply_markup=kb)
-        
+            msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
+        await message.answer(msg, parse_mode='HTML')
+        # Повертаємо меню після створення виставки
+        kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+        await message.answer("Головне меню:", reply_markup=kb)
         # Зберігаємо зв'язок page_code <-> site_user_id (замість event_code)
         c = conn.cursor()
         c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (page_code, site_user_id))
         conn.commit()
-        
     except Exception as e:
         print(f"[EVENTS] Помилка у events_save_all: {e}")
         import traceback
