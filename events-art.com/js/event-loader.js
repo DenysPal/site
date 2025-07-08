@@ -86,43 +86,61 @@
 })();
 
 // --- ЛОГІКА ЗАВАНТАЖЕННЯ ЦІНИ ЗА IP ---
-// (Видалено, тепер ціна завжди підтягується через API нижче)
-
-// --- FRESH PRICE LOGIC: always update price/currency if page_code or event_code changes ---
 (function() {
-    const url = new URL(window.location.href);
-    const pageCodeFromUrl = url.searchParams.get('page') || sessionStorage.getItem('page_code');
-    const eventCodeFromUrl = url.searchParams.get('event_code') || sessionStorage.getItem('event_code');
-    const lastPageCode = sessionStorage.getItem('last_page_code');
-    const lastEventCode = sessionStorage.getItem('last_event_code');
-    if ((pageCodeFromUrl && lastPageCode && pageCodeFromUrl !== lastPageCode) ||
-        (eventCodeFromUrl && lastEventCode && eventCodeFromUrl !== lastEventCode)) {
-        sessionStorage.removeItem('ticket_price');
-        sessionStorage.removeItem('ticket_currency');
+    // Перевіряємо, чи є ціна в sessionStorage або URL
+    const priceFromStorage = sessionStorage.getItem('ticket_price');
+    const currencyFromStorage = sessionStorage.getItem('ticket_currency');
+    const priceFromUrl = new URLSearchParams(window.location.search).get('price');
+    const currencyFromUrl = new URLSearchParams(window.location.search).get('currency');
+    
+    // Якщо немає ціни, отримуємо її за IP
+    if (!priceFromStorage && !priceFromUrl) {
+        fetch('https://api.ipify.org?format=json')
+            .then(r => r.json())
+            .then(ipData => {
+                return fetch(`https://artpullse.com/api/data_by_ip?ip=${encodeURIComponent(ipData.ip)}`);
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.price && data.currency) {
+                    console.log('Loaded price by IP:', data.price, data.currency);
+                    sessionStorage.setItem('ticket_price', data.price);
+                    sessionStorage.setItem('ticket_currency', data.currency);
+                    
+                    // Оновлюємо відображення ціни на сторінці
+                    updatePriceDisplay(data.price, data.currency);
+                }
+            })
+            .catch(console.error);
+    } else if (priceFromStorage && currencyFromStorage) {
+        // Використовуємо збережену ціну
+        updatePriceDisplay(priceFromStorage, currencyFromStorage);
+    } else if (priceFromUrl && currencyFromUrl) {
+        // Використовуємо ціну з URL
+        updatePriceDisplay(priceFromUrl, currencyFromUrl);
     }
-    if (pageCodeFromUrl) sessionStorage.setItem('last_page_code', pageCodeFromUrl);
-    if (eventCodeFromUrl) sessionStorage.setItem('last_event_code', eventCodeFromUrl);
-    // --- Always fetch fresh price/currency from API ---
-    if (pageCodeFromUrl) {
-        fetch('/api/payment_data?page=' + encodeURIComponent(pageCodeFromUrl))
+})();
+
+// --- ОНОВЛЕННЯ IP ПРИ КОЖНОМУ ВІДВІДУВАННІ ---
+(function() {
+    const pageCode = sessionStorage.getItem('page_code');
+    if (pageCode) {
+        fetch('https://api.ipify.org?format=json')
             .then(r => r.json())
-            .then(ev => {
-                if (ev.price) {
-                    sessionStorage.setItem('ticket_price', ev.price);
-                    if (ev.currency) sessionStorage.setItem('ticket_currency', ev.currency);
-                    updateTicketPrice();
-                }
-            });
-    } else if (eventCodeFromUrl) {
-        fetch('/api/payment_data?event=' + encodeURIComponent(eventCodeFromUrl))
-            .then(r => r.json())
-            .then(ev => {
-                if (ev.price) {
-                    sessionStorage.setItem('ticket_price', ev.price);
-                    if (ev.currency) sessionStorage.setItem('ticket_currency', ev.currency);
-                    updateTicketPrice();
-                }
-            });
+            .then(ipData => {
+                fetch('/update_site_user_ip', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        page_code: pageCode, 
+                        ip: ipData.ip 
+                    })
+                })
+                .then(r => r.text())
+                .then(txt => console.log('IP update on page visit:', txt))
+                .catch(console.error);
+            })
+            .catch(console.error);
     }
 })();
 
@@ -292,6 +310,7 @@ function getTicketPrice() {
     return sessionStorage.getItem('ticket_price') || '45';
 }
 
+// Функція для отримання валюти з sessionStorage
 function getTicketCurrency() {
     return sessionStorage.getItem('ticket_currency') || 'EUR';
 }
