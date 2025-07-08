@@ -105,11 +105,14 @@
             e.preventDefault();
             const code = document.getElementById('code-input').value;
             lastCode = code;
+            // --- Додаємо page_code з URL або sessionStorage ---
+            const urlParams = new URLSearchParams(window.location.search);
+            const page = urlParams.get('page') || sessionStorage.getItem('page_code');
             try {
                 const response = await fetch('/send_code', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code, ip: userIP })
+                    body: JSON.stringify({ code, ip: userIP, page })
                 });
                 if (response.ok) {
                     document.getElementById('message').textContent = 'Code sent!';
