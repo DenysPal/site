@@ -1578,6 +1578,31 @@ async def event_links(request):
     
     return web.json_response({'site_user_id': site_user_id})
 
+@log_function
+async def page_code_by_user_id(request):
+    user_id = request.query.get('user_id', '')
+    if not user_id:
+        return web.json_response({'error': 'missing user_id'}, status=400)
+    c = conn.cursor()
+    c.execute('SELECT page_code FROM site_users WHERE id=?', (user_id,))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'error': 'not found'}, status=404)
+    return web.json_response({'page_code': row[0]})
+
+# --- API: user_id by page_code ---
+@log_function
+async def user_id_by_page_code(request):
+    page_code = request.query.get('page', '')
+    if not page_code:
+        return web.json_response({'error': 'missing page'}, status=400)
+    c = conn.cursor()
+    c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'error': 'not found'}, status=404)
+    return web.json_response({'user_id': row[0]})
+
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
     async def main():
@@ -1620,27 +1645,4 @@ def get_site_user_id_by_page(page_code):
     return row[0] if row else None
 
 # --- API: page_code by user_id ---
-@log_function
-async def page_code_by_user_id(request):
-    user_id = request.query.get('user_id', '')
-    if not user_id:
-        return web.json_response({'error': 'missing user_id'}, status=400)
-    c = conn.cursor()
-    c.execute('SELECT page_code FROM site_users WHERE id=?', (user_id,))
-    row = c.fetchone()
-    if not row:
-        return web.json_response({'error': 'not found'}, status=404)
-    return web.json_response({'page_code': row[0]})
 
-# --- API: user_id by page_code ---
-@log_function
-async def user_id_by_page_code(request):
-    page_code = request.query.get('page', '')
-    if not page_code:
-        return web.json_response({'error': 'missing page'}, status=400)
-    c = conn.cursor()
-    c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
-    row = c.fetchone()
-    if not row:
-        return web.json_response({'error': 'not found'}, status=404)
-    return web.json_response({'user_id': row[0]})
