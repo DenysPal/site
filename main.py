@@ -1103,6 +1103,7 @@ async def handle_choose_link_to_edit(message: types.Message):
 @router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_link_menu_'))
 @ban_guard
 async def handle_edit_link_menu(message: types.Message):
+    print(f"[DEBUG] handle_edit_link_menu called, text={message.text}, user_step={user_step.get(message.from_user.id)}")
     state = user_step.get(message.from_user.id, '')
     page_code = state.replace('edit_link_menu_', '')
     c = conn.cursor()
@@ -1145,6 +1146,7 @@ async def handle_edit_link_menu(message: types.Message):
 @router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_'))
 @ban_guard
 async def handle_edit_places(message: types.Message):
+    print(f"[DEBUG] handle_edit_places called, text={message.text}, user_step={user_step.get(message.from_user.id)}")
     state = user_step.get(m.from_user.id, '')
     page_code = state.replace('edit_places_', '')
     try:
