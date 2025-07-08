@@ -419,26 +419,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (priceInput) priceInput.value = ev.price;
                         if (currencyInput) currencyInput.value = ev.currency;
                     });
-                } else {
-                    // Якщо даних немає — показати помилку
-                    showNoEventCodeError();
                 }
-            })
-            .catch(() => {
-                showNoEventCodeError();
             });
-    } else {
-        // 4. Якщо page_code немає ніде — показати помилку
-        showNoEventCodeError();
     }
-    function showNoEventCodeError() {
-        // --- ВІДКЛЮЧЕНО: не показуємо помилку, просто нічого не робимо ---
-        // const card = document.querySelector('.payment-card');
-        // if (card) {
-        //     card.innerHTML = '<div style="color:#dc3545;font-size:1.2rem;font-weight:600;margin-bottom:18px;">Error: No event code found.<br>Please return to the main page and try again.</div>' +
-        //         '<a href="/" style="display:inline-block;padding:12px 32px;background:#00b2ff;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">Go to Main Page</a>';
-        // }
-    }
+    // --- showNoEventCodeError та його виклики повністю видалені ---
 });
 </script>
 <script>
