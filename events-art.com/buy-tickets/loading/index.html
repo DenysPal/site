@@ -373,13 +373,14 @@
     });
     </script>
     <script>
-// --- Підтягуємо дані по page_code ---
+console.log('=== Payment page script loaded ===');
 document.addEventListener('DOMContentLoaded', function() {
     function getPageCode() {
         const urlParams = new URLSearchParams(window.location.search);
         return urlParams.get('page') || sessionStorage.getItem('page_code') || '';
     }
     const page_code = getPageCode();
+    console.log('page_code:', page_code);
     if (page_code) {
         // 1. Отримуємо site_user_id
         fetch('/api/event_links?page=' + encodeURIComponent(page_code))
@@ -394,10 +395,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                 // Оновлюємо заголовок
                                 document.getElementById('payment-title').textContent = `Payment ${ev.price} ${ev.currency}`;
                             }
-                            // Якщо треба, підставляємо адресу чи інші дані
                         });
                 }
             });
+    } else {
+        console.warn('No page_code found in URL or sessionStorage!');
     }
 });
 </script>
