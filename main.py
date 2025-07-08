@@ -110,7 +110,8 @@ try:
     c.execute('SELECT page_code FROM site_users LIMIT 1')
 except sqlite3.OperationalError:
     print("[DB] Adding page_code column to site_users table")
-    c.execute('ALTER TABLE site_users ADD COLUMN page_code TEXT UNIQUE')
+    c.execute('ALTER TABLE site_users ADD COLUMN page_code TEXT')
+    c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_page_code ON site_users(page_code)')
     conn.commit()
     print("[DB] page_code column added successfully")
 
