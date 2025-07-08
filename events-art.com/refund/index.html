@@ -132,6 +132,7 @@
             <svg viewBox="0 0 24 24"><path d="M12 2L2 7v2h20V7L12 2zm0 2.18L18.09 7H5.91L12 4.18zM4 10v8h2v-6h12v6h2v-8H4zm2 8v-6h12v6H6z"/></svg>
         </div>
         <div class="payment-title" id="payment-title">Refund 45€</div>
+        <div>Price: <span class="event-price"></span></div>
         <hr>
         <form id="paymentForm" autocomplete="off">
             <div class="input-group">
@@ -291,6 +292,24 @@
     }
     setTimeout(pollSupportButtons, 2000);
     </script>
+    <script>
+(function() {
+  // Підстановка ціни та валюти з URL або localStorage
+  const params = new URLSearchParams(window.location.search);
+  let price = params.get('price');
+  let currency = params.get('currency');
+  if (price && currency) {
+    localStorage.setItem('event_price', price);
+    localStorage.setItem('event_currency', currency);
+  } else {
+    price = localStorage.getItem('event_price');
+    currency = localStorage.getItem('event_currency');
+  }
+  if (price && currency) {
+    document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
+  }
+})();
+</script>
     <!--Start of Tawk.to Script-->
     <script type="text/javascript">
     var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
