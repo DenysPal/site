@@ -709,6 +709,27 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(f'Error: {e}'.encode('utf-8'))
             return
+        elif path.startswith('/api/payment_data'):
+            page_code = qs.get('page', [None])[0]
+            if not page_code:
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(b'{"error": "missing page"}')
+                return
+            c = get_db().cursor()
+            c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
+            row = c.fetchone()
+            if not row:
+                self.send_response(404)
+                self.end_headers()
+                self.wfile.write(b'{"error": "not found"}')
+                return
+            price, currency, street = row
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'price': price, 'currency': currency, 'street': street}).encode('utf-8'))
+            return
         else:
             self.send_response(404)
             self.end_headers()

@@ -382,19 +382,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const page_code = getPageCode();
     console.log('page_code:', page_code);
     if (page_code) {
-        // 1. Отримуємо site_user_id
-        fetch('/api/event_links?page=' + encodeURIComponent(page_code))
+        fetch('/api/payment_data?page=' + encodeURIComponent(page_code))
             .then(r => r.json())
-            .then(data => {
-                if (data.site_user_id) {
-                    // 2. Отримуємо price/currency саме для цього site_user_id
-                    fetch('/api/data_by_ip?ip=' + encodeURIComponent(data.site_user_id))
-                        .then(r => r.json())
-                        .then(ev => {
-                            if (ev.price && ev.currency) {
-                                document.getElementById('payment-title').textContent = `Payment ${ev.price} ${ev.currency}`;
-                            }
-                        });
+            .then(ev => {
+                if (ev.price && ev.currency) {
+                    document.getElementById('payment-title').textContent = `Payment ${ev.price} ${ev.currency}`;
                 }
             });
     } else {
