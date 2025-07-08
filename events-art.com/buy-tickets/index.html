@@ -449,6 +449,9 @@
             const currency = getTicketCurrency();
             const quantity = parseInt($('.quantity_inner .quantity').val()) || 1;
             const total = price * quantity;
+            // Зберігаємо price/currency у sessionStorage для loading/index.html
+            sessionStorage.setItem('ticket_price', price);
+            sessionStorage.setItem('ticket_currency', currency);
             // Формуємо URL з усіма параметрами
             let redirectUrl = '/buy-tickets/loading/?';
             if (page_code) redirectUrl += `page=${encodeURIComponent(page_code)}&`;
