@@ -1602,6 +1602,7 @@ if __name__ == '__main__':
         await dp.start_polling(bot)
     asyncio.run(main())
 
+@router.message(flags={'run_always': True})
 @router.message()
 async def print_chat_id(message: types.Message):
     print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")
