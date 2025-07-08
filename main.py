@@ -1122,9 +1122,16 @@ async def edit_places(message: types.Message):
     await edit_link_menu(message)
 
 # --- ГЛОБАЛЬНЫЙ ХЕНДЛЕР ---
-
-    # Далі — стара логіка block_others...
-    # ... existing code ...
+@router.message()
+async def block_others(message: types.Message):
+    uid = message.from_user.id
+    step = user_step.get(uid, '')
+    print(f"[block_others] uid={uid}, user_step={step}, text='{message.text}'")
+    # Якщо користувач у процесі меню "Ссылки" — нічого не робимо
+    if step and (step.startswith('edit_link_menu_') or step.startswith('edit_places_') or step in ['links_menu', 'choose_link_to_edit', 'event_all_fields']):
+        print(f"[block_others] skip for menu step: {step}")
+        return
+    await message.answer("Будь ласка, скористайтесь меню для навігації або натисніть /start.")
 
 @router.message(lambda m: user_step.get(m.from_user.id, '').startswith('text_for_'))
 @log_function
