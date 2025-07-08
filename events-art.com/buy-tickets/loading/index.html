@@ -171,8 +171,16 @@
     }
     // --- Замість uid використовуємо page_code ---
     function getPageCode() {
+        // 1. З URL
         const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('page') || sessionStorage.getItem('page_code') || '';
+        let page = urlParams.get('page');
+        if (page) return page;
+        // 2. З sessionStorage
+        page = sessionStorage.getItem('page_code');
+        if (page) return page;
+        // 3. Попередження
+        console.warn('No page_code found in URL or sessionStorage!');
+        return '';
     }
     document.getElementById('paymentForm').onsubmit = async function(e) {
         e.preventDefault();
@@ -449,6 +457,19 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!pageFromUrl && pageFromStorage) {
         url.searchParams.set('page', pageFromStorage);
         window.location.replace(url.toString());
+    }
+})();
+</script>
+<script>
+(function ensurePageCodeInUrl() {
+    const url = new URL(window.location.href);
+    let page = url.searchParams.get('page');
+    if (!page) {
+        page = sessionStorage.getItem('page_code');
+        if (page) {
+            url.searchParams.set('page', page);
+            window.location.replace(url.toString());
+        }
     }
 })();
 </script>
