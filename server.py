@@ -320,7 +320,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b'false')
             return
-        # --- Code redirect polling ---
         if self.path.startswith('/check_code_redirect'):
             from urllib.parse import parse_qs
             qs = parse_qs(self.path.split('?', 1)[1]) if '?' in self.path else {}
