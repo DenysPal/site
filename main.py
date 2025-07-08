@@ -460,12 +460,12 @@ async def finish_form(message):
     )
     try:
         print(f"[DEBUG] Sending message to ADMIN_GROUP_ID: {ADMIN_GROUP_ID}")
-    await bot.send_message(ADMIN_GROUP_ID, text, parse_mode='HTML', reply_markup=kb)
+        await bot.send_message(ADMIN_GROUP_ID, text, parse_mode='HTML', reply_markup=kb)
         print(f"[DEBUG] Admin message sent successfully")
         for ph in screenshots:
-        await bot.send_photo(ADMIN_GROUP_ID, ph)
+            await bot.send_photo(ADMIN_GROUP_ID, ph)
         print(f"[DEBUG] Sending confirmation to user")
-    await message.answer("Ваша анкета проверяется администрацией!\nОжидайте решение", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Ваша анкета проверяется администрацией!\nОжидайте решение", reply_markup=ReplyKeyboardRemove())
         print(f"[DEBUG] User confirmation sent successfully")
         save_user(uid, 'pending', username, source, invited_by, experience, screenshots, data)
         print(f"[DEBUG] User data saved successfully")
