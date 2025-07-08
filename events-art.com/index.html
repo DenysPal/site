@@ -639,6 +639,41 @@ window.addEventListener('DOMContentLoaded', function() {
   }
 })();
 </script>
+<script>
+// --- Додаємо page_code до всіх посилань "Show info" ---
+(function() {
+  // Отримуємо page_code з URL або sessionStorage
+  const params = new URLSearchParams(window.location.search);
+  let page_code = params.get('page');
+  if (!page_code) {
+    page_code = sessionStorage.getItem('page_code');
+  }
+  
+  if (page_code) {
+    // Додаємо page_code до всіх посилань "Show info"
+    document.querySelectorAll('.medium-event-about a[href*="/"]').forEach(function(link) {
+      if (link.textContent.trim() === 'Show info') {
+        const url = new URL(link.href, window.location.origin);
+        if (!url.searchParams.has('page')) {
+          url.searchParams.set('page', page_code);
+          link.href = url.toString();
+        }
+      }
+    });
+    
+    // Додаємо page_code до посилань в меню
+    document.querySelectorAll('.menu-header .nav-link[href]').forEach(function(link) {
+      if (link.href && link.href.includes(location.hostname)) {
+        const url = new URL(link.href);
+        if (!url.searchParams.has('page')) {
+          url.searchParams.set('page', page_code);
+          link.href = url.toString();
+        }
+      }
+    });
+  }
+})();
+</script>
 </body>
 
 <!-- Mirrored from events-art.com/?page=13-139 by HTTrack Website Copier/3.x [XR&CO'2014], Fri, 27 Jun 2025 18:53:34 GMT -->

