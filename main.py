@@ -391,11 +391,11 @@ async def skip_screenshots(message: types.Message):
     print(f"[DEBUG] Message text: '{message.text}'")
     if user_step.get(uid) == 'screenshots':
         print(f"[DEBUG] User is in screenshots step, processing...")
-    if 'screenshots' not in user_data.get(uid, {}):
-        user_data.setdefault(uid, {})['screenshots'] = []
+        if 'screenshots' not in user_data.get(uid, {}):
+            user_data.setdefault(uid, {})['screenshots'] = []
         try:
             print(f"[DEBUG] Calling finish_form...")
-    await finish_form(message)
+            await finish_form(message)
             print(f"[DEBUG] finish_form completed successfully")
         except Exception as e:
             print(f"[ERROR] finish_form failed: {e}")
