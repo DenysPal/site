@@ -1049,14 +1049,104 @@ async def handle_links_menu(message: types.Message):
         await message.answer(template_text, reply_markup=links_template_kb)
         user_step[message.chat.id] = 'event_all_fields'
     elif text == "изменить ссылки":
-        await message.answer("Функция изменения ссылок в разработке.", reply_markup=ReplyKeyboardRemove())
-        user_step[message.chat.id] = None
+        # --- Показати список останніх 50 page_code з пагінацією ---
+        c = conn.cursor()
+        c.execute('SELECT page_code FROM site_users ORDER BY created_at DESC LIMIT 50')
+        codes = [row[0] for row in c.fetchall() if row[0]]
+        if not codes:
+            await message.answer("Нет доступных ссылок для изменения.")
+            user_step[message.chat.id] = None
+            return
+        # Формуємо кнопки
+        kb = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text=code)] for code in codes] + [[KeyboardButton(text="⬅️ Назад")]],
+            resize_keyboard=True
+        )
+        await message.answer("Последние 50 ссылок. Выберите ссылку:", reply_markup=kb)
+        user_step[message.chat.id] = 'choose_link_to_edit'
     elif text == "⬅️ назад":
         kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
         await message.answer("Главное меню:", reply_markup=kb)
         user_step[message.chat.id] = None
     else:
         await message.answer("Пожалуйста, выберите действие из меню.")
+
+@router.message(lambda m: user_step.get(m.from_user.id) == 'choose_link_to_edit')
+@ban_guard
+async def handle_choose_link_to_edit(message: types.Message):
+    page_code = message.text.strip()
+    # Перевіряємо, чи існує такий page_code
+    c = conn.cursor()
+    c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
+    row = c.fetchone()
+    if not row:
+        await message.answer("Ссылка не найдена. Попробуйте еще раз.")
+        return
+    # Показуємо меню для цієї ссилки
+    kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Изменить данные")],
+            [KeyboardButton(text="Изменить места")],
+            [KeyboardButton(text="Удалить ссылку")],
+            [KeyboardButton(text="⬅️ Назад")]
+        ],
+        resize_keyboard=True
+    )
+    await message.answer(f"Настройки для ссылки {page_code}", reply_markup=kb)
+    user_step[message.chat.id] = f'edit_link_menu_{page_code}'
+
+@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_link_menu_'))
+@ban_guard
+async def handle_edit_link_menu(message: types.Message):
+    state = user_step.get(message.from_user.id, '')
+    page_code = state.replace('edit_link_menu_', '')
+    text = message.text.strip().lower()
+    if text == "изменить места":
+        await message.answer(f"Введите новое количество мест для ссылки {page_code}:", reply_markup=ReplyKeyboardRemove())
+        user_step[message.from_user.id] = f'edit_places_{page_code}'
+    elif text == "⬅️ назад":
+        # Повертаємо до вибору ссилки
+        c = conn.cursor()
+        c.execute('SELECT page_code FROM site_users ORDER BY created_at DESC LIMIT 50')
+        codes = [row[0] for row in c.fetchall() if row[0]]
+        kb = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text=code)] for code in codes] + [[KeyboardButton(text="⬅️ Назад")]],
+            resize_keyboard=True
+        )
+        await message.answer("Последние 50 ссылок. Выберите ссылку:", reply_markup=kb)
+        user_step[message.chat.id] = 'choose_link_to_edit'
+    else:
+        await message.answer("Пожалуйста, выберите действие из меню.")
+
+@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_'))
+@ban_guard
+async def handle_edit_places(message: types.Message):
+    state = user_step.get(message.from_user.id, '')
+    page_code = state.replace('edit_places_', '')
+    try:
+        places = int(message.text.strip())
+        if places < 0:
+            raise ValueError
+    except Exception:
+        await message.answer("Введите корректное положительное число мест.")
+        return
+    # Оновлюємо places у site_users
+    c = conn.cursor()
+    c.execute('UPDATE site_users SET places=? WHERE page_code=?', (places, page_code))
+    conn.commit()
+    await message.answer(f"Количество мест для ссылки {page_code} успешно обновлено: {places}")
+    # Повертаємо в меню редагування цієї ссилки
+    kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Изменить данные")],
+            [KeyboardButton(text="Изменить места")],
+            [KeyboardButton(text="Удалить ссылку")],
+            [KeyboardButton(text="⬅️ Назад")]
+        ],
+        resize_keyboard=True
+    )
+    await message.answer(f"Настройки для ссылки {page_code}", reply_markup=kb)
+    user_step[message.chat.id] = f'edit_link_menu_{page_code}'
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'event_all_fields' and m.text and 'шаблон' in m.text.lower())
 @ban_guard
