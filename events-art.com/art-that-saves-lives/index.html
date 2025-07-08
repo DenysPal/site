@@ -29,7 +29,7 @@
 		<h3 id="event-title">Art that saves lives</h3>
 		<div>Price: <span class="event-price"></span></div>
 		<a href="/buy-tickets/">Buy ticket</a>
-	    <span>4 ticket left / Duration: 3 hours</span>
+	    <span id="event-places">4 ticket left</span> / Duration: 3 hours
 		</div>
 	</div>
 </div>
@@ -475,8 +475,6 @@ setTimeout(function() {
 </script>
 <script>
 (function() {
-  // Зберігаємо e у localStorage і видаляємо з URL
-=======
   // Отримуємо page_code з URL або sessionStorage
 >>>>>>> origin/sasha
   const params = new URLSearchParams(window.location.search);
@@ -492,6 +490,25 @@ setTimeout(function() {
         if (data.address) {
           var el = document.getElementById('event-address');
           if (el) el.textContent = data.address;
+        }
+      });
+  }
+})();
+</script>
+<script>
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  let page_code = params.get('page');
+  if (!page_code) {
+    page_code = sessionStorage.getItem('page_code');
+  }
+  if (page_code) {
+    fetch('https://artpullse.com/api/event_address?page=' + encodeURIComponent(page_code))
+      .then(r => r.json())
+      .then(data => {
+        if (data.places !== undefined && data.places !== null) {
+          var el = document.getElementById('event-places');
+          if (el) el.textContent = data.places + ' ticket left';
         }
       });
   }

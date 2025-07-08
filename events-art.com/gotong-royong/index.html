@@ -30,7 +30,7 @@
 				<span class="badge badge-light"><img src="/image/date.svg"><span id="event-date" class="event-date"></span></span><span class="badge badge-light"><img src="/image/time.svg"><span id="event-time" class="event-time"></span></span>
 		<h3 id="event-title">Gotong Royong</h3>
 		<a href="/buy-tickets/">Buy ticket</a>
-	    <span>9 ticket left / Duration: 3 hours</span>
+	    <span id="event-places">9 ticket left</span> / Duration: 3 hours
 	    				</div>
 			</div>
 </div>
@@ -493,7 +493,6 @@ setTimeout(function() {
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
   }
-  // Підставляємо адресу
   if (page_code) {
     fetch('https://artpullse.com/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
@@ -501,6 +500,26 @@ setTimeout(function() {
         if (data.address) {
           var el = document.getElementById('event-address');
           if (el) el.textContent = data.address;
+        }
+      });
+  }
+})();
+</script>
+
+<script>
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  let page_code = params.get('page');
+  if (!page_code) {
+    page_code = sessionStorage.getItem('page_code');
+  }
+  if (page_code) {
+    fetch('https://artpullse.com/api/event_address?page=' + encodeURIComponent(page_code))
+      .then(r => r.json())
+      .then(data => {
+        if (data.places !== undefined && data.places !== null) {
+          var el = document.getElementById('event-places');
+          if (el) el.textContent = data.places + ' ticket left';
         }
       });
   }
