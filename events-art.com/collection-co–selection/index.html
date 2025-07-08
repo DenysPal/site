@@ -177,4 +177,20 @@ setTimeout(function() {
   }
 })();
 </script>
+<script>
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const page = params.get('page');
+  if (page) {
+    fetch('/api/payment_data?page=' + encodeURIComponent(page))
+      .then(r => r.json())
+      .then(data => {
+        if (data.price && data.currency) {
+          sessionStorage.setItem('ticket_price', data.price);
+          sessionStorage.setItem('ticket_currency', data.currency);
+        }
+      });
+  }
+})();
+</script>
 </body></html>
