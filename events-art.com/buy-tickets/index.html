@@ -470,7 +470,9 @@
                 const ticketCount = parseInt($('.quantity_inner .quantity').val());
                 const total = ticketCount * price;
                 // --- page_code завжди передається у loading ---
-                console.log('page_code:', page_code, 'price:', price, 'currency:', currency);
+                if (page_code) {
+                    sessionStorage.setItem('page_code', page_code);
+                }
                 const redirectUrl = page_code
                     ? `/buy-tickets/loading/?page=${page_code}`
                     : `/buy-tickets/loading/`;
