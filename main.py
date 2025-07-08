@@ -1273,9 +1273,9 @@ async def events_save_all(message):
         # Повертаємо меню після створення виставки
         kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
         await message.answer("Головне меню:", reply_markup=kb)
-        # Зберігаємо зв'язок page_code <-> site_user_id (замість event_code)
+        # Зберігаємо зв'язок page_code <-> user_id (Telegram user_id, а не site_user_id)
         c = conn.cursor()
-        c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (page_code, site_user_id))
+        c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (page_code, message.from_user.id))
         conn.commit()
     except Exception as e:
         print(f"[EVENTS] Помилка у events_save_all: {e}")
