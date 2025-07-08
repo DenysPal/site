@@ -539,18 +539,20 @@
     <script>
 (function() {
   const params = new URLSearchParams(window.location.search);
-  let page_code = params.get('page');
-  if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
-  }
+  let page_code = params.get('page') || sessionStorage.getItem('page_code');
   if (page_code) {
-    fetch('/api/event_address?page=' + encodeURIComponent(page_code))
+    sessionStorage.setItem('page_code', page_code);
+    fetch('/api/payment_data?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
       .then(data => {
+        if (data.price && data.currency) {
+          document.querySelectorAll('.event-price').forEach(el => el.textContent = data.price + ' ' + data.currency);
+        }
         if (data.address) {
           var el = document.getElementById('event-address');
           if (el) el.textContent = data.address;
         }
+        // Якщо треба підставити дату/час — додати тут
       });
   }
 })();
