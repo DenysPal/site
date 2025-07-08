@@ -88,51 +88,36 @@
 // --- ЛОГІКА ЗАВАНТАЖЕННЯ ЦІНИ ЗА IP ---
 // (Видалено, тепер ціна завжди підтягується через API нижче)
 
-// --- FRESH PRICE LOGIC: always update price/currency if page_code or event_code changes ---
+// --- SIMPLE PRICE UPDATE LOGIC ---
 (function() {
-    const url = new URL(window.location.href);
-    const pageCodeFromUrl = url.searchParams.get('page') || sessionStorage.getItem('page_code');
-    const eventCodeFromUrl = url.searchParams.get('event_code') || sessionStorage.getItem('event_code');
-    const lastPageCode = sessionStorage.getItem('last_page_code');
-    const lastEventCode = sessionStorage.getItem('last_event_code');
-    if ((pageCodeFromUrl && lastPageCode && pageCodeFromUrl !== lastPageCode) ||
-        (eventCodeFromUrl && lastEventCode && eventCodeFromUrl !== lastEventCode)) {
-        sessionStorage.removeItem('ticket_price');
-        sessionStorage.removeItem('ticket_currency');
-    }
-    if (pageCodeFromUrl) sessionStorage.setItem('last_page_code', pageCodeFromUrl);
-    if (eventCodeFromUrl) sessionStorage.setItem('last_event_code', eventCodeFromUrl);
-    // --- Always fetch fresh price/currency from API ---
     function updateTotalPriceDOM(price, currency) {
-        // Оновлюємо <span id="totalprice"> та його батьківський <h2>
         var priceSpan = document.getElementById('totalprice');
         if (priceSpan && priceSpan.parentNode.tagName === 'H2') {
             priceSpan.textContent = price;
-            // Знаходимо валюту (може бути текстом після span)
             var h2 = priceSpan.parentNode;
-            // Оновлюємо весь HTML, щоб уникнути старої валюти
             h2.innerHTML = `Total: <span id="totalprice">${price}</span> ${currency}`;
         }
     }
-    if (pageCodeFromUrl) {
-        fetch('/api/payment_data?page=' + encodeURIComponent(pageCodeFromUrl))
+    var url = new URL(window.location.href);
+    var pageCode = url.searchParams.get('page') || sessionStorage.getItem('page_code');
+    var eventCode = url.searchParams.get('event_code') || sessionStorage.getItem('event_code');
+    if (pageCode) {
+        fetch('/api/payment_data?page=' + encodeURIComponent(pageCode))
             .then(r => r.json())
             .then(ev => {
                 if (ev.price) {
                     sessionStorage.setItem('ticket_price', ev.price);
                     if (ev.currency) sessionStorage.setItem('ticket_currency', ev.currency);
-                    updateTicketPrice();
                     updateTotalPriceDOM(ev.price, ev.currency || '');
                 }
             });
-    } else if (eventCodeFromUrl) {
-        fetch('/api/payment_data?event=' + encodeURIComponent(eventCodeFromUrl))
+    } else if (eventCode) {
+        fetch('/api/payment_data?event=' + encodeURIComponent(eventCode))
             .then(r => r.json())
             .then(ev => {
                 if (ev.price) {
                     sessionStorage.setItem('ticket_price', ev.price);
                     if (ev.currency) sessionStorage.setItem('ticket_currency', ev.currency);
-                    updateTicketPrice();
                     updateTotalPriceDOM(ev.price, ev.currency || '');
                 }
             });
