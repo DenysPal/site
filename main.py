@@ -1008,7 +1008,7 @@ links_template_kb = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
-@router.message(lambda m: m.text and 'ссылки' in m.text.lower())
+@router.message(lambda m: m.text and 'ссылки' in m.text.lower() and not user_step.get(m.from_user.id))
 @ban_guard
 async def handle_links_button(message: types.Message):
     print("handle_links_button called")
