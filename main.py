@@ -1028,8 +1028,25 @@ async def handle_links_button(message: types.Message):
 async def handle_links_menu(message: types.Message):
     text = message.text.strip().lower()
     if text == "создать ссылку":
-        # Переводимо користувача у сценарій створення івенту
-        await message.answer("Введите данные по следующему образцу:\nФормат даты: 01.01.2025 12:00\n... (шаблон как раньше)", reply_markup=links_template_kb)
+        # Повертаємо стару інструкцію-шаблон
+        template_text = (
+            "1️⃣Введите данные по следующему образцу:\n"
+            "📅 Формат даты: 01.01.2025 12:00\n\n"
+            "1. Дата/время Terroir and Traditions\n"
+            "2. Дата/время Collection Co–selection\n"
+            "3. Дата/время Snucie\n"
+            "4. Дата/время Art that saves lives\n"
+            "5. Дата/время Gotong Royong\n"
+            "6. Дата/время Anna Konik\n"
+            "7. Дата/время Uncensored\n"
+            "8. Дата/время Jacek Adamas\n"
+            "9. Валюта (PLN,EUR,USD...)\n"
+            "10. Адрес выставки\n"
+            "11. Цена за билет\n\n"
+            "Минимальная стоимость одного билета - 40 EUR!\n"
+            "Минимальная стоимость для Австралии - 110 AUD"
+        )
+        await message.answer(template_text, reply_markup=links_template_kb)
         user_step[message.chat.id] = 'event_all_fields'
     elif text == "изменить ссылки":
         await message.answer("Функция изменения ссылок в разработке.", reply_markup=ReplyKeyboardRemove())
