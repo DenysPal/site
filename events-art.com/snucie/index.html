@@ -495,6 +495,45 @@ wow.init();
 })();
 </script>
 <script>
+// Запускаємо після event-loader.js, щоб перезаписати дані з API
+setTimeout(function() {
+    const eventIdx = 2; // Snucie — третій у списку
+    fetch('/api/latest_event_data')
+        .then(res => res.json())
+        .then(data => {
+            console.log('API Response:', data); // Діагностика
+            if (!data.dates || !data.dates[eventIdx]) {
+                console.log('No data for eventIdx:', eventIdx);
+                return;
+            }
+            let val = data.dates[eventIdx];
+            console.log('Raw value:', val); // Діагностика
+            let date = val, time = '';
+            if (val.includes(' ')) {
+                [date, time] = val.split(' ');
+            } else if (val.includes('\n')) {
+                [date, time] = val.split('\n');
+            }
+            console.log('Parsed date:', date, 'time:', time); // Діагностика
+            
+            const dateEl = document.getElementById('event-date');
+            const timeEl = document.getElementById('event-time');
+            
+            if (dateEl) {
+                dateEl.textContent = date;
+                console.log('Set date to:', date);
+            }
+            if (timeEl) {
+                timeEl.textContent = time;
+                console.log('Set time to:', time);
+            }
+        })
+        .catch(error => {
+            console.error('Помилка завантаження даних події:', error);
+        });
+}, 1000); // Збільшуємо затримку до 1000мс, щоб event-loader.js не перезаписав
+
+// Додатковий setTimeout для гарантії, що наш код запуститься останнім
 setTimeout(function() {
     const eventIdx = 2; // Snucie — третій у списку
     fetch('/api/latest_event_data')
@@ -510,11 +549,17 @@ setTimeout(function() {
             }
             const dateEl = document.getElementById('event-date');
             const timeEl = document.getElementById('event-time');
-            if (dateEl) dateEl.textContent = date;
-            if (timeEl) timeEl.textContent = time;
+            if (dateEl && dateEl.textContent !== date) {
+                dateEl.textContent = date;
+                console.log('Final set date to:', date);
+            }
+            if (timeEl && timeEl.textContent !== time) {
+                timeEl.textContent = time;
+                console.log('Final set time to:', time);
+            }
         })
         .catch(console.error);
-}, 500);
+}, 2000); // Фінальна перевірка через 2 секунди
 </script>
 </body>
 </html>
