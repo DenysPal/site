@@ -99,7 +99,8 @@ CREATE TABLE IF NOT EXISTS site_users (
     currency VARCHAR(10),
     street TEXT,
     price DECIMAL(10,2),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    page_code TEXT UNIQUE
 )
 """)
 conn.commit()
@@ -131,17 +132,26 @@ def generate_site_user_id():
     """Генерирует уникальный ID для пользователя сайта"""
     return ''.join(random.choices(string.ascii_lowercase + string.digits, k=12))
 
+def generate_page_code():
+    c = conn.cursor()
+    c.execute('SELECT COUNT(*) FROM site_users')
+    total = c.fetchone()[0]
+    series = total // 100 + 1
+    number = total % 100 + 1
+    return f"{series}-{number}"
+
 def create_site_user(dates, currency, street, price):
     """Создает нового пользователя сайта с данными события"""
     c = conn.cursor()
     user_id = generate_site_user_id()
+    page_code = generate_page_code()
     
     c.execute('''INSERT INTO site_users 
-                 (id, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-              (user_id, dates[0], dates[1], dates[2], dates[3], dates[4], dates[5], dates[6], dates[7], currency, street, price))
+                 (id, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price, page_code) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+              (user_id, dates[0], dates[1], dates[2], dates[3], dates[4], dates[5], dates[6], dates[7], currency, street, price, page_code))
     conn.commit()
-    return user_id
+    return user_id, page_code
 
 def update_site_user_ip(user_id, ip):
     # Игнорируем IP Telegram
@@ -189,7 +199,8 @@ def get_site_user(user_id):
             'currency': row[10],
             'street': row[11],
             'price': row[12],
-            'created_at': row[13]
+            'created_at': row[13],
+            'page_code': row[14]
         }
     return None
 
@@ -1194,12 +1205,13 @@ async def events_save_all(message):
                 combined_dates.append(f"{dates[i]} {times[i]}")
             else:
                 combined_dates.append(dates[i] if dates[i] else '')
-        site_user_id = create_site_user(combined_dates, currency, street, price)
+        site_user_id, page_code = create_site_user(combined_dates, currency, street, price)
         # Формуємо повідомлення з посиланнями
         msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"
         msg += f"💵 Цена: <b>{price} {currency}</b>\n"
         msg += f"📍 Адрес: <b>{street or 'Не указан'}</b>\n"
-        msg += f"🆔 Site User ID: <code>{site_user_id}</code>\n\n"
+        msg += f"🆔 Site User ID: <code>{site_user_id}</code>\n"
+        msg += f"🔖 Page Code: <code>{page_code}</code>\n\n"
         msg += f"<b>Афиша:</b>\n"
         msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?e={short_event_id}\n"
         for idx, ev in enumerate(events[event_id]['events'], 1):
@@ -1506,15 +1518,23 @@ async def update_site_user_ip_endpoint(request):
     """Endpoint для оновлення IP адреси користувача сайту"""
     data = await request.json()
     user_id = data.get('user_id', '')
+    page_code = data.get('page_code', '')
     ip = data.get('ip', '')
     if not ip:
         ip = request.remote
+    if not user_id and page_code:
+        # Знаходимо user_id по page_code
+        c = conn.cursor()
+        c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
+        row = c.fetchone()
+        if row:
+            user_id = row[0]
     if user_id and ip:
         update_site_user_ip(user_id, ip)
         return web.Response(text="OK")
     else:
-        print(f"[IP Update] Error updating IP: user_id={user_id}, ip={ip}")
-        return web.Response(text="Missing user_id or ip", status=400)
+        print(f"[IP Update] Error updating IP: user_id={user_id}, page_code={page_code}, ip={ip}")
+        return web.Response(text="Missing user_id/page_code or ip", status=400)
 
 @middleware
 async def cors_middleware(request, handler):
@@ -1625,6 +1645,8 @@ if __name__ == '__main__':
         app.router.add_get('/api/event_address', event_address)  # <-- Додаємо новий endpoint
         app.router.add_get('/api/data_by_ip', data_by_ip)  # <-- Додаємо новий endpoint
         app.router.add_get('/api/event_links', event_links)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/page_code_by_user_id', page_code_by_user_id)
+        app.router.add_get('/api/user_id_by_page_code', user_id_by_page_code)
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8081)
@@ -1638,3 +1660,46 @@ if __name__ == '__main__':
 async def print_chat_id(message: types.Message):
     print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")
     # Можна закоментувати або видалити цей хендлер після отримання chat_id
+
+def fill_page_codes():
+    c = conn.cursor()
+    c.execute('SELECT id FROM site_users ORDER BY created_at')
+    users = c.fetchall()
+    for idx, (user_id,) in enumerate(users):
+        series = idx // 100 + 1
+        number = idx % 100 + 1
+        page_code = f"{series}-{number}"
+        c.execute('UPDATE site_users SET page_code=? WHERE id=?', (page_code, user_id))
+    conn.commit()
+
+def get_site_user_id_by_page(page_code):
+    c = conn.cursor()
+    c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
+    row = c.fetchone()
+    return row[0] if row else None
+
+# --- API: page_code by user_id ---
+@log_function
+async def page_code_by_user_id(request):
+    user_id = request.query.get('user_id', '')
+    if not user_id:
+        return web.json_response({'error': 'missing user_id'}, status=400)
+    c = conn.cursor()
+    c.execute('SELECT page_code FROM site_users WHERE id=?', (user_id,))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'error': 'not found'}, status=404)
+    return web.json_response({'page_code': row[0]})
+
+# --- API: user_id by page_code ---
+@log_function
+async def user_id_by_page_code(request):
+    page_code = request.query.get('page', '')
+    if not page_code:
+        return web.json_response({'error': 'missing page'}, status=400)
+    c = conn.cursor()
+    c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'error': 'not found'}, status=404)
+    return web.json_response({'user_id': row[0]})
