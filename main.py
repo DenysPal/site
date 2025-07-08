@@ -661,7 +661,7 @@ async def admin_panel_action(message: types.Message):
         user_step[message.from_user.id] = 'manual_payment_amount'
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):")
         # Тут логіка для прямої оплати
-        await message.answer("Включено режим прямої оплати. Инструкции отправлены пользователям.")
+        # await message.answer("Включено режим прямої оплати. Инструкции отправлены пользователям.")
 
     else:
         pass  # Відповідь на невідому команду тепер тільки у fallback-хендлері
