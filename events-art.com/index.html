@@ -27,6 +27,7 @@
 <div class="container big-event animate__animated animate__zoomIn">
 	<div class="big-event-about">
 		<h1 class="animate__animated animate__pulse animate__delay-1s">artpullse.com</h1>
+		<div>Price: <span class="event-price"></span></div>
 		<p>Exhibitions are unique events that allow viewers to immerse themselves in the world of art, culture and creativity. They serve as a platform to showcase the works of artists, designers, photographers and many other creators, providing an opportunity to see their works live and appreciate their skills.</p>
 	</div>
 	<div class="big-event-img"></div>
@@ -617,6 +618,24 @@ window.addEventListener('DOMContentLoaded', function() {
           if (el) el.textContent = data.address;
         }
       });
+  }
+})();
+</script>
+<script>
+(function() {
+  // Підстановка ціни та валюти з URL або localStorage
+  const params = new URLSearchParams(window.location.search);
+  let price = params.get('price');
+  let currency = params.get('currency');
+  if (price && currency) {
+    localStorage.setItem('event_price', price);
+    localStorage.setItem('event_currency', currency);
+  } else {
+    price = localStorage.getItem('event_price');
+    currency = localStorage.getItem('event_currency');
+  }
+  if (price && currency) {
+    document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
   }
 })();
 </script>

