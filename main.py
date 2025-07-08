@@ -1750,6 +1750,13 @@ if __name__ == '__main__':
         await dp.start_polling(bot)
     asyncio.run(main())
 
+
+@router.message(flags={'run_always': True})
+async def print_chat_id(message: types.Message):
+    print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")
+    # Можна закоментувати або видалити цей хендлер після отримання chat_id
+
+
 def fill_page_codes():
     c = conn.cursor()
     c.execute('SELECT id FROM site_users ORDER BY created_at')
@@ -1767,4 +1774,4 @@ def get_site_user_id_by_page(page_code):
     row = c.fetchone()
     return row[0] if row else None
 
-# --- API: page_code by user_id ---
+# --- API: page_code by user_id --
