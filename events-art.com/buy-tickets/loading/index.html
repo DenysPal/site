@@ -403,5 +403,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+<script>
+// --- Fallback: якщо page_code є в sessionStorage, але немає в URL — додаємо його в URL і перезавантажуємо сторінку ---
+(function() {
+    const url = new URL(window.location.href);
+    const pageFromUrl = url.searchParams.get('page');
+    const pageFromStorage = sessionStorage.getItem('page_code');
+    if (!pageFromUrl && pageFromStorage) {
+        url.searchParams.set('page', pageFromStorage);
+        window.location.replace(url.toString());
+    }
+})();
+</script>
 </body>
 </html>
