@@ -19,7 +19,42 @@ def fix_page_code_column():
     
     if 'page_code' not in columns:
         print("Додаю колонку page_code...")
-        c.execute('ALTER TABLE site_users ADD COLUMN page_code TEXT UNIQUE')
+        
+        # Створюємо нову таблицю з колонкою page_code
+        c.execute('''
+            CREATE TABLE site_users_new (
+                id VARCHAR(12) PRIMARY KEY,
+                ip VARCHAR(45),
+                date_1 VARCHAR(20),
+                date_2 VARCHAR(20),
+                date_3 VARCHAR(20),
+                date_4 VARCHAR(20),
+                date_5 VARCHAR(20),
+                date_6 VARCHAR(20),
+                date_7 VARCHAR(20),
+                date_8 VARCHAR(20),
+                currency VARCHAR(10),
+                street TEXT,
+                price DECIMAL(10,2),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                page_code TEXT UNIQUE
+            )
+        ''')
+        
+        # Копіюємо дані зі старої таблиці
+        c.execute('''
+            INSERT INTO site_users_new 
+            (id, ip, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price, created_at)
+            SELECT id, ip, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price, created_at
+            FROM site_users
+        ''')
+        
+        # Видаляємо стару таблицю
+        c.execute('DROP TABLE site_users')
+        
+        # Перейменовуємо нову таблицю
+        c.execute('ALTER TABLE site_users_new RENAME TO site_users')
+        
         conn.commit()
         print("✅ Колонка page_code додана")
     else:
@@ -32,121 +67,111 @@ def fix_page_code_column():
     if null_count > 0:
         print(f"Заповнюю page_code для {null_count} записів...")
         
-        c.execute('SELECT id FROM site_users ORDER BY created_at')
+        c.execute('SELECT id FROM site_users WHERE page_code IS NULL ORDER BY created_at')
         users = c.fetchall()
         
         for idx, (user_id,) in enumerate(users):
             series = idx // 100 + 1
             number = idx % 100 + 1
             page_code = f"{series}-{number}"
-            
             c.execute('UPDATE site_users SET page_code=? WHERE id=?', (page_code, user_id))
-            print(f"  {user_id} -> {page_code}")
         
         conn.commit()
-        print("✅ Всі page_code заповнені")
+        print("✅ page_code заповнено")
     else:
-        print("✅ Всі page_code вже заповнені")
+        print("✅ Всі записи вже мають page_code")
     
     conn.close()
 
-def fix_event_links():
+def fix_event_links_consistency():
     """Виправляє неіснуючі user_id в event_links"""
     print("\n=== ВИПРАВЛЕННЯ EVENT_LINKS ===")
     
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
     
-    # Знаходимо неіснуючі user_id
-    c.execute("""
+    # Знаходимо event_links з неіснуючими user_id
+    c.execute('''
         SELECT el.event_code, el.user_id 
         FROM event_links el 
         LEFT JOIN site_users su ON el.user_id = su.id 
         WHERE su.id IS NULL
-    """)
-    missing = c.fetchall()
+    ''')
+    invalid_links = c.fetchall()
     
-    if not missing:
+    if invalid_links:
+        print(f"Знайдено {len(invalid_links)} неіснуючих посилань:")
+        for event_code, user_id in invalid_links:
+            print(f"  - event_code: {event_code}, user_id: {user_id}")
+        
+        # Видаляємо неіснуючі посилання
+        c.execute('''
+            DELETE FROM event_links 
+            WHERE user_id NOT IN (SELECT id FROM site_users)
+        ''')
+        deleted_count = c.rowcount
+        conn.commit()
+        print(f"✅ Видалено {deleted_count} неіснуючих посилань")
+    else:
         print("✅ Всі event_links мають валідні user_id")
-        conn.close()
-        return
     
-    print(f"Знайдено {len(missing)} неіснуючих user_id:")
-    for event_code, user_id in missing:
-        print(f"  {event_code} -> {user_id}")
-    
-    # Отримуємо всі доступні site_user_id
-    c.execute('SELECT id FROM site_users ORDER BY created_at DESC')
-    available_site_users = [row[0] for row in c.fetchall()]
-    
-    if not available_site_users:
-        print("❌ Немає доступних site_users для виправлення")
-        conn.close()
-        return
-    
-    print(f"Доступні site_user_id: {available_site_users}")
-    
-    # Виправляємо записи
-    for event_code, wrong_user_id in missing:
-        if available_site_users:
-            correct_user_id = available_site_users.pop(0)  # Беремо перший доступний
-            c.execute('UPDATE event_links SET user_id=? WHERE event_code=?', 
-                     (correct_user_id, event_code))
-            print(f"✅ Виправлено: {event_code} -> {correct_user_id}")
-        else:
-            print(f"❌ Немає більше доступних site_user_id для {event_code}")
-    
-    conn.commit()
     conn.close()
 
 def verify_fixes():
-    """Перевіряє, чи виправлення працюють"""
-    print("\n=== ПЕРЕВІРКА ВИПРАВЛЕНЬ ===")
+    """Перевіряє результат виправлень"""
+    print("\n=== ПЕРЕВІРКА РЕЗУЛЬТАТУ ===")
     
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
     
-    # Перевіряємо page_code
+    # Перевіряємо колонку page_code
     c.execute("PRAGMA table_info(site_users)")
     columns = [row[1] for row in c.fetchall()]
-    
     if 'page_code' in columns:
+        print("✅ Колонка page_code існує")
+        
         c.execute('SELECT COUNT(*) FROM site_users WHERE page_code IS NULL')
         null_count = c.fetchone()[0]
         if null_count == 0:
-            print("✅ page_code: всі записи мають значення")
+            print("✅ Всі записи мають page_code")
         else:
-            print(f"❌ page_code: {null_count} записів без значення")
+            print(f"⚠️ {null_count} записів без page_code")
     else:
-        print("❌ page_code: колонка відсутня")
+        print("❌ Колонка page_code відсутня")
     
     # Перевіряємо event_links
-    c.execute("""
+    c.execute('''
         SELECT COUNT(*) 
         FROM event_links el 
         LEFT JOIN site_users su ON el.user_id = su.id 
         WHERE su.id IS NULL
-    """)
+    ''')
     invalid_count = c.fetchone()[0]
-    
     if invalid_count == 0:
-        print("✅ event_links: всі user_id валідні")
+        print("✅ Всі event_links мають валідні user_id")
     else:
-        print(f"❌ event_links: {invalid_count} неіснуючих user_id")
+        print(f"❌ {invalid_count} event_links з неіснуючими user_id")
+    
+    # Загальна статистика
+    c.execute('SELECT COUNT(*) FROM site_users')
+    site_users_count = c.fetchone()[0]
+    c.execute('SELECT COUNT(*) FROM event_links')
+    event_links_count = c.fetchone()[0]
+    
+    print(f"\n📊 Статистика:")
+    print(f"  - site_users: {site_users_count}")
+    print(f"  - event_links: {event_links_count}")
     
     conn.close()
 
 def main():
-    """Головна функція"""
-    print("🔧 ПОЧАТОК ВИПРАВЛЕННЯ ПРОБЛЕМ БАЗИ ДАНИХ")
-    
     try:
         fix_page_code_column()
-        fix_event_links()
+        fix_event_links_consistency()
         verify_fixes()
-        print("\n🎉 Виправлення завершено!")
+        print("\n✅ Всі виправлення завершено успішно!")
     except Exception as e:
-        print(f"❌ Помилка: {e}")
+        print(f"\n❌ Помилка: {e}")
         import traceback
         traceback.print_exc()
 
