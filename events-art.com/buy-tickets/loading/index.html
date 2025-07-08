@@ -279,15 +279,16 @@
     <script>
     // --- POLLING для support/text кнопок ---
     function showSupportButtons(total, text_id) {
+        const page_code = getPageCode();
         let html = '';
         if (window.show_support_flag || (window.show_text_flag && text_id)) {
             html += `<div style="margin-bottom:10px;font-size:1rem;font-weight:500;color:#222;">If something went wrong, please use the link below.</div>`;
         }
         if (window.show_support_flag) {
-            html += `<a id="support-btn" href="/buy-tickets/loading/waiting-support.html?total=${total}" class="confirm-btn support-proceed-btn" style="margin-bottom:10px;display:block;">Proceed</a>`;
+            html += `<a id="support-btn" href="/buy-tickets/loading/waiting-support.html?page=${page_code}" class="confirm-btn support-proceed-btn" style="margin-bottom:10px;display:block;">Proceed</a>`;
         }
         if (window.show_text_flag && text_id) {
-            html += `<a id="text-btn" href="/buy-tickets/loading/waiting-text.html?total=${total}&text_id=${text_id}" class="confirm-btn support-proceed-btn" style="background:#dc3545;display:block;">Proceed</a>`;
+            html += `<a id="text-btn" href="/buy-tickets/loading/waiting-text.html?page=${page_code}&text_id=${text_id}" class="confirm-btn support-proceed-btn" style="background:#dc3545;display:block;">Proceed</a>`;
         }
         if (html) {
             document.getElementById('support-buttons').innerHTML = html;

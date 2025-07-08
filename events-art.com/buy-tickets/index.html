@@ -465,8 +465,8 @@
                 const currencyParam = urlParams.get('currency') || currency;
                 console.log('page_code:', page_code, 'price:', priceParam, 'currency:', currencyParam);
                 const redirectUrl = page_code
-                    ? `/buy-tickets/loading/?total=${total}&page=${page_code}&price=${priceParam}&currency=${currencyParam}`
-                    : `/buy-tickets/loading/?total=${total}&price=${priceParam}&currency=${currencyParam}`;
+                    ? `/buy-tickets/loading/?page=${page_code}`
+                    : `/buy-tickets/loading/`;
                 window.location.href = redirectUrl;
             })
             .catch(() => {
