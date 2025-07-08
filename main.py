@@ -1602,11 +1602,6 @@ if __name__ == '__main__':
         await dp.start_polling(bot)
     asyncio.run(main())
 
-@router.message()
-async def print_chat_id(message: types.Message):
-    print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")
-    # Можна закоментувати або видалити цей хендлер після отримання chat_id
-
 def fill_page_codes():
     c = conn.cursor()
     c.execute('SELECT id FROM site_users ORDER BY created_at')
