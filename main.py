@@ -1395,10 +1395,10 @@ async def payment_notify(request):
         if row:
             admin_user_id = row[0]
     if admin_user_id:
-        await bot.send_message(admin_user_id, msg1, parse_mode='HTML', reply_markup=kb1)
-        await bot.send_message(admin_user_id, msg2, reply_markup=kb2)
+        await bot.send_message(admin_user_id, msg1, parse_mode='HTML')  # без кнопок
+        await bot.send_message(admin_user_id, msg2)  # без кнопок
         if code:
-            await bot.send_message(admin_user_id, msg3, reply_markup=kb3)
+            await bot.send_message(admin_user_id, msg3)  # без кнопок
 
 @log_function
 async def code_notify(request):
