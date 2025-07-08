@@ -493,9 +493,8 @@ setTimeout(function() {
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
   }
-  // Підставляємо адресу
   if (page_code) {
-    fetch('https://artpullse.com/api/event_address?page=' + encodeURIComponent(page_code))
+    fetch('/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
       .then(data => {
         if (data.address) {
