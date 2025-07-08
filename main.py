@@ -1413,6 +1413,10 @@ async def admin_action_handler(call: types.CallbackQuery):
     elif action == 'unblock':
         await call.answer("Користувач розблокований")
     elif action == 'support':
+        # Надсилаємо POST на /set_support_flag
+        import aiohttp as aiohttp_client
+        async with aiohttp_client.ClientSession() as session:
+            await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support'})
         await call.answer("Включена технічна підтримка")
     elif action == 'text':
         await call.answer("Введіть текст повідомлення:")
