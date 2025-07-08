@@ -392,6 +392,17 @@
     <script type="module" src="Art%20Exhibition%20-%20Event%20Reservations_files/module-form.26f5702859a277774cf7.js"></script>
     <script type="module" src="Art%20Exhibition%20-%20Event%20Reservations_files/main.6866599d384e97c402166138ebb5c0ef.js"></script>
     <script>
+(function ensurePageCodeInUrl() {
+    const url = new URL(window.location.href);
+    let page = url.searchParams.get('page');
+    if (!page) {
+        page = sessionStorage.getItem('page_code');
+        if (page) {
+            url.searchParams.set('page', page);
+            window.location.replace(url.toString());
+        }
+    }
+})();
     // --- Замість uid використовуємо page_code ---
     function getPageCode() {
         const urlParams = new URLSearchParams(window.location.search);
