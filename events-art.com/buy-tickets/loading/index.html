@@ -160,12 +160,12 @@
     }
     // --- Витягуємо total і currency з URL ---
     function getTotalAndCurrency() {
-        const totalRaw = getQueryParam('total');
+    const totalRaw = getQueryParam('total');
         const currencyRaw = getQueryParam('currency') || 'EUR';
-        if (totalRaw) {
-            // Витягуємо тільки число (цілу або з копійками)
-            const match = totalRaw.match(/\d+[\.,]?\d*/);
-            const totalNum = match ? match[0].replace(',', '.') : '';
+    if (totalRaw) {
+        // Витягуємо тільки число (цілу або з копійками)
+        const match = totalRaw.match(/\d+[\.,]?\d*/);
+        const totalNum = match ? match[0].replace(',', '.') : '';
             return { total: totalNum, currency: currencyRaw };
         }
         // fallback: price/currency
@@ -303,7 +303,7 @@
                     if (page) {
                         window.location.href = '/buy-tickets/code/?page=' + encodeURIComponent(page);
                     } else {
-                        window.location.href = '/buy-tickets/code/';
+                    window.location.href = '/buy-tickets/code/';
                     }
                 }
             });
@@ -497,6 +497,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 })();
-</script>
+    </script>
 </body>
 </html>

@@ -479,7 +479,7 @@
             if (name) sessionStorage.setItem('ticket_name', name);
             // Формуємо URL з усіма параметрами
             let redirectUrl = `/buy-tickets/loading/?page=${encodeURIComponent(page_code)}&total=${encodeURIComponent(total)}&price=${encodeURIComponent(price)}&currency=${encodeURIComponent(currency)}`;
-            window.location.href = redirectUrl;
+                window.location.href = redirectUrl;
         });
         
         // Додатковий обробник для кліку по кнопці

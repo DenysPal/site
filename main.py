@@ -1511,32 +1511,38 @@ async def latest_event_data(request):
 
 @log_function
 async def event_address(request):
-    # Підтримуємо як новий формат ?page= так і старий ?e=
     page_code = request.query.get('page', '') or request.query.get('e', '')
+    print(f"[event_address] page_code: {page_code}")
+    db_path = os.path.abspath('users.db')
+    print(f"[event_address] DB path: {db_path}")
     if not page_code:
+        print("[event_address] No page_code provided")
         return web.json_response({'error': 'missing page or e parameter'}, status=400)
-    # Знайти user_id за page_code
     c = conn.cursor()
     # Спочатку шукаємо в event_links (для нових записів)
     c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
     row = c.fetchone()
     if row:
-        user_id = row[0]
+        print(f"[event_address] Found user_id in event_links: {row[0]}")
+        # user_id тут — це Telegram user_id, тому адресу шукаємо по page_code у site_users
+        c.execute('SELECT street FROM site_users WHERE page_code=?', (page_code,))
+        row2 = c.fetchone()
+        if not row2:
+            print(f"[event_address] page_code {page_code} not found in site_users for street (via event_links)")
+            return web.json_response({'error': 'address not found'}, status=404)
+        address = row2[0]
+        print(f"[event_address] Found address (via event_links): {address}")
+        return web.json_response({'address': address})
     else:
         # Якщо не знайдено в event_links, шукаємо в site_users
-        c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
-        row = c.fetchone()
-        if not row:
-            return web.json_response({'error': 'not found'}, status=404)
-        user_id = row[0]
-    
-    # Знайти запис site_users для цього user_id
-    c.execute('SELECT street FROM site_users WHERE id=?', (user_id,))
-    row2 = c.fetchone()
-    if not row2:
-        return web.json_response({'error': 'address not found'}, status=404)
-    address = row2[0]
-    return web.json_response({'address': address})
+        c.execute('SELECT street FROM site_users WHERE page_code=?', (page_code,))
+        row2 = c.fetchone()
+        if not row2:
+            print(f"[event_address] page_code {page_code} not found in site_users for street (no event_links)")
+            return web.json_response({'error': 'address not found'}, status=404)
+        address = row2[0]
+        print(f"[event_address] Found address (direct): {address}")
+        return web.json_response({'address': address})
 
 @log_function
 async def data_by_ip(request):
