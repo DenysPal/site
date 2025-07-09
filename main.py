@@ -1079,7 +1079,7 @@ async def edit_link_menu(message: types.Message):
     page_code = state.replace('edit_link_menu_', '')
     print(f"[edit_link_menu] chat={message.chat.id} user_step={user_step.get(message.chat.id)} text={message.text} page_code={page_code}")
     c = conn.cursor()
-    c.execute('SELECT places FROM site_users WHERE page_code=?', (page_code,))
+    c.execute('SELECT places, date1, date2, date3, date4, date5, date6, date7, date8, currency, street, price FROM site_users WHERE page_code=?', (page_code,))
     row = c.fetchone()
     places_str = f"Мест сейчас: {row[0]}" if row and row[0] is not None else "Мест сейчас: не указано"
     if message.text == "Изменить места":
@@ -1093,12 +1093,37 @@ async def edit_link_menu(message: types.Message):
         user_step[message.chat.id] = 'links_menu'
         await links_menu(message)
     elif message.text == "Изменить данные":
-        await message.answer("Изменение других данных пока не реализовано.", reply_markup=links_edit_kb)
+        # Показати шаблон з поточними даними
+        if row:
+            template = "\n".join([str(row[i+1]) for i in range(8)]) + f"\n{row[9]}\n{row[10]}\n{row[11]}"
+        else:
+            template = "01.01.2025 12:00\n" * 8 + "EUR\nАдрес\n45"
+        await message.answer(f"Отправьте новые данные для ссылки ?page={page_code} по шаблону (11 строк):\n\n{template}", reply_markup=ReplyKeyboardRemove())
+        user_step[message.chat.id] = f'edit_link_data_{page_code}'
     elif message.text == "⬅️ Назад":
         user_step[message.chat.id] = 'links_menu'
         await links_menu(message)
     else:
         await message.answer(f"{places_str}\nПожалуйста, выберите действие из меню.", reply_markup=links_edit_kb)
+
+@router.message(lambda m: user_step.get(m.chat.id, '').startswith('edit_link_data_'))
+@ban_guard
+async def edit_link_data(message: types.Message):
+    state = user_step.get(message.chat.id, '')
+    page_code = state.replace('edit_link_data_', '')
+    lines = [l.strip() for l in message.text.split('\n') if l.strip()]
+    if len(lines) != 11:
+        await message.answer(f"❗️ Должно быть ровно 11 непустых строк! Вы отправили: {len(lines)}. Скопируйте шаблон и заполните все поля.")
+        return
+    # Оновити дані у site_users
+    c = conn.cursor()
+    for i in range(8):
+        c.execute(f'UPDATE site_users SET date{i+1}=? WHERE page_code=?', (lines[i], page_code))
+    c.execute('UPDATE site_users SET currency=?, street=?, price=? WHERE page_code=?', (lines[8], lines[9], lines[10], page_code))
+    conn.commit()
+    await message.answer("Данные успешно обновлены!", reply_markup=links_edit_kb)
+    user_step[message.chat.id] = f'edit_link_menu_{page_code}'
+    await edit_link_menu(message)
 
 @router.message(lambda m: user_step.get(m.chat.id, '').startswith('edit_places_'))
 @ban_guard
