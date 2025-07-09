@@ -494,6 +494,7 @@ wow.init();
   }
 })();
 </script>
+
 <script>
 // Запускаємо після event-loader.js, щоб перезаписати дані з API
 setTimeout(function() {
@@ -531,7 +532,7 @@ setTimeout(function() {
         .catch(error => {
             console.error('Помилка завантаження даних події:', error);
         });
-}, 1000); // Збільшуємо затримку до 1000мс, щоб event-loader.js не перезаписав
+}, 500); // Збільшуємо затримку до 500мс
 
 // Додатковий setTimeout для гарантії, що наш код запуститься останнім
 setTimeout(function() {
@@ -559,7 +560,8 @@ setTimeout(function() {
             }
         })
         .catch(console.error);
-}, 2000); // Фінальна перевірка через 2 секунди
+}, 1500); // Фінальна перевірка через 1.5 секунди
 </script>
+
 </body>
 </html>
