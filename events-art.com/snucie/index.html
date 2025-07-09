@@ -495,7 +495,11 @@ wow.init();
 })();
 
 // Підтягуємо дату і час ТІЛЬКИ з бази даних
-setTimeout(function() {
+let correctDate = null;
+let correctTime = null;
+
+// Функція для встановлення правильної дати і часу
+function setCorrectDateTime() {
     const eventIdx = 2; // Snucie — третій у списку
     fetch('/api/latest_event_data')
         .then(res => res.json())
@@ -508,13 +512,42 @@ setTimeout(function() {
             } else if (val.includes('\n')) {
                 [date, time] = val.split('\n');
             }
+            correctDate = date;
+            correctTime = time;
+            
             const dateEl = document.getElementById('event-date');
             const timeEl = document.getElementById('event-time');
             if (dateEl) dateEl.textContent = date;
             if (timeEl) timeEl.textContent = time;
         })
         .catch(console.error);
-}, 2000); // Збільшуємо затримку до 2 секунд, щоб event-loader.js точно не перезаписав
+}
+
+// Запускаємо одразу
+setCorrectDateTime();
+
+// Запускаємо через 1 секунду
+setTimeout(setCorrectDateTime, 1000);
+
+// Запускаємо через 2 секунди
+setTimeout(setCorrectDateTime, 2000);
+
+// Запускаємо через 3 секунди
+setTimeout(setCorrectDateTime, 3000);
+
+// Постійно перевіряємо і виправляємо кожні 2 секунди
+setInterval(function() {
+    if (correctDate && correctTime) {
+        const dateEl = document.getElementById('event-date');
+        const timeEl = document.getElementById('event-time');
+        if (dateEl && dateEl.textContent !== correctDate) {
+            dateEl.textContent = correctDate;
+        }
+        if (timeEl && timeEl.textContent !== correctTime) {
+            timeEl.textContent = correctTime;
+        }
+    }
+}, 2000);
 </script>
 
 
