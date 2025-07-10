@@ -1297,14 +1297,7 @@ async def block_others(message: types.Message):
         await message.answer("⚠️ Виникла помилка стану. Крок скинуто. Спробуйте ще раз або натисніть 'Админ панель'.")
         return
     # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
-    if is_admin(uid):
-        m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
-        if m:
-            amount = m.group(1).replace(',', '.')
-            currency = m.group(2).upper()
-            link = f"https://artpullse.com/refund/?total={amount}{currency}"
-            await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
-            return
+
     print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
     # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
     if message.text and 'ссылки' in message.text.lower():
