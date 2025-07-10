@@ -1153,18 +1153,10 @@ async def handle_edit_places_choose(message: types.Message):
     page_code = state.replace('edit_places_choose_', '')
     text = message.text.strip()
     if text == "⬅️ Назад":
-        # Повертаємо в меню редагування цієї ссилки
-        kb = ReplyKeyboardMarkup(
-            keyboard=[
-                [KeyboardButton(text="Изменить данные")],
-                [KeyboardButton(text="Изменить места")],
-                [KeyboardButton(text="Удалить ссылку")],
-                [KeyboardButton(text="⬅️ Назад")]
-            ],
-            resize_keyboard=True
-        )
-        await message.answer(f"Настройки для ссылки {page_code}", reply_markup=kb)
-        user_step[message.chat.id] = f'edit_link_menu_{page_code}'
+        # Повертаємо в головне меню
+        kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+        await message.answer("Главное меню:", reply_markup=kb)
+        user_step[message.chat.id] = None
         return
     # Визначаємо event_index по тексту кнопки
     try:
