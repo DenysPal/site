@@ -408,7 +408,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 // --- Додаємо page_code до всіх посилань на сторінці івенту ---
 (function() {
   // Отримуємо page_code з URL або sessionStorage
-  const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
