@@ -1919,6 +1919,13 @@ if __name__ == '__main__':
         await dp.start_polling(bot)
     asyncio.run(main())
 
+@router.message(lambda m: user_step.get(m.from_user.id) == 'pay_amount')
+@ban_guard
+async def admin_pay_amount(message: types.Message):
+    # ...існуючий код...
+    user_step[uid] = None
+
+# --- ВСТАВИТИ СЮДИ ---
 @router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
 @ban_guard
 async def manual_payment_back(message: types.Message):
