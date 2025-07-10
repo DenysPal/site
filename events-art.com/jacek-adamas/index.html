@@ -29,8 +29,9 @@
 				<div class="medium-event-about">
 			    <span class="badge badge-light"><img src="/image/date.svg"><span id="event-date" class="event-date"></span></span><span class="badge badge-light"><img src="/image/time.svg"><span id="event-time" class="event-time"></span></span>
 	    <h3 id="event-title">Jacek Adamas</h3>
-      <a href="/buy-tickets/?event=7" onclick="sessionStorage.setItem('event_index', 7)">Buy ticket</a> 
-        <span id="event-places"></span> / Duration: 3 hours
+      		<a href="/buy-tickets/?event=7" onclick="sessionStorage.setItem('event_index', 7)">Buy ticket</a>
+	    <span id="event-places">0 ticket left</span> / Duration: 3 hours
+	    <div class="event-price">Price: <span id="event-price">Loading...</span></div>
             </div>
 			</div>
 </div>
@@ -493,6 +494,15 @@ Yes. Photography and videography are allowed in the Museum so long as the images
         if (data.places !== undefined && data.places !== null) {
           var el = document.getElementById('event-places');
           if (el) el.textContent = data.places + ' ticket left';
+        }
+      });
+    // Price
+    fetch('/api/payment_data?page=' + encodeURIComponent(page_code))
+      .then(r => r.json())
+      .then(data => {
+        if (data.price && data.currency) {
+          var el = document.getElementById('event-price');
+          if (el) el.textContent = data.price + ' ' + data.currency;
         }
       });
   }
