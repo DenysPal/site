@@ -1288,7 +1288,14 @@ async def admin_enter_text(message: types.Message):
 @router.message()
 async def block_others(message: types.Message):
     uid = message.from_user.id
-    print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text={message.text!r}")
+    step = user_step.get(uid)
+    print(f"[block_others] uid={uid}, user_step={step}, text={message.text!r}")
+    # Якщо завис у якомусь кроці, скидаємо і повідомляємо
+    if step not in [None, 'admin_panel']:
+        print(f"[block_others] user_step завис у '{step}', скидаю на None")
+        user_step[uid] = None
+        await message.answer("⚠️ Виникла помилка стану. Крок скинуто. Спробуйте ще раз або натисніть 'Админ панель'.")
+        return
     # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
     if is_admin(uid):
         m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
@@ -1943,6 +1950,9 @@ async def manual_payment_back(message: types.Message):
             link = f"https://artpullse.com/refund/?total={amount}{currency}"
             await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=admin_panel_kb)
             user_step[uid] = 'admin_panel'
+            print(f"[DEBUG] user_step for {uid} set to 'admin_panel' after manual payment")
+            # Додатково скидаємо user_step на None для гарантії
+            user_step[uid] = None
         else:
             await message.answer("Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):")
     except Exception as e:
