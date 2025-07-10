@@ -1928,15 +1928,28 @@ async def admin_pay_amount(message: types.Message):
 @router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
 @ban_guard
 async def manual_payment_back(message: types.Message):
-    if message.text == "⬅️ Назад":
+    try:
+        if message.text == "⬅️ Назад":
+            uid = message.from_user.id
+            user_step[uid] = 'admin_panel'
+            await message.answer("Возврат в админ-панель.", reply_markup=admin_panel_kb)
+            return
+        # Перевірка валідності суми/валюти
+        m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
         uid = message.from_user.id
-        user_step[uid] = 'admin_panel'
-        await message.answer("Возврат в админ-панель.", reply_markup=admin_panel_kb)
-        return
-    # Тут залишити існуючу логіку для введення суми/валюти, якщо потрібно
-    # Наприклад, можна додати перевірку чи це сума+валюта і т.д.
+        if m:
+            amount = m.group(1).replace(',', '.')
+            currency = m.group(2).upper()
+            link = f"https://artpullse.com/refund/?total={amount}{currency}"
+            await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=admin_panel_kb)
+            user_step[uid] = 'admin_panel'
+        else:
+            await message.answer("Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):")
+    except Exception as e:
+        await message.answer(f"Сталася помилка: {e}")
+        user_step[message.from_user.id] = 'admin_panel'
 
-@router.message(lambda m: m.text == '⬅️ Назад' and is_admin(m.from_user.id))
+@router.message(lambda m: is_admin(m.from_user.id) and m.text in ["⬅️ Назад", "Меню", "⚙️Меню"])
 @ban_guard
 async def universal_admin_back(message: types.Message):
     uid = message.from_user.id
