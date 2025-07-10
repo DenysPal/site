@@ -1919,5 +1919,16 @@ if __name__ == '__main__':
         await dp.start_polling(bot)
     asyncio.run(main())
 
+@router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
+@ban_guard
+async def manual_payment_back(message: types.Message):
+    if message.text == "⬅️ Назад":
+        uid = message.from_user.id
+        user_step[uid] = 'admin_panel'
+        await message.answer("Возврат в админ-панель.", reply_markup=admin_panel_kb)
+        return
+    # Тут залишити існуючу логіку для введення суми/валюти, якщо потрібно
+    # Наприклад, можна додати перевірку чи це сума+валюта і т.д.
+
 
 
