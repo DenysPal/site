@@ -1104,7 +1104,50 @@ async def handle_edit_link_menu(message: types.Message):
     page_code = state.replace('edit_link_menu_', '')
     text = message.text.strip().lower()
     if text == "изменить места":
-        await message.answer(f"Введите новое количество мест для ссылки {page_code}:", reply_markup=ReplyKeyboardRemove())
+        # Отримуємо поточні дані з бази для цього page_code
+        c = conn.cursor()
+        c.execute('SELECT date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, places FROM site_users WHERE page_code=?', (page_code,))
+        row = c.fetchone()
+        if not row:
+            await message.answer("Данные для этой ссылки не найдены.")
+            return
+        
+        dates = [row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]]
+        places = row[8] if row[8] else 0
+        
+        # Формуємо список із 8 рядків з поточною кількістю місць
+        event_names = [
+            "Terroir and Traditions",
+            "Collection Co–selection", 
+            "Snucie",
+            "Art that saves lives",
+            "Gotong Royong",
+            "Anna Konik",
+            "Uncensored",
+            "Jacek Adamas"
+        ]
+        
+        # Отримуємо актуальні дані з сайту через API
+        try:
+            import aiohttp
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f'http://127.0.0.1:8081/api/event_address?page={page_code}') as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        current_places = data.get('places', places)
+                    else:
+                        current_places = places
+        except Exception as e:
+            print(f"[DEBUG] Error fetching places from API: {e}")
+            current_places = places
+        
+        places_text = f"Текущее количество мест для ссылки ?page={page_code}:\n\n"
+        for i in range(8):
+            places_text += f"{i+1}. {event_names[i]}: {current_places} мест\n"
+        
+        places_text += "\nВведите новое количество мест для всех событий:"
+        
+        await message.answer(places_text, reply_markup=ReplyKeyboardRemove())
         user_step[message.from_user.id] = f'edit_places_{page_code}'
     elif text == "удалить ссылку":
         # Видаляємо з site_users і event_links
@@ -1141,18 +1184,41 @@ async def handle_edit_link_menu(message: types.Message):
 async def handle_edit_places(message: types.Message):
     state = user_step.get(message.from_user.id, '')
     page_code = state.replace('edit_places_', '')
-    try:
-        places = int(message.text.strip())
-        if places < 0:
-            raise ValueError
-    except Exception:
-        await message.answer("Введите корректное положительное число мест.")
-        return
-    # Оновлюємо places у site_users
-    c = conn.cursor()
-    c.execute('UPDATE site_users SET places=? WHERE page_code=?', (places, page_code))
-    conn.commit()
-    await message.answer(f"Количество мест для ссылки {page_code} успешно обновлено: {places}")
+    
+    # Перевіряємо, чи це список чисел (8 рядків)
+    lines = [line.strip() for line in message.text.split('\n') if line.strip()]
+    
+    if len(lines) == 8:
+        # Користувач ввів 8 чисел - оновлюємо places
+        try:
+            places = int(lines[0])  # Беремо перше число як загальну кількість місць
+            if places < 0:
+                raise ValueError
+        except Exception:
+            await message.answer("Введите корректное положительное число мест.")
+            return
+        
+        # Оновлюємо places у site_users
+        c = conn.cursor()
+        c.execute('UPDATE site_users SET places=? WHERE page_code=?', (places, page_code))
+        conn.commit()
+        await message.answer(f"Количество мест для ссылки {page_code} успешно обновлено: {places}")
+    else:
+        # Користувач ввів одне число - оновлюємо places
+        try:
+            places = int(message.text.strip())
+            if places < 0:
+                raise ValueError
+        except Exception:
+            await message.answer("Введите корректное положительное число мест.")
+            return
+        
+        # Оновлюємо places у site_users
+        c = conn.cursor()
+        c.execute('UPDATE site_users SET places=? WHERE page_code=?', (places, page_code))
+        conn.commit()
+        await message.answer(f"Количество мест для ссылки {page_code} успешно обновлено: {places}")
+    
     # Повертаємо в меню редагування цієї ссилки
     kb = ReplyKeyboardMarkup(
         keyboard=[
