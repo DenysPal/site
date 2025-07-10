@@ -412,51 +412,29 @@ wow.init();
 
 <script>
 (function() {
-<<<<<<< HEAD
-=======
-  const urlParams = new URLSearchParams(window.location.search);
-  const page = urlParams.get('page');
-  if (page) {
-    sessionStorage.setItem('page_code', page);
-  }
-})();
-</script>
-<script>
-// --- Додаємо page_code до всіх посилань на сторінці івенту ---
-(function() {
-  // Отримуємо page_code з URL або sessionStorage
->>>>>>> origin/sasha
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
   }
-<<<<<<< HEAD
-=======
-  
->>>>>>> origin/sasha
+  const eventIndex = 2; // snucie
   if (page_code) {
-    // Додаємо page_code до всіх посилань на сторінці
-    document.querySelectorAll('a[href]').forEach(function(link) {
-      if (link.href && link.href.includes(location.hostname)) {
-        const url = new URL(link.href);
-        if (!url.searchParams.has('page')) {
-          url.searchParams.set('page', page_code);
-          link.href = url.toString();
+    fetch('/api/event_address?page=' + encodeURIComponent(page_code))
+      .then(r => r.json())
+      .then(data => {
+        if (data.address) {
+          var el = document.getElementById('event-address');
+          if (el) el.textContent = data.address;
         }
-      }
-    });
-    
-    // Додаємо page_code до посилань в меню
-    document.querySelectorAll('.menu-header .nav-link[href]').forEach(function(link) {
-      if (link.href && link.href.includes(location.hostname)) {
-        const url = new URL(link.href);
-        if (!url.searchParams.has('page')) {
-          url.searchParams.set('page', page_code);
-          link.href = url.toString();
+      });
+    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+      .then(r => r.json())
+      .then(data => {
+        if (data.places !== undefined && data.places !== null) {
+          var el = document.getElementById('event-places');
+          if (el) el.textContent = data.places + ' ticket left';
         }
-      }
-    });
+      });
   }
 })();
 </script>
@@ -471,13 +449,24 @@ wow.init();
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
   }
+  const eventIndex = 2; // snucie
   if (page_code) {
-    fetch('https://artpullse.com/api/event_address?page=' + encodeURIComponent(page_code))
+    // Підтягуємо адресу
+    fetch('/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
       .then(data => {
         if (data.address) {
           var el = document.getElementById('event-address');
           if (el) el.textContent = data.address;
+        }
+      });
+    // Підтягуємо кількість місць для цієї події
+    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+      .then(r => r.json())
+      .then(data => {
+        if (data.places !== undefined && data.places !== null) {
+          var el = document.getElementById('event-places');
+          if (el) el.textContent = data.places + ' ticket left';
         }
       });
   }

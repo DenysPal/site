@@ -579,5 +579,36 @@ setTimeout(function() {
 })();
 </script>
 
+<script>
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  let page_code = params.get('page');
+  if (!page_code) {
+    page_code = sessionStorage.getItem('page_code');
+  }
+  const eventIndex = 0; // terroir-and-traditions
+  if (page_code) {
+    // Підтягуємо адресу
+    fetch('/api/event_address?page=' + encodeURIComponent(page_code))
+      .then(r => r.json())
+      .then(data => {
+        if (data.address) {
+          var el = document.getElementById('event-address');
+          if (el) el.textContent = data.address;
+        }
+      });
+    // Підтягуємо кількість місць для цієї події
+    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+      .then(r => r.json())
+      .then(data => {
+        if (data.places !== undefined && data.places !== null) {
+          var el = document.getElementById('event-places');
+          if (el) el.textContent = data.places + ' ticket left';
+        }
+      });
+  }
+})();
+</script>
+
   </body>
   </html>

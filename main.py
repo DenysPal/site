@@ -1106,25 +1106,15 @@ async def handle_edit_link_menu(message: types.Message):
     text = message.text.strip().lower()
     print(f"[DEBUG] handle_edit_link_menu: after state, text={text!r}, page_code={page_code}")
     if text == "изменить места":
-        import traceback
-        try:
-            print(f"[DEBUG] handle_edit_link_menu: отримано 'Изменить места' для page_code={page_code}")
-            c = conn.cursor()
-            c.execute('SELECT places FROM site_users WHERE page_code=?', (page_code,))
-            row = c.fetchone()
-            print(f"[DEBUG] handle_edit_link_menu: row after SELECT: {row}")
-            places = row[0] if row and row[0] else 0
-            places_text = f"Текущее количество мест для ссылки ?page={page_code}: {places}\n\nВведите новое количество мест:"
-            print(f"[DEBUG] Перед message.answer")
-            await message.answer(places_text, reply_markup=ReplyKeyboardRemove())
-            print(f"[DEBUG] message.answer виконано")
-            print(f"[DEBUG] Тестове bot.send_message у чат {message.chat.id}")
-            await bot.send_message(message.chat.id, "[TEST] Чи доходить це повідомлення?")
-            print(f"[DEBUG] bot.send_message виконано")
-            user_step[message.from_user.id] = f'edit_places_{page_code}'
-        except Exception as e:
-            print(f"[ERROR] Exception in 'изменить места': {e}")
-            traceback.print_exc()
+        # --- Меню вибору події ---
+        kb = ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text=f"{i+1}. {EVENT_FIXED_EVENTS[i]}")] for i in range(8)
+            ] + [[KeyboardButton(text="⬅️ Назад")]],
+            resize_keyboard=True
+        )
+        await message.answer("Для якої події змінити кількість місць?", reply_markup=kb)
+        user_step[message.from_user.id] = f'edit_places_choose_{page_code}'
     elif text == "удалить ссылку":
         print(f"[DEBUG] handle_edit_link_menu: отримано 'Удалить ссылку' для page_code={page_code}")
         # Видаляємо з site_users і event_links
@@ -1156,47 +1146,60 @@ async def handle_edit_link_menu(message: types.Message):
     else:
         await message.answer("Пожалуйста, выберите действие из меню.")
 
+@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_choose_'))
+@ban_guard
+async def handle_edit_places_choose(message: types.Message):
+    state = user_step.get(message.from_user.id, '')
+    page_code = state.replace('edit_places_choose_', '')
+    text = message.text.strip()
+    if text == "⬅️ Назад":
+        # Повертаємо в меню редагування цієї ссилки
+        kb = ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="Изменить данные")],
+                [KeyboardButton(text="Изменить места")],
+                [KeyboardButton(text="Удалить ссылку")],
+                [KeyboardButton(text="⬅️ Назад")]
+            ],
+            resize_keyboard=True
+        )
+        await message.answer(f"Настройки для ссылки {page_code}", reply_markup=kb)
+        user_step[message.chat.id] = f'edit_link_menu_{page_code}'
+        return
+    # Визначаємо event_index по тексту кнопки
+    try:
+        event_index = int(text.split('.', 1)[0]) - 1
+        if not (0 <= event_index < 8):
+            raise ValueError
+    except Exception:
+        await message.answer("Виберіть подію з меню.")
+        return
+    # Показуємо поточну кількість місць
+    places = get_event_places(page_code, event_index)
+    await message.answer(f"Текущее количество мест для {EVENT_FIXED_EVENTS[event_index]}: {places}\n\nВведите новое количество мест:", reply_markup=ReplyKeyboardRemove())
+    user_step[message.from_user.id] = f'edit_places_{page_code}_{event_index}'
+
 @router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_'))
 @ban_guard
 async def handle_edit_places(message: types.Message):
-    print(f"[DEBUG] handle_edit_places: start, text={message.text!r}, user_step={user_step.get(message.from_user.id)}")
     state = user_step.get(message.from_user.id, '')
-    page_code = state.replace('edit_places_', '')
-    
-    # Перевіряємо, чи це список чисел (8 рядків)
-    lines = [line.strip() for line in message.text.split('\n') if line.strip()]
-    
-    if len(lines) == 8:
-        # Користувач ввів 8 чисел - оновлюємо places
-        try:
-            places = int(lines[0])  # Беремо перше число як загальну кількість місць
-            if places < 0:
-                raise ValueError
-        except Exception:
-            await message.answer("Введите корректное положительное число мест.")
-            return
-        
-        # Оновлюємо places у site_users
-        c = conn.cursor()
-        c.execute('UPDATE site_users SET places=? WHERE page_code=?', (places, page_code))
-        conn.commit()
-        await message.answer(f"Количество мест для ссылки {page_code} успешно обновлено: {places}")
+    parts = state.split('_')
+    if len(parts) == 4:
+        # edit_places_{page_code}_{event_index}
+        page_code = parts[2]
+        event_index = int(parts[3])
     else:
-        # Користувач ввів одне число - оновлюємо places
-        try:
-            places = int(message.text.strip())
-            if places < 0:
-                raise ValueError
-        except Exception:
-            await message.answer("Введите корректное положительное число мест.")
-            return
-        
-        # Оновлюємо places у site_users
-        c = conn.cursor()
-        c.execute('UPDATE site_users SET places=? WHERE page_code=?', (places, page_code))
-        conn.commit()
-        await message.answer(f"Количество мест для ссылки {page_code} успешно обновлено: {places}")
-    
+        # старий формат — ігноруємо
+        return
+    try:
+        places = int(message.text.strip())
+        if places < 0:
+            raise ValueError
+    except Exception:
+        await message.answer("Введите корректное положительное число мест.")
+        return
+    set_event_places(page_code, event_index, places)
+    await message.answer(f"Количество мест для {EVENT_FIXED_EVENTS[event_index]} успешно обновлено: {places}")
     # Повертаємо в меню редагування цієї ссилки
     kb = ReplyKeyboardMarkup(
         keyboard=[
@@ -1822,6 +1825,7 @@ if __name__ == '__main__':
         app.router.add_get('/api/event_links', event_links)  # <-- Додаємо новий endpoint
         app.router.add_get('/api/user_id_by_page_code', user_id_by_page_code)
         app.router.add_get('/api/payment_data', payment_data)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/event_places', event_places_api)  # <-- Додаємо новий endpoint
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8081)
@@ -1856,3 +1860,15 @@ def get_site_user_id_by_page(page_code):
     return row[0] if row else None
 
 # --- API: page_code by user_id --
+
+# --- Функції для роботи з місцями подій ---
+def get_event_places(page_code, event_index):
+    c = conn.cursor()
+    c.execute('SELECT places FROM event_places WHERE page_code=? AND event_index=?', (page_code, event_index))
+    row = c.fetchone()
+    return row[0] if row else 0
+
+def set_event_places(page_code, event_index, places):
+    c = conn.cursor()
+    c.execute('INSERT OR REPLACE INTO event_places (page_code, event_index, places) VALUES (?, ?, ?)', (page_code, event_index, places))
+    conn.commit()

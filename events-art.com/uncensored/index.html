@@ -362,6 +362,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
   }
+  const eventIndex = 6; // uncensored
   if (page_code) {
     fetch('/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
@@ -370,6 +371,10 @@ Yes. Photography and videography are allowed in the Museum so long as the images
           var el = document.getElementById('event-address');
           if (el) el.textContent = data.address;
         }
+      });
+    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+      .then(r => r.json())
+      .then(data => {
         if (data.places !== undefined && data.places !== null) {
           var el = document.getElementById('event-places');
           if (el) el.textContent = data.places + ' ticket left';

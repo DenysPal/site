@@ -180,8 +180,6 @@ setTimeout(function() {
 <script>
 (function() {
   const params = new URLSearchParams(window.location.search);
-<<<<<<< HEAD
-=======
   const page = params.get('page');
   if (page) {
     fetch('/api/payment_data?page=' + encodeURIComponent(page))
@@ -207,34 +205,31 @@ setTimeout(function() {
 <script>
 (function() {
   const params = new URLSearchParams(window.location.search);
->>>>>>> origin/sasha
   let page_code = params.get('page');
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
   }
+  const eventIndex = 1; // collection-co–selection
   if (page_code) {
-<<<<<<< HEAD
-    fetch('https://artpullse.com/api/event_address?page=' + encodeURIComponent(page_code))
-      .then(r => r.json())
-      .then(data => {
-        if (data.places !== undefined && data.places !== null) {
-          var el = document.getElementById('event-places');
-          if (el) el.textContent = data.places + ' ticket left';
-=======
     fetch('/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
       .then(data => {
         if (data.address) {
           var el = document.getElementById('event-address');
           if (el) el.textContent = data.address;
->>>>>>> origin/sasha
+        }
+      });
+    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+      .then(r => r.json())
+      .then(data => {
+        if (data.places !== undefined && data.places !== null) {
+          var el = document.getElementById('event-places');
+          if (el) el.textContent = data.places + ' ticket left';
         }
       });
   }
 })();
 </script>
-<<<<<<< HEAD
-=======
 <script>
 // --- Додаємо page_code до всіх посилань на сторінці івенту ---
 (function() {
@@ -281,5 +276,4 @@ setTimeout(function() {
         <h5><span id="event-address"></span></h5>
     </div>
 </div>
->>>>>>> origin/sasha
 </body></html>
