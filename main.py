@@ -1930,7 +1930,7 @@ async def block_others(message: types.Message):
         return
 
     # Якщо адмін у адмін-панелі вводить число+валюта — підказка
-    if is_admin(uid):
+    if is_admin(uid) and step == 'admin_panel':
         m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
         if m:
             await message.answer("Щоб створити посилання для оплати, спочатку натисніть 'Пряма оплата'.")
