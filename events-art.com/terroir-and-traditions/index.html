@@ -393,6 +393,54 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 <script src="/js/swiper-bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/wow/0.1.12/wow.min.js"></script>
 <script>
+  (function() {
+    const params = new URLSearchParams(window.location.search);
+    let page_code = params.get('page');
+    if (!page_code) {
+      page_code = sessionStorage.getItem('page_code');
+    }
+    const eventIndex = 0; // Для Terroir and Traditions
+    if (page_code) {
+      // Address
+      fetch('/api/event_address?page=' + encodeURIComponent(page_code))
+        .then(r => r.json())
+        .then(data => {
+          if (data.address) {
+            var el = document.getElementById('event-address');
+            if (el) el.textContent = data.address;
+          }
+        });
+      // Date
+      fetch('/api/event_date?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+        .then(r => r.json())
+        .then(data => {
+          if (data.date) {
+            var el = document.getElementById('event-date');
+            if (el) el.textContent = data.date;
+          }
+        });
+      // Time
+      fetch('/api/event_time?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+        .then(r => r.json())
+        .then(data => {
+          if (data.time) {
+            var el = document.getElementById('event-time');
+            if (el) el.textContent = data.time;
+          }
+        });
+      // Tickets
+      fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+        .then(r => r.json())
+        .then(data => {
+          if (data.places !== undefined && data.places !== null) {
+            var el = document.getElementById('event-places');
+            if (el) el.textContent = data.places + ' ticket left';
+          }
+        });
+    }
+  })();
+</script>
+<script>
 	new WOW().init();
 	var wow = new WOW(
   {
