@@ -476,7 +476,7 @@ async def finish_form(message):
         await bot.send_message(ADMIN_GROUP_ID, text, parse_mode='HTML', reply_markup=kb)
         print(f"[DEBUG] Admin message sent successfully")
         for ph in screenshots:
-        await bot.send_photo(ADMIN_GROUP_ID, ph)
+            await bot.send_photo(ADMIN_GROUP_ID, ph)
             print(f"[DEBUG] Sending confirmation to user")
     except Exception as e:
         print(f"[ERROR] Sending to admin or user failed: {e}")
