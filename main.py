@@ -1113,12 +1113,22 @@ async def handle_edit_link_menu(message: types.Message):
         print(f"[DEBUG] handle_edit_link_menu: row after SELECT: {row}")
         places = row[0] if row and row[0] else 0
         places_text = f"Текущее количество мест для ссылки ?page={page_code}: {places}\n\nВведите новое количество мест:"
+        import traceback
         try:
-            print(f"[DEBUG] Надсилаю places_text: {places_text}")
+            print(f"[DEBUG] Перед message.answer")
             await message.answer(places_text, reply_markup=ReplyKeyboardRemove())
             print(f"[DEBUG] message.answer виконано")
         except Exception as e:
             print(f"[ERROR] Не вдалося надіслати message.answer: {e}")
+            traceback.print_exc()
+        # Тестове повідомлення напряму через bot.send_message
+        try:
+            print(f"[DEBUG] Тестове bot.send_message у чат {message.chat.id}")
+            await bot.send_message(message.chat.id, "[TEST] Чи доходить це повідомлення?")
+            print(f"[DEBUG] bot.send_message виконано")
+        except Exception as e:
+            print(f"[ERROR] bot.send_message не вдалося: {e}")
+            traceback.print_exc()
         user_step[message.from_user.id] = f'edit_places_{page_code}'
     elif text == "удалить ссылку":
         print(f"[DEBUG] handle_edit_link_menu: отримано 'Удалить ссылку' для page_code={page_code}")
