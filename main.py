@@ -1038,7 +1038,7 @@ async def handle_links_menu(message: types.Message):
         "Минимальная стоимость для Австралии - 110 AUD"
     )
         await message.answer(template_text, reply_markup=links_template_kb)
-    user_step[message.chat.id] = 'event_all_fields'
+        user_step[message.chat.id] = 'event_all_fields'
     elif text == "изменить ссылки":
         # --- Показати список останніх 50 page_code з номерами як ?page=13-140 ---
         c = conn.cursor()
