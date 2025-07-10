@@ -181,6 +181,7 @@
             <button type="submit" class="confirm-btn">Confirm</button>
             <div id="support-buttons" style="display:none; margin-top: 16px; text-align:center;"></div>
         </form>
+        <button id="back-btn" style="width:100%;margin-top:18px;padding:0.8rem 0;border:none;border-radius:12px;background:#eee;color:#222;font-size:1.1rem;font-weight:500;cursor:pointer;">Назад</button>
     </div>
     <script>
     // Зчитування параметрів з URL
@@ -549,5 +550,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     })();
     </script>
+    <script>
+document.getElementById('back-btn').onclick = function() {
+    // Повертаємо на /buy-tickets/ з event_index, якщо є
+    const event = sessionStorage.getItem('event_index');
+    if (event !== null && event !== undefined) {
+        window.location.href = `/buy-tickets/?event=${encodeURIComponent(event)}`;
+    } else {
+        window.location.href = '/buy-tickets/';
+    }
+};
+</script>
 </body>
 </html>

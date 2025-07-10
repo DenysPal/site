@@ -1930,8 +1930,13 @@ async def manual_payment_back(message: types.Message):
         await message.answer(f"Сталася помилка: {e}")
         user_step[message.from_user.id] = 'admin_panel'
 
-
-
+@router.message(lambda m: m.text and ("назад" in m.text.lower() or "⬅️" in m.text.lower()))
+@ban_guard
+async def universal_back_handler(message: types.Message):
+    uid = message.from_user.id
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    user_step[uid] = None
+    await message.answer("Повернення в головне меню.", reply_markup=kb)
 
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
