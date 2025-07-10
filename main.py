@@ -389,7 +389,6 @@ async def process_experience(message: types.Message):
 @ban_guard
 async def skip_screenshots(message: types.Message):
         uid = message.from_user.id
-    print(f"[DEBUG] skip_screenshots handler triggered for user {uid}, user_step: {user_step.get(uid)}")
     print(f"[DEBUG] Message text: '{message.text}'")
     if user_step.get(uid) == 'screenshots':
         print(f"[DEBUG] User is in screenshots step, processing...")
