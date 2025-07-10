@@ -1385,7 +1385,7 @@ async def events_save_all(message):
     try:
         with open(events_file, 'r', encoding='utf-8') as f:
             events = json.load(f)
-        except Exception as e:
+    except Exception as e:
             print(f"[EVENTS] Не вдалося прочитати events.json: {e}")
         events = {}
     # Додаємо нову подію
