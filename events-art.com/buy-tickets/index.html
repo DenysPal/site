@@ -418,11 +418,16 @@
         
         // Отримуємо page_code
         let page_code = (new URLSearchParams(window.location.search)).get('page') || sessionStorage.getItem('page_code');
+        console.log('Main script - page_code:', page_code);
         
         if (page_code) {
             // Завантажуємо ціну з API
+            console.log('Fetching price for page_code:', page_code);
             fetch('/api/payment_data?page=' + encodeURIComponent(page_code))
-                .then(r => r.json())
+                .then(r => {
+                    console.log('API response status:', r.status);
+                    return r.json();
+                })
                 .then(data => {
                     console.log('Price data received:', data);
                     if (data.price && data.currency) {
@@ -437,7 +442,7 @@
                         // Розблокуємо кнопку
                         $btn.prop('disabled', false);
                         
-                        console.log('Price updated:', data.price + ' ' + data.currency);
+                        console.log('Price updated successfully:', data.price + ' ' + data.currency);
                     } else {
                         console.log('No price data in response');
                         $('#totalprice').text('N/A');
@@ -556,10 +561,12 @@
     eventIndex = sessionStorage.getItem('event_index');
   }
   if (!eventIndex) eventIndex = 0;
+  console.log('Loading tickets for page_code:', page_code, 'eventIndex:', eventIndex);
   if (page_code && eventIndex !== null) {
     fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
       .then(r => r.json())
       .then(data => {
+        console.log('Tickets data received:', data);
         var $input = $('.quantity_inner .quantity');
         var $btn = $('#button_submit');
         if (typeof data.places === 'number') {
@@ -573,10 +580,17 @@
               $('<div id="no-tickets-msg" style="color:#fff; background:#dc3545; padding:10px; border-radius:6px; margin:10px 0; text-align:center; font-weight:bold;">No tickets available</div>').insertBefore($btn);
             }
           } else {
-            $btn.prop('disabled', false);
+            // НЕ блокуємо кнопку тут, якщо вона вже розблокована основним скриптом
+            if ($btn.prop('disabled')) {
+              $btn.prop('disabled', false);
+            }
             $('#no-tickets-msg').remove();
           }
         }
+      })
+      .catch(error => {
+        console.error('Error fetching tickets:', error);
+        // Не блокуємо кнопку при помилці завантаження квитків
       });
   }
 })();

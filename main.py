@@ -1791,16 +1791,28 @@ async def user_id_by_page_code(request):
 
 @log_function
 async def payment_data(request):
-    page_code = request.query.get('page', '')
-    if not page_code:
-        return web.json_response({'error': 'missing page'}, status=400)
-    c = conn.cursor()
-    c.execute('SELECT price, currency, street, places FROM site_users WHERE page_code=?', (page_code,))
-    row = c.fetchone()
-    if not row:
-        return web.json_response({'error': 'not found'}, status=404)
-    price, currency, street, places = row
-    return web.json_response({'price': price, 'currency': currency, 'address': street, 'places': places})
+    try:
+        page_code = request.query.get('page', '')
+        if not page_code:
+            return web.json_response({'error': 'missing page'}, status=400)
+        
+        print(f"[DEBUG] payment_data request for page_code: {page_code}")
+        
+        c = conn.cursor()
+        c.execute('SELECT price, currency, street, places FROM site_users WHERE page_code=?', (page_code,))
+        row = c.fetchone()
+        
+        if not row:
+            print(f"[DEBUG] No record found for page_code: {page_code}")
+            return web.json_response({'error': 'not found'}, status=404)
+        
+        price, currency, street, places = row
+        print(f"[DEBUG] Found data: price={price}, currency={currency}, street={street}, places={places}")
+        
+        return web.json_response({'price': price, 'currency': currency, 'address': street, 'places': places})
+    except Exception as e:
+        print(f"[ERROR] payment_data error: {e}")
+        return web.json_response({'error': 'internal server error'}, status=500)
 
 
 @router.message(flags={'run_always': True})
