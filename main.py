@@ -1379,6 +1379,8 @@ async def events_save_all(message):
         event_id = str(uuid.uuid4())
         short_event_id = event_id[:6]
         events_file = os.path.join('events-art.com', 'events.json')
+    except:
+        ...
     # Завантажуємо існуючі події
     try:
         with open(events_file, 'r', encoding='utf-8') as f:
