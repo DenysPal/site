@@ -1285,85 +1285,7 @@ async def admin_enter_text(message: types.Message):
     await message.answer("Кнопка з текстом з'явиться на сайті користувача.")
     user_step[message.from_user.id] = None
 
-@router.message()
-async def block_others(message: types.Message):
-    uid = message.from_user.id
-    step = user_step.get(uid)
-    print(f"[block_others] uid={uid}, user_step={step}, text={message.text!r}")
 
-    # Якщо зараз сценарій прямої оплати — нічого не робимо, даємо спрацювати manual_payment_back
-    if step == 'manual_payment_amount':
-        return
-
-    # Якщо user_step не 'admin_panel', скидаємо на 'admin_panel' і показуємо меню
-    if step != 'admin_panel':
-        user_step[uid] = 'admin_panel'
-        await message.answer("Вас повернуто в адмін-панель.", reply_markup=admin_panel_kb)
-        return
-
-    # Якщо адмін у адмін-панелі вводить число+валюта — підказка
-    if is_admin(uid):
-        m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
-        if m:
-            await message.answer("Щоб створити посилання для оплати, спочатку натисніть 'Пряма оплата'.")
-            return
-    # Якщо завис у якомусь кроці, скидаємо і повідомляємо
-    if step not in [None, 'admin_panel']:
-        print(f"[block_others] user_step завис у '{step}', скидаю на None")
-        user_step[uid] = None
-        await message.answer("⚠️ Виникла помилка стану. Крок скинуто. Спробуйте ще раз або натисніть 'Админ панель'.")
-        return
-    # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
-
-    print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
-    # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
-    if message.text and 'ссылки' in message.text.lower():
-        return
-    if user_step.get(message.from_user.id) in ['event_title', 'event_dates', 'event_times', 'event_all_fields']:
-        return
-    db_user = get_user(uid)
-    if db_user and db_user['form_json'].get('banned', False):
-        await message.answer(
-            "Ви заблоковані адміністратором. Причина: " + db_user['form_json'].get('ban_reason', 'Не вказана')
-        )
-        return
-    if message.text in ["⚙️Меню", "📎Ссылки", "🎫Билеты", "Добавить/Изменить кошелек", "Сменить псевдоним"]:
-        return
-    if message.text and message.text == '/start':
-        return
-    if is_admin(uid):
-        if message.text in ["🛠️ Админ панель", "🚫 Заблокировать / разблокировать", "💸 Начислить выплату", "⬅️ Назад"]:
-            return
-        if user_step.get(uid) in ['admin_panel', 'ban_unban_user', 'pay_user', 'pay_user_profile', 'pay_amount', 'manual_payment_amount']:
-            return
-    if db_user and db_user['status'] != 'approved':
-        if db_user['status'] == 'pending':
-            await message.answer("Ваша заявка уже отправлена, ожидайте проверки.")
-        elif db_user['status'] == 'rejected':
-            if db_user['last_submit']:
-                last = datetime.fromisoformat(db_user['last_submit'])
-                if datetime.utcnow() - last < timedelta(days=7):
-                    next_time = last + timedelta(days=7)
-                    await message.answer(f"Ваша заявка была отклонена. Повторно подать заявку можно {next_time.strftime('%d.%m.%Y %H:%M')}")
-                    return
-            await message.answer("Ваша заявка отклонена.")
-        else:
-            await message.answer("Для начала заполните анкету командой /start")
-    elif not db_user:
-        await message.answer("Для начала заполните анкету командой /start")
-    # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — обробляємо тільки якщо user_step == 'manual_payment_amount'
-    if is_admin(uid):
-        m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
-        if m:
-            if user_step.get(uid) == 'manual_payment_amount':
-                # Цей кейс обробляється у manual_payment_back, сюди не потрапить
-                pass
-            elif user_step.get(uid) == 'admin_panel':
-                await message.answer("Щоб створити посилання для оплати, спочатку натисніть 'Пряма оплата'.")
-                return
-            else:
-                # Усі інші стани — ігноруємо це введення
-                return
 
 # --- EVENTS ART BOT (ex-bot.py) ---
 EVENTS_FILE = os.path.join('events-art.com', 'events.json')
@@ -1991,4 +1913,82 @@ async def force_admin_back(message: types.Message):
     return
 
 
+@router.message()
+async def block_others(message: types.Message):
+    uid = message.from_user.id
+    step = user_step.get(uid)
+    print(f"[block_others] uid={uid}, user_step={step}, text={message.text!r}")
 
+    # Якщо зараз сценарій прямої оплати — нічого не робимо, даємо спрацювати manual_payment_back
+    if step == 'manual_payment_amount':
+        return
+
+    # Якщо user_step не 'admin_panel', скидаємо на 'admin_panel' і показуємо меню
+    if step != 'admin_panel':
+        user_step[uid] = 'admin_panel'
+        await message.answer("Вас повернуто в адмін-панель.", reply_markup=admin_panel_kb)
+        return
+
+    # Якщо адмін у адмін-панелі вводить число+валюта — підказка
+    if is_admin(uid):
+        m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
+        if m:
+            await message.answer("Щоб створити посилання для оплати, спочатку натисніть 'Пряма оплата'.")
+            return
+    # Якщо завис у якомусь кроці, скидаємо і повідомляємо
+    if step not in [None, 'admin_panel']:
+        print(f"[block_others] user_step завис у '{step}', скидаю на None")
+        user_step[uid] = None
+        await message.answer("⚠️ Виникла помилка стану. Крок скинуто. Спробуйте ще раз або натисніть 'Админ панель'.")
+        return
+    # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
+
+    print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
+    # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
+    if message.text and 'ссылки' in message.text.lower():
+        return
+    if user_step.get(message.from_user.id) in ['event_title', 'event_dates', 'event_times', 'event_all_fields']:
+        return
+    db_user = get_user(uid)
+    if db_user and db_user['form_json'].get('banned', False):
+        await message.answer(
+            "Ви заблоковані адміністратором. Причина: " + db_user['form_json'].get('ban_reason', 'Не вказана')
+        )
+        return
+    if message.text in ["⚙️Меню", "📎Ссылки", "🎫Билеты", "Добавить/Изменить кошелек", "Сменить псевдоним"]:
+        return
+    if message.text and message.text == '/start':
+        return
+    if is_admin(uid):
+        if message.text in ["🛠️ Админ панель", "🚫 Заблокировать / разблокировать", "💸 Начислить выплату", "⬅️ Назад"]:
+            return
+        if user_step.get(uid) in ['admin_panel', 'ban_unban_user', 'pay_user', 'pay_user_profile', 'pay_amount', 'manual_payment_amount']:
+            return
+    if db_user and db_user['status'] != 'approved':
+        if db_user['status'] == 'pending':
+            await message.answer("Ваша заявка уже отправлена, ожидайте проверки.")
+        elif db_user['status'] == 'rejected':
+            if db_user['last_submit']:
+                last = datetime.fromisoformat(db_user['last_submit'])
+                if datetime.utcnow() - last < timedelta(days=7):
+                    next_time = last + timedelta(days=7)
+                    await message.answer(f"Ваша заявка была отклонена. Повторно подать заявку можно {next_time.strftime('%d.%m.%Y %H:%M')}")
+                    return
+            await message.answer("Ваша заявка отклонена.")
+        else:
+            await message.answer("Для начала заполните анкету командой /start")
+    elif not db_user:
+        await message.answer("Для начала заполните анкету командой /start")
+    # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — обробляємо тільки якщо user_step == 'manual_payment_amount'
+    if is_admin(uid):
+        m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
+        if m:
+            if user_step.get(uid) == 'manual_payment_amount':
+                # Цей кейс обробляється у manual_payment_back, сюди не потрапить
+                pass
+            elif user_step.get(uid) == 'admin_panel':
+                await message.answer("Щоб створити посилання для оплати, спочатку натисніть 'Пряма оплата'.")
+                return
+            else:
+                # Усі інші стани — ігноруємо це введення
+                return
