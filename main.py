@@ -1798,17 +1798,17 @@ async def payment_data(request):
         print(f"[DEBUG] payment_data request for page_code: {page_code}")
         
         c = conn.cursor()
-        c.execute('SELECT price, currency, street, places FROM site_users WHERE page_code=?', (page_code,))
+        c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
         row = c.fetchone()
         
         if not row:
             print(f"[DEBUG] No record found for page_code: {page_code}")
             return web.json_response({'error': 'not found'}, status=404)
         
-        price, currency, street, places = row
-        print(f"[DEBUG] Found data: price={price}, currency={currency}, street={street}, places={places}")
+        price, currency, street = row
+        print(f"[DEBUG] Found data: price={price}, currency={currency}, street={street}")
         
-        return web.json_response({'price': price, 'currency': currency, 'address': street, 'places': places})
+        return web.json_response({'price': price, 'currency': currency, 'address': street})
     except Exception as e:
         print(f"[ERROR] payment_data error: {e}")
         import traceback
