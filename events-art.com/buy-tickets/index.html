@@ -553,11 +553,21 @@
     fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
       .then(r => r.json())
       .then(data => {
+        var $input = $('.quantity_inner .quantity');
+        var $btn = $('#button_submit');
         if (typeof data.places === 'number') {
-          var $input = $('.quantity_inner .quantity');
           $input.attr('data-max-count', data.places);
           if (parseInt($input.val()) > data.places) {
             $input.val(data.places);
+          }
+          if (data.places === 0) {
+            $btn.prop('disabled', true);
+            if ($('#no-tickets-msg').length === 0) {
+              $('<div id="no-tickets-msg" style="color:#fff; background:#dc3545; padding:10px; border-radius:6px; margin:10px 0; text-align:center; font-weight:bold;">No tickets available</div>').insertBefore($btn);
+            }
+          } else {
+            $btn.prop('disabled', false);
+            $('#no-tickets-msg').remove();
           }
         }
       });
