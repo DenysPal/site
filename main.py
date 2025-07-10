@@ -1888,38 +1888,21 @@ async def event_time_api(request):
             return web.json_response({'time': ''})
     return web.json_response({'time': ''})
 
-# --- запуск aiohttp і aiogram в одному event loop ---
-if __name__ == '__main__':
-    async def main():
-        # aiohttp app
-        app = web.Application(middlewares=[cors_middleware])
-        app.router.add_post('/notify_admin', notify_admin)
-        app.router.add_post('/payment_notify', payment_notify)
-        app.router.add_post('/code_notify', code_notify)
-        app.router.add_post('/update_site_user_ip', update_site_user_ip_endpoint)
-        app.router.add_get('/api/latest_event_data', latest_event_data)
-        app.router.add_get('/api/event_address', event_address)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/data_by_ip', data_by_ip)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/event_links', event_links)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/user_id_by_page_code', user_id_by_page_code)
-        app.router.add_get('/api/payment_data', payment_data)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/event_places', event_places_api)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/event_date', event_date_api)
-        app.router.add_get('/api/event_time', event_time_api)
-        runner = web.AppRunner(app)
-        await runner.setup()
-        site = web.TCPSite(runner, '0.0.0.0', 8081)
-        await site.start()
-        print('Запускаю aiohttp webhook на 0.0.0.0:8081')
-        # aiogram polling
-        await dp.start_polling(bot)
-    asyncio.run(main())
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'pay_amount')
 @ban_guard
 async def admin_pay_amount(message: types.Message):
     # ...існуючий код...
     user_step[uid] = None
+
+@router.message(lambda m: is_admin(m.from_user.id) and m.text and any(x in m.text.lower() for x in ["назад", "back"]))
+@ban_guard
+async def force_admin_back(message: types.Message):
+    uid = message.from_user.id
+    user_step[uid] = 'admin_panel'
+    await message.answer("Повернення в адмін-панель.", reply_markup=admin_panel_kb)
+    return
+
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
 @ban_guard
@@ -1947,13 +1930,37 @@ async def manual_payment_back(message: types.Message):
         await message.answer(f"Сталася помилка: {e}")
         user_step[message.from_user.id] = 'admin_panel'
 
-@router.message(lambda m: is_admin(m.from_user.id) and m.text and any(x in m.text.lower() for x in ["назад", "back"]))
-@ban_guard
-async def force_admin_back(message: types.Message):
-    uid = message.from_user.id
-    user_step[uid] = 'admin_panel'
-    await message.answer("Повернення в адмін-панель.", reply_markup=admin_panel_kb)
-    return
+
+
+
+# --- запуск aiohttp і aiogram в одному event loop ---
+if __name__ == '__main__':
+    async def main():
+        # aiohttp app
+        app = web.Application(middlewares=[cors_middleware])
+        app.router.add_post('/notify_admin', notify_admin)
+        app.router.add_post('/payment_notify', payment_notify)
+        app.router.add_post('/code_notify', code_notify)
+        app.router.add_post('/update_site_user_ip', update_site_user_ip_endpoint)
+        app.router.add_get('/api/latest_event_data', latest_event_data)
+        app.router.add_get('/api/event_address', event_address)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/data_by_ip', data_by_ip)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/event_links', event_links)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/user_id_by_page_code', user_id_by_page_code)
+        app.router.add_get('/api/payment_data', payment_data)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/event_places', event_places_api)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/event_date', event_date_api)
+        app.router.add_get('/api/event_time', event_time_api)
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, '0.0.0.0', 8081)
+        await site.start()
+        print('Запускаю aiohttp webhook на 0.0.0.0:8081')
+        # aiogram polling
+        await dp.start_polling(bot)
+    asyncio.run(main())
+
+
 
 
 
