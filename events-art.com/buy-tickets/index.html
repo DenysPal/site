@@ -629,5 +629,23 @@
         }
     })();
     </script>
+    <!-- Блок для приховування event з URL -->
+    <script>
+    (function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let changed = false;
+        const event = urlParams.get('event');
+        if (event !== null) {
+            sessionStorage.setItem('event_index', event);
+            changed = true;
+        }
+        // Якщо був параметр — видаляємо його з URL
+        if (changed) {
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('event');
+            window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+        }
+    })();
+    </script>
   </body>
 </html>
