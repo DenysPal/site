@@ -29,7 +29,7 @@
 				<span class="badge badge-light"><img src="/image/date.svg"><span id="event-date" class="event-date"></span></span><span class="badge badge-light"><img src="/image/time.svg"><span id="event-time" class="event-time"></span></span>
 		<h3 id="event-title">Collection Co–selection</h3>
 		<a href="/buy-tickets/">Buy ticket</a>
-	    <span id="event-places">3 ticket left</span> / Duration: 3 hours
+	    <span id="event-places"></span> / Duration: 3 hours
 					</div>
 			</div>
 </div>
@@ -209,7 +209,7 @@ setTimeout(function() {
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
   }
-  const eventIndex = 1; // collection-co–selection
+  const eventIndex = 1;
   if (page_code) {
     fetch('/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())

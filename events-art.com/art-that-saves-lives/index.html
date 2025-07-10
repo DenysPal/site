@@ -29,7 +29,7 @@
 		<h3 id="event-title">Art that saves lives</h3>
 		<div>Price: <span class="event-price"></span></div>
 		<a href="/buy-tickets/" class="buy-ticket-btn">Buy ticket</a>
-	    <span>4 ticket left / Duration: 3 hours</span>
+	    <span id="event-places"></span> / Duration: 3 hours
 		</div>
 	</div>
 </div>
@@ -391,7 +391,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
   }
-  const eventIndex = 3; // art-that-saves-lives
+  const eventIndex = 3;
   if (page_code) {
     fetch('/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())

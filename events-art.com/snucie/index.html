@@ -30,7 +30,7 @@
 				<span class="badge badge-light"><img src="/image/date.svg"><span id="event-date" class="event-date"></span></span><span class="badge badge-light"><img src="/image/time.svg"><span id="event-time" class="event-time"></span></span>
 		<h3 id="event-title">Snucie</h3>
 		<a href="/buy-tickets/">Buy ticket</a>
-	    <span id="event-places">6 ticket left</span> / Duration: 3 hours
+	    <span id="event-places"></span> / Duration: 3 hours
 	    				</div>
 			</div>
 </div>
@@ -417,7 +417,7 @@ wow.init();
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
   }
-  const eventIndex = 2; // snucie
+  const eventIndex = 2;
   if (page_code) {
     fetch('/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
