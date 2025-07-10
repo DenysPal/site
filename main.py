@@ -121,8 +121,8 @@ try:
     null_count = c.fetchone()[0]
     if null_count > 0:
         print(f"[DB] Found {null_count} records without page_code, filling them...")
-        fill_page_codes()
-        print("[DB] page_code values filled successfully")
+        # fill_page_codes()  # <-- Видалено, щоб не було помилки
+        print("[DB] (fill_page_codes не викликається, бо не визначена)")
 except Exception as e:
     print(f"[DB] Error checking/filling page_code: {e}")
 
@@ -600,7 +600,7 @@ async def change_wallet_save(message: types.Message):
     await message.answer(f"Кошелек сохранён: <code>{new_wallet}</code>", parse_mode='HTML', reply_markup=main_menu_kb)
 
 # --- Админка ---
-@router.message(lambda m: m.text == "🛠️ Админ панель" and is_admin(m.from_user.id))
+@router.message(lambda m: m.text == "��️ Админ панель" and is_admin(m.from_user.id))
 @ban_guard
 async def admin_panel(message: types.Message):
     await message.answer("Админ-панель. Выберите действие:", reply_markup=admin_panel_kb)
