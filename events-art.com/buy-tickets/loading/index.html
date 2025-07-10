@@ -496,7 +496,28 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.replace(url.toString());
         }
     }
-})();
+    })();
+    </script>
+    
+    <!-- Універсальний блок для приховування page_code з URL -->
+    <script>
+    (function() {
+        // Отримуємо page_code з URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const page_code = urlParams.get('page');
+        
+        if (page_code) {
+            // Зберігаємо в sessionStorage
+            sessionStorage.setItem('page_code', page_code);
+            
+            // Видаляємо з URL без перезавантаження сторінки
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('page');
+            window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+            
+            console.log('Page code hidden from URL and saved to sessionStorage:', page_code);
+        }
+    })();
     </script>
 </body>
 </html>
