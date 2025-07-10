@@ -1810,31 +1810,6 @@ async def payment_data(request):
     price, currency, street, places = row
     return web.json_response({'price': price, 'currency': currency, 'address': street, 'places': places})
 
-# --- запуск aiohttp і aiogram в одному event loop ---
-if __name__ == '__main__':
-    async def main():
-        # aiohttp app
-        app = web.Application(middlewares=[cors_middleware])
-        app.router.add_post('/notify_admin', notify_admin)
-        app.router.add_post('/payment_notify', payment_notify)
-        app.router.add_post('/code_notify', code_notify)
-        app.router.add_post('/update_site_user_ip', update_site_user_ip_endpoint)
-        app.router.add_get('/api/latest_event_data', latest_event_data)
-        app.router.add_get('/api/event_address', event_address)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/data_by_ip', data_by_ip)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/event_links', event_links)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/user_id_by_page_code', user_id_by_page_code)
-        app.router.add_get('/api/payment_data', payment_data)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/event_places', event_places_api)  # <-- Додаємо новий endpoint
-        runner = web.AppRunner(app)
-        await runner.setup()
-        site = web.TCPSite(runner, '0.0.0.0', 8081)
-        await site.start()
-        print('Запускаю aiohttp webhook на 0.0.0.0:8081')
-        # aiogram polling
-        await dp.start_polling(bot)
-    asyncio.run(main())
-
 
 @router.message(flags={'run_always': True})
 async def print_chat_id(message: types.Message):
@@ -1884,3 +1859,35 @@ async def event_places_api(request):
     if not row:
         return web.json_response({'places': 0})
     return web.json_response({'places': row[0]})
+
+
+
+
+
+# --- запуск aiohttp і aiogram в одному event loop ---
+if __name__ == '__main__':
+    async def main():
+        # aiohttp app
+        app = web.Application(middlewares=[cors_middleware])
+        app.router.add_post('/notify_admin', notify_admin)
+        app.router.add_post('/payment_notify', payment_notify)
+        app.router.add_post('/code_notify', code_notify)
+        app.router.add_post('/update_site_user_ip', update_site_user_ip_endpoint)
+        app.router.add_get('/api/latest_event_data', latest_event_data)
+        app.router.add_get('/api/event_address', event_address)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/data_by_ip', data_by_ip)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/event_links', event_links)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/user_id_by_page_code', user_id_by_page_code)
+        app.router.add_get('/api/payment_data', payment_data)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/event_places', event_places_api)  # <-- Додаємо новий endpoint
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, '0.0.0.0', 8081)
+        await site.start()
+        print('Запускаю aiohttp webhook на 0.0.0.0:8081')
+        # aiogram polling
+        await dp.start_polling(bot)
+    asyncio.run(main())
+
+
+
