@@ -1383,13 +1383,14 @@ async def events_save_all(message):
         ...
     # Завантажуємо існуючі події
     try:
-        with open(events_file, 'r', encoding='utf-8') as f:
-            events = json.load(f)
-    except Exception as e:
+        try:
+            with open(events_file, 'r', encoding='utf-8') as f:
+                events = json.load(f)
+        except Exception as e:
             print(f"[EVENTS] Не вдалося прочитати events.json: {e}")
-            events = {}
+        events = {}
     # Додаємо нову подію
-            user_event = EVENT_user_data.get(chat_id)
+        user_event = EVENT_user_data.get(chat_id)
         if not user_event:
             await message.answer("❗️ Дані івенту не знайдено. Спробуйте ще раз з початку.")
             print(f"[EVENTS] EVENT_user_data порожній для chat_id={chat_id}")
