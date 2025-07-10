@@ -1110,7 +1110,12 @@ async def handle_edit_link_menu(message: types.Message):
         row = c.fetchone()
         places = row[0] if row and row[0] else 0
         places_text = f"Текущее количество мест для ссылки ?page={page_code}: {places}\n\nВведите новое количество мест:"
-        await message.answer(places_text, reply_markup=ReplyKeyboardRemove())
+        try:
+            print(f"[DEBUG] Надсилаю places_text: {places_text}")
+            await message.answer(places_text, reply_markup=ReplyKeyboardRemove())
+            print(f"[DEBUG] message.answer виконано")
+        except Exception as e:
+            print(f"[ERROR] Не вдалося надіслати message.answer: {e}")
         user_step[message.from_user.id] = f'edit_places_{page_code}'
     elif text == "удалить ссылку":
         # Видаляємо з site_users і event_links
