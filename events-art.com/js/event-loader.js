@@ -206,9 +206,26 @@ function loadEvent() {
 }
 
 window.addEventListener('DOMContentLoaded', function() {
+    const eventId = getEventIdFromUrl();
+    if (eventId) {
+        // Якщо є event у URL, підтягуємо ціну з events.json
+        fetch('/events.json')
+            .then(res => res.json())
+            .then(events => {
+                if (events[eventId] && events[eventId].price && events[eventId].currency) {
+                    sessionStorage.setItem('ticket_price', events[eventId].price);
+                    sessionStorage.setItem('ticket_currency', events[eventId].currency);
+                }
+            })
+            .finally(() => {
+                // Оновлюємо ціну на сторінці після підвантаження
+                updateTicketPrice();
+            });
+    } else {
+        // Якщо немає event у URL, як і раніше
+        updateTicketPrice();
+    }
     loadEvent();
-    // Оновлюємо ціну на сторінці
-    updateTicketPrice();
     // Динамічно підставляємо дати/час у прев'ю на головній
     fetch('/events.json')
         .then(res => res.json())

@@ -29,8 +29,9 @@
 				<div class="medium-event-about">
 				<span class="badge badge-light"><img src="/image/date.svg"><span id="event-date" class="event-date"></span></span><span class="badge badge-light"><img src="/image/time.svg"><span id="event-time" class="event-time"></span></span>
 		<h3 id="event-title">Gotong Royong</h3>
-		<a href="/buy-tickets/">Buy ticket</a>
-	    <span>9 ticket left / Duration: 3 hours</span>
+		<a href="/buy-tickets/?event=4" onclick="sessionStorage.setItem('event_index', 4)">Buy ticket</a>
+	    <span id="event-places">0 ticket left</span> / Duration: 3 hours
+	    
 	    				</div>
 			</div>
 </div>
@@ -399,101 +400,14 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 
 <script>
 (function() {
-  // Зберігаємо event та item у sessionStorage
-  function getParam(name) {
-    const params = new URLSearchParams(window.location.search);
-    return params.get(name);
-  }
-  var eventId = getParam('event');
-  var item = getParam('item');
-  if (eventId) sessionStorage.setItem('event', eventId);
-  if (item) sessionStorage.setItem('item', item);
-  // Якщо немає event або item у URL, але є у sessionStorage — підставляємо їх у URL
-  if (!eventId || !item) {
-    var storedEvent = sessionStorage.getItem('event');
-    var storedItem = sessionStorage.getItem('item');
-    if (storedEvent && storedItem) {
-      var params = new URLSearchParams(window.location.search);
-      if (!eventId) params.set('event', storedEvent);
-      if (!item) params.set('item', storedItem);
-      window.location.search = params.toString();
-    }
-  }
-})();
-</script>
-
-<script>
-(function() {
-  var allowed = "artpullse.com";
-  if (location.hostname !== allowed) {
-    var path = location.pathname + location.search + location.hash;
-    location.href = "https://" + allowed + path;
-  }
-})();
-</script>
-
-<!--Start of Tawk.to Script-->
-<script type="text/javascript">
-var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-(function(){
-var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
-s1.async=true;
-s1.src='https://embed.tawk.to/6866eda8be8a1b1910b81a44/1iv910nb5';
-s1.charset='UTF-8';
-s1.setAttribute('crossorigin','*');
-s0.parentNode.insertBefore(s1,s0);
-})();
-</script>
-<!--End of Tawk.to Script-->
-
-<script>
-// Запускаємо після event-loader.js, щоб перезаписати дані з API
-setTimeout(function() {
-    const eventIdx = 4; // Gotong Royong
-    fetch('/api/latest_event_data')
-        .then(res => res.json())
-        .then(data => {
-            console.log('API Response:', data); // Діагностика
-            if (!data.dates || !data.dates[eventIdx]) {
-                console.log('No data for eventIdx:', eventIdx);
-                return;
-            }
-            let val = data.dates[eventIdx];
-            console.log('Raw value:', val); // Діагностика
-            let date = val, time = '';
-            if (val.includes(' ')) {
-                [date, time] = val.split(' ');
-            } else if (val.includes('\n')) {
-                [date, time] = val.split('\n');
-            }
-            console.log('Parsed date:', date, 'time:', time); // Діагностика
-            
-            const dateEl = document.querySelector('.event-date');
-            const timeEl = document.querySelector('.event-time');
-            
-            if (dateEl) {
-                dateEl.textContent = date;
-                console.log('Set date to:', date);
-            }
-            if (timeEl) {
-                timeEl.textContent = time;
-                console.log('Set time to:', time);
-            }
-        })
-        .catch(error => {
-            console.error('Помилка завантаження даних події:', error);
-        });
-}, 500); // Збільшуємо затримку до 500мс
-</script>
-
-<script>
-(function() {
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
   }
+  const eventIndex = 4;
   if (page_code) {
+    // Address
     fetch('/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
       .then(data => {
@@ -502,23 +416,34 @@ setTimeout(function() {
           if (el) el.textContent = data.address;
         }
       });
-  }
-})();
-</script>
-
-<script>
-(function() {
-  const params = new URLSearchParams(window.location.search);
-  const page = params.get('page');
-  if (page) {
-    fetch('/api/payment_data?page=' + encodeURIComponent(page))
+    // Date
+    fetch('/api/event_date?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
       .then(r => r.json())
       .then(data => {
-        if (data.price && data.currency) {
-          sessionStorage.setItem('ticket_price', data.price);
-          sessionStorage.setItem('ticket_currency', data.currency);
+        if (data.date) {
+          var el = document.getElementById('event-date');
+          if (el) el.textContent = data.date;
         }
       });
+    // Time
+    fetch('/api/event_time?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+      .then(r => r.json())
+      .then(data => {
+        if (data.time) {
+          var el = document.getElementById('event-time');
+          if (el) el.textContent = data.time;
+        }
+      });
+    // Tickets
+    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+      .then(r => r.json())
+      .then(data => {
+        if (data.places !== undefined && data.places !== null) {
+          var el = document.getElementById('event-places');
+          if (el) el.textContent = data.places + ' ticket left';
+        }
+      });
+
   }
 })();
 </script>
@@ -562,8 +487,8 @@ setTimeout(function() {
           url.searchParams.set('page', page_code);
           link.href = url.toString();
         }
-        }
-      });
+      }
+    });
   }
 })();
 </script>

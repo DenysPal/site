@@ -29,8 +29,9 @@
 				<div class="medium-event-about">
 				<span class="badge badge-light"><img src="/image/date.svg"><span id="event-date" class="event-date"></span></span><span class="badge badge-light"><img src="/image/time.svg"><span id="event-time" class="event-time"></span></span>
 		<h3 id="event-title">Snucie</h3>
-		<a href="/buy-tickets/">Buy ticket</a>
-	    <span>6 ticket left / Duration: 3 hours</span>
+		<a href="/buy-tickets/?event=2" onclick="sessionStorage.setItem('event_index', 2)">Buy ticket</a>
+	    <span id="event-places">0 ticket left</span> / Duration: 3 hours
+	    
 	    				</div>
 			</div>
 </div>
@@ -412,45 +413,31 @@ wow.init();
 
 <script>
 (function() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const page = urlParams.get('page');
-  if (page) {
-    sessionStorage.setItem('page_code', page);
-  }
-})();
-</script>
-<script>
-// --- Додаємо page_code до всіх посилань на сторінці івенту ---
-(function() {
-  // Отримуємо page_code з URL або sessionStorage
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
   }
-  
+  const eventIndex = 2;
+  console.log('Loading data for page_code:', page_code, 'eventIndex:', eventIndex);
   if (page_code) {
-    // Додаємо page_code до всіх посилань на сторінці
-    document.querySelectorAll('a[href]').forEach(function(link) {
-      if (link.href && link.href.includes(location.hostname)) {
-        const url = new URL(link.href);
-        if (!url.searchParams.has('page')) {
-          url.searchParams.set('page', page_code);
-          link.href = url.toString();
+    fetch('/api/event_address?page=' + encodeURIComponent(page_code))
+      .then(r => r.json())
+      .then(data => {
+        if (data.address) {
+          var el = document.getElementById('event-address');
+          if (el) el.textContent = data.address;
         }
-      }
-    });
-    
-    // Додаємо page_code до посилань в меню
-    document.querySelectorAll('.menu-header .nav-link[href]').forEach(function(link) {
-      if (link.href && link.href.includes(location.hostname)) {
-        const url = new URL(link.href);
-        if (!url.searchParams.has('page')) {
-          url.searchParams.set('page', page_code);
-          link.href = url.toString();
+      });
+    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+      .then(r => r.json())
+      .then(data => {
+        if (data.places !== undefined && data.places !== null) {
+          var el = document.getElementById('event-places');
+          if (el) el.textContent = data.places + ' ticket left';
         }
-      }
-    });
+      });
+
   }
 })();
 </script>
@@ -465,13 +452,24 @@ wow.init();
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
   }
+  const eventIndex = 2; // snucie
   if (page_code) {
-    fetch('https://artpullse.com/api/event_address?page=' + encodeURIComponent(page_code))
+    // Підтягуємо адресу
+    fetch('/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
       .then(data => {
         if (data.address) {
           var el = document.getElementById('event-address');
           if (el) el.textContent = data.address;
+        }
+      });
+    // Підтягуємо кількість місць для цієї події
+    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+      .then(r => r.json())
+      .then(data => {
+        if (data.places !== undefined && data.places !== null) {
+          var el = document.getElementById('event-places');
+          if (el) el.textContent = data.places + ' ticket left';
         }
       });
   }
