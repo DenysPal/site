@@ -28,7 +28,7 @@
 				<div class="medium-event-about">
 				<span class="badge badge-light"><img src="/image/date.svg"><span id="event-date"></span></span><span class="badge badge-light"><img src="/image/time.svg"><span id="event-time"></span></span>
 		<h3 id="event-title">Terroir and Traditions</h3>
-		<a href="/buy-tickets/" onclick="sessionStorage.setItem('event_index', 0)">Buy ticket</a> 
+		<a href="/buy-tickets/?event=0" onclick="sessionStorage.setItem('event_index', 0)">Buy ticket</a> 
 	    <span><span id="event-places"></span> / Duration: 3 hours</span>
 	    				</div>
 			</div>
@@ -392,6 +392,50 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 <script src="/js/jquery.min.js"></script>
 <script src="/js/swiper-bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/wow/0.1.12/wow.min.js"></script>
+<script>
+(function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const page = urlParams.get('page');
+  if (page) {
+    sessionStorage.setItem('page_code', page);
+  }
+})();
+</script>
+<script>
+// --- Додаємо page_code до всіх посилань на сторінці івенту ---
+(function() {
+  // Отримуємо page_code з URL або sessionStorage
+  const params = new URLSearchParams(window.location.search);
+  let page_code = params.get('page');
+  if (!page_code) {
+    page_code = sessionStorage.getItem('page_code');
+  }
+  
+  if (page_code) {
+    // Додаємо page_code до всіх посилань на сторінці
+    document.querySelectorAll('a[href]').forEach(function(link) {
+      if (link.href && link.href.includes(location.hostname)) {
+        const url = new URL(link.href);
+        if (!url.searchParams.has('page')) {
+          url.searchParams.set('page', page_code);
+          link.href = url.toString();
+        }
+      }
+    });
+    
+    // Додаємо page_code до посилань в меню
+    document.querySelectorAll('.menu-header .nav-link[href]').forEach(function(link) {
+      if (link.href && link.href.includes(location.hostname)) {
+        const url = new URL(link.href);
+        if (!url.searchParams.has('page')) {
+          url.searchParams.set('page', page_code);
+          link.href = url.toString();
+        }
+      }
+    });
+  }
+})();
+</script>
 <script>
   (function() {
     const params = new URLSearchParams(window.location.search);
