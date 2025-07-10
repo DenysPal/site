@@ -364,7 +364,7 @@
                   <span style="color:#fff; font-weight:500;">Ticket quantity?</span>
                   <div class="quantity_inner" style="display:inline-flex;">
                     <button type="button" class="bt_minus">-</button>
-                    <input type="text" value="1" size="2" class="quantity" data-max-count="8" style="width:40px; text-align:center;">
+                    <input type="text" value="1" size="2" class="quantity" style="width:40px; text-align:center;">
                     <button type="button" class="bt_plus">+</button>
                   </div>
                 </div>
@@ -508,6 +508,10 @@
             e.stopPropagation();
             let $input = $(this).parent().find('.quantity');
             let max = parseInt($input.data('max-count'));
+            if (isNaN(max) || max < 1) {
+                // Якщо ще не підвантажено — не дозволяємо збільшувати
+                return;
+            }
             let count = parseInt($input.val()) + 1;
             count = count > max ? max : count;
             $input.val(count);
