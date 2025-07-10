@@ -406,6 +406,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
   }
   const eventIndex = 4;
   if (page_code) {
+    // Address
     fetch('/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
       .then(data => {
@@ -414,6 +415,25 @@ Yes. Photography and videography are allowed in the Museum so long as the images
           if (el) el.textContent = data.address;
         }
       });
+    // Date
+    fetch('/api/event_date?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+      .then(r => r.json())
+      .then(data => {
+        if (data.date) {
+          var el = document.getElementById('event-date');
+          if (el) el.textContent = data.date;
+        }
+      });
+    // Time
+    fetch('/api/event_time?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+      .then(r => r.json())
+      .then(data => {
+        if (data.time) {
+          var el = document.getElementById('event-time');
+          if (el) el.textContent = data.time;
+        }
+      });
+    // Tickets
     fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
       .then(r => r.json())
       .then(data => {
