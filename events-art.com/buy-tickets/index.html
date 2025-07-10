@@ -542,13 +542,13 @@
     </script>
     <script>
 (function() {
-  // Витягуємо page_code з URL/sessionStorage
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page') || sessionStorage.getItem('page_code');
-  // eventIndex треба зберігати у sessionStorage на сторінці івенту
-  let eventIndex = sessionStorage.getItem('event_index');
-  if (!eventIndex) eventIndex = 0; // fallback, якщо не знайдено
-
+  let eventIndex = params.get('event');
+  if (eventIndex === null || eventIndex === undefined) {
+    eventIndex = sessionStorage.getItem('event_index');
+  }
+  if (!eventIndex) eventIndex = 0;
   if (page_code && eventIndex !== null) {
     fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
       .then(r => r.json())
@@ -556,7 +556,6 @@
         if (typeof data.places === 'number') {
           var $input = $('.quantity_inner .quantity');
           $input.attr('data-max-count', data.places);
-          // Якщо value > max, зменшуємо
           if (parseInt($input.val()) > data.places) {
             $input.val(data.places);
           }
