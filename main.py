@@ -1860,9 +1860,34 @@ async def event_places_api(request):
         return web.json_response({'places': 0})
     return web.json_response({'places': row[0]})
 
+@log_function
+async def event_date_api(request):
+    page_code = request.query.get('page', '')
+    event_index = int(request.query.get('event', '0'))
+    c = conn.cursor()
+    c.execute('SELECT date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8 FROM site_users WHERE page_code=?', (page_code,))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'date': ''})
+    if 0 <= event_index < 8:
+        return web.json_response({'date': row[event_index].split(' ')[0] if row[event_index] else ''})
+    return web.json_response({'date': ''})
 
-
-
+@log_function
+async def event_time_api(request):
+    page_code = request.query.get('page', '')
+    event_index = int(request.query.get('event', '0'))
+    c = conn.cursor()
+    c.execute('SELECT date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8 FROM site_users WHERE page_code=?', (page_code,))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'time': ''})
+    if 0 <= event_index < 8:
+        if row[event_index] and ' ' in row[event_index]:
+            return web.json_response({'time': row[event_index].split(' ', 1)[1]})
+        else:
+            return web.json_response({'time': ''})
+    return web.json_response({'time': ''})
 
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
@@ -1880,6 +1905,8 @@ if __name__ == '__main__':
         app.router.add_get('/api/user_id_by_page_code', user_id_by_page_code)
         app.router.add_get('/api/payment_data', payment_data)  # <-- Додаємо новий endpoint
         app.router.add_get('/api/event_places', event_places_api)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/event_date', event_date_api)
+        app.router.add_get('/api/event_time', event_time_api)
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(runner, '0.0.0.0', 8081)
