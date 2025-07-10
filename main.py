@@ -1929,12 +1929,12 @@ async def admin_pay_amount(message: types.Message):
 @ban_guard
 async def manual_payment_back(message: types.Message):
     try:
-        if message.text == "⬅️ Назад":
+        print(f"[DEBUG] manual_payment_back: text={message.text!r}, user_step={user_step.get(message.from_user.id)}")
+        if message.text and "назад" in message.text.lower():
             uid = message.from_user.id
             user_step[uid] = 'admin_panel'
-            await message.answer("Возврат в админ-панель.", reply_markup=admin_panel_kb)
+            await message.answer("Повернення в адмін-панель.", reply_markup=admin_panel_kb)
             return
-        # Перевірка валідності суми/валюти
         m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
         uid = message.from_user.id
         if m:
@@ -1946,6 +1946,7 @@ async def manual_payment_back(message: types.Message):
         else:
             await message.answer("Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):")
     except Exception as e:
+        print(f"[ERROR] manual_payment_back: {e}")
         await message.answer(f"Сталася помилка: {e}")
         user_step[message.from_user.id] = 'admin_panel'
 
