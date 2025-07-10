@@ -1341,6 +1341,19 @@ async def block_others(message: types.Message):
             await message.answer("Для начала заполните анкету командой /start")
     elif not db_user:
         await message.answer("Для начала заполните анкету командой /start")
+    # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — обробляємо тільки якщо user_step == 'manual_payment_amount'
+    if is_admin(uid):
+        m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
+        if m:
+            if user_step.get(uid) == 'manual_payment_amount':
+                # Цей кейс обробляється у manual_payment_back, сюди не потрапить
+                pass
+            elif user_step.get(uid) == 'admin_panel':
+                await message.answer("Щоб створити посилання для оплати, спочатку натисніть 'Пряма оплата'.")
+                return
+            else:
+                # Усі інші стани — ігноруємо це введення
+                return
 
 # --- EVENTS ART BOT (ex-bot.py) ---
 EVENTS_FILE = os.path.join('events-art.com', 'events.json')
