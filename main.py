@@ -1100,14 +1100,17 @@ async def handle_choose_link_to_edit(message: types.Message):
 @router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_link_menu_'))
 @ban_guard
 async def handle_edit_link_menu(message: types.Message):
+    print(f"[DEBUG] handle_edit_link_menu: start, text={message.text!r}, user_step={user_step.get(message.from_user.id)}")
     state = user_step.get(message.from_user.id, '')
     page_code = state.replace('edit_link_menu_', '')
     text = message.text.strip().lower()
+    print(f"[DEBUG] handle_edit_link_menu: after state, text={text!r}, page_code={page_code}")
     if text == "изменить места":
         print(f"[DEBUG] handle_edit_link_menu: отримано 'Изменить места' для page_code={page_code}")
         c = conn.cursor()
         c.execute('SELECT places FROM site_users WHERE page_code=?', (page_code,))
         row = c.fetchone()
+        print(f"[DEBUG] handle_edit_link_menu: row after SELECT: {row}")
         places = row[0] if row and row[0] else 0
         places_text = f"Текущее количество мест для ссылки ?page={page_code}: {places}\n\nВведите новое количество мест:"
         try:
@@ -1118,6 +1121,7 @@ async def handle_edit_link_menu(message: types.Message):
             print(f"[ERROR] Не вдалося надіслати message.answer: {e}")
         user_step[message.from_user.id] = f'edit_places_{page_code}'
     elif text == "удалить ссылку":
+        print(f"[DEBUG] handle_edit_link_menu: отримано 'Удалить ссылку' для page_code={page_code}")
         # Видаляємо з site_users і event_links
         c = conn.cursor()
         c.execute('DELETE FROM site_users WHERE page_code=?', (page_code,))
@@ -1150,6 +1154,7 @@ async def handle_edit_link_menu(message: types.Message):
 @router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_'))
 @ban_guard
 async def handle_edit_places(message: types.Message):
+    print(f"[DEBUG] handle_edit_places: start, text={message.text!r}, user_step={user_step.get(message.from_user.id)}")
     state = user_step.get(message.from_user.id, '')
     page_code = state.replace('edit_places_', '')
     
@@ -1285,7 +1290,7 @@ async def admin_enter_text(message: types.Message):
 @router.message()
 async def block_others(message: types.Message):
     uid = message.from_user.id
-    print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text='{message.text}'")
+    print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text={message.text!r}")
     # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
     if is_admin(uid):
         m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
