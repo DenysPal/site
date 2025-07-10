@@ -1949,12 +1949,12 @@ async def manual_payment_back(message: types.Message):
         await message.answer(f"Сталася помилка: {e}")
         user_step[message.from_user.id] = 'admin_panel'
 
-@router.message(lambda m: is_admin(m.from_user.id) and m.text in ["⬅️ Назад", "Меню", "⚙️Меню"])
+@router.message(lambda m: is_admin(m.from_user.id) and m.text and any(x in m.text.lower() for x in ["назад", "back"]))
 @ban_guard
-async def universal_admin_back(message: types.Message):
+async def force_admin_back(message: types.Message):
     uid = message.from_user.id
     user_step[uid] = 'admin_panel'
-    await message.answer("Возврат в админ-панель.", reply_markup=admin_panel_kb)
+    await message.answer("Повернення в адмін-панель.", reply_markup=admin_panel_kb)
     return
 
 
