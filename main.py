@@ -1387,7 +1387,7 @@ async def events_save_all(message):
             events = json.load(f)
     except Exception as e:
             print(f"[EVENTS] Не вдалося прочитати events.json: {e}")
-        events = {}
+            events = {}
     # Додаємо нову подію
         user_event = EVENT_user_data.get(chat_id)
         if not user_event:
