@@ -390,7 +390,7 @@ async def process_experience(message: types.Message):
 @router.message(lambda m: m.text and m.text.strip().lower() == "пропустить")
 @ban_guard
 async def skip_screenshots(message: types.Message):
-        uid = message.from_user.id
+    uid = message.from_user.id
     print(f"[DEBUG] skip_screenshots handler triggered for user {uid}, user_step: {user_step.get(uid)}")
     print(f"[DEBUG] Message text: '{message.text}'")
     if user_step.get(uid) == 'screenshots':
@@ -405,7 +405,7 @@ async def skip_screenshots(message: types.Message):
             print(f"[ERROR] finish_form failed: {e}")
             import traceback
             traceback.print_exc()
-            user_step[uid] = None  # Скидаємо крок навіть якщо сталася помилка
+        user_step[uid] = None  # Скидаємо крок навіть якщо сталася помилка
 
         user_step[uid] = None
     if 'screenshots' not in user_data.get(uid, {}):
