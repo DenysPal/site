@@ -600,13 +600,11 @@ async def change_wallet_save(message: types.Message):
     await message.answer(f"Кошелек сохранён: <code>{new_wallet}</code>", parse_mode='HTML', reply_markup=main_menu_kb)
 
 # --- Админка ---
-@router.message(lambda m: m.text == "��️ Админ панель" and is_admin(m.from_user.id))
+@router.message(lambda m: m.text and 'админ панель' in m.text.lower() and is_admin(m.from_user.id))
 @ban_guard
 async def admin_panel(message: types.Message):
     await message.answer("Админ-панель. Выберите действие:", reply_markup=admin_panel_kb)
     user_step[message.from_user.id] = 'admin_panel'
-
-
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'admin_panel')
 @ban_guard
