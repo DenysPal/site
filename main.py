@@ -388,7 +388,7 @@ async def process_experience(message: types.Message):
 @router.message(lambda m: m.text and m.text.strip().lower() == "пропустить")
 @ban_guard
 async def skip_screenshots(message: types.Message):
-        uid = message.from_user.id
+    uid = message.from_user.id
     print(f"[DEBUG] Message text: '{message.text}'")
     if user_step.get(uid) == 'screenshots':
         print(f"[DEBUG] User is in screenshots step, processing...")
