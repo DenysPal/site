@@ -1669,7 +1669,6 @@ async def event_address(request):
         return web.json_response({'address': address})
     else:
         # Якщо не знайдено в event_links, шукаємо в site_users
-<<<<<<< HEAD
         c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
         row = c.fetchone()
         if not row:
@@ -1682,7 +1681,6 @@ async def event_address(request):
         return web.json_response({'error': 'address not found'}, status=404)
     address, places = row2
     return web.json_response({'address': address, 'places': places})
-=======
         c.execute('SELECT street FROM site_users WHERE page_code=?', (page_code,))
         row2 = c.fetchone()
         if not row2:
@@ -1691,7 +1689,6 @@ async def event_address(request):
         address = row2[0]
         print(f"[event_address] Found address (direct): {address}")
         return web.json_response({'address': address})
->>>>>>> origin/sasha
 
 @log_function
 async def data_by_ip(request):
