@@ -538,21 +538,25 @@
     </script>
     <script>
 (function() {
+  // Витягуємо page_code з URL/sessionStorage
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page') || sessionStorage.getItem('page_code');
-  if (page_code) {
-    sessionStorage.setItem('page_code', page_code);
-    fetch('/api/payment_data?page=' + encodeURIComponent(page_code))
+  // eventIndex треба зберігати у sessionStorage на сторінці івенту
+  let eventIndex = sessionStorage.getItem('event_index');
+  if (!eventIndex) eventIndex = 0; // fallback, якщо не знайдено
+
+  if (page_code && eventIndex !== null) {
+    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
       .then(r => r.json())
       .then(data => {
-        if (data.price && data.currency) {
-          document.querySelectorAll('.event-price').forEach(el => el.textContent = data.price + ' ' + data.currency);
+        if (typeof data.places === 'number') {
+          var $input = $('.quantity_inner .quantity');
+          $input.attr('data-max-count', data.places);
+          // Якщо value > max, зменшуємо
+          if (parseInt($input.val()) > data.places) {
+            $input.val(data.places);
+          }
         }
-        if (data.address) {
-          var el = document.getElementById('event-address');
-          if (el) el.textContent = data.address;
-        }
-        // Якщо треба підставити дату/час — додати тут
       });
   }
 })();
