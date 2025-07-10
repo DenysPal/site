@@ -1290,6 +1290,19 @@ async def block_others(message: types.Message):
     uid = message.from_user.id
     step = user_step.get(uid)
     print(f"[block_others] uid={uid}, user_step={step}, text={message.text!r}")
+
+    # Якщо user_step не 'admin_panel', скидаємо на 'admin_panel' і показуємо меню
+    if step != 'admin_panel':
+        user_step[uid] = 'admin_panel'
+        await message.answer("Вас повернуто в адмін-панель.", reply_markup=admin_panel_kb)
+        return
+
+    # Якщо адмін у адмін-панелі вводить число+валюта — підказка
+    if is_admin(uid):
+        m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
+        if m:
+            await message.answer("Щоб створити посилання для оплати, спочатку натисніть 'Пряма оплата'.")
+            return
     # Якщо завис у якомусь кроці, скидаємо і повідомляємо
     if step not in [None, 'admin_panel']:
         print(f"[block_others] user_step завис у '{step}', скидаю на None")
