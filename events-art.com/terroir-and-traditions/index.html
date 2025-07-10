@@ -30,7 +30,7 @@
 		<h3 id="event-title">Terroir and Traditions</h3>
 		<a href="/buy-tickets/?event=0" onclick="sessionStorage.setItem('event_index', 0)">Buy ticket</a> 
 	    		<span><span id="event-places">0 ticket left</span> / Duration: 3 hours</span>
-		<div class="event-price">Price: <span id="event-price">Loading...</span></div>
+		<div class="event-price"><span id="event-price"></span></div>
 	    				</div>
 			</div>
 </div>
@@ -438,13 +438,14 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 })();
 </script>
 <script>
-  (function() {
+  document.addEventListener('DOMContentLoaded', function() {
     const params = new URLSearchParams(window.location.search);
     let page_code = params.get('page');
     if (!page_code) {
       page_code = sessionStorage.getItem('page_code');
     }
     const eventIndex = 0; // Для Terroir and Traditions
+    console.log('Loading data for page_code:', page_code, 'eventIndex:', eventIndex);
     if (page_code) {
       // Address
       fetch('/api/event_address?page=' + encodeURIComponent(page_code))
@@ -486,13 +487,24 @@ Yes. Photography and videography are allowed in the Museum so long as the images
       fetch('/api/payment_data?page=' + encodeURIComponent(page_code))
         .then(r => r.json())
         .then(data => {
+          console.log('Price data received:', data);
           if (data.price && data.currency) {
             var el = document.getElementById('event-price');
-            if (el) el.textContent = data.price + ' ' + data.currency;
+            if (el) {
+              el.textContent = data.price + ' ' + data.currency;
+              console.log('Price updated:', data.price + ' ' + data.currency);
+            } else {
+              console.log('Price element not found');
+            }
+          } else {
+            console.log('No price data in response');
           }
+        })
+        .catch(error => {
+          console.error('Error fetching price:', error);
         });
     }
-  })();
+  });
 </script>
 <script>
 	new WOW().init();

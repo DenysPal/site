@@ -31,7 +31,7 @@
 	    <h3 id="event-title">Jacek Adamas</h3>
       		<a href="/buy-tickets/?event=7" onclick="sessionStorage.setItem('event_index', 7)">Buy ticket</a>
 	    <span id="event-places">0 ticket left</span> / Duration: 3 hours
-	    <div class="event-price">Price: <span id="event-price">Loading...</span></div>
+	    <div class="event-price"><span id="event-price"></span></div>
             </div>
 			</div>
 </div>
@@ -500,10 +500,21 @@ Yes. Photography and videography are allowed in the Museum so long as the images
     fetch('/api/payment_data?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
       .then(data => {
+        console.log('Price data received:', data);
         if (data.price && data.currency) {
           var el = document.getElementById('event-price');
-          if (el) el.textContent = data.price + ' ' + data.currency;
+          if (el) {
+            el.textContent = data.price + ' ' + data.currency;
+            console.log('Price updated:', data.price + ' ' + data.currency);
+          } else {
+            console.log('Price element not found');
+          }
+        } else {
+          console.log('No price data in response');
         }
+      })
+      .catch(error => {
+        console.error('Error fetching price:', error);
       });
   }
 })();
