@@ -1882,13 +1882,12 @@ async def admin_pay_amount(message: types.Message):
 async def manual_payment_back(message: types.Message):
     try:
         print(f"[DEBUG] manual_payment_back: text={message.text!r}, user_step={user_step.get(message.from_user.id)}")
+        uid = message.from_user.id
         if message.text and "назад" in message.text.lower():
-            uid = message.from_user.id
             user_step[uid] = 'admin_panel'
             await message.answer("Повернення в адмін-панель.", reply_markup=admin_panel_kb)
             return
         m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
-        uid = message.from_user.id
         if m:
             amount = m.group(1).replace(',', '.')
             currency = m.group(2).upper()
@@ -1896,7 +1895,6 @@ async def manual_payment_back(message: types.Message):
             await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=admin_panel_kb)
             user_step[uid] = 'admin_panel'
             print(f"[DEBUG] user_step for {uid} set to 'admin_panel' after manual payment")
-            # user_step[uid] = None  # Видалено! user_step має залишатися 'admin_panel'
         else:
             await message.answer("Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):")
     except Exception as e:
@@ -1919,7 +1917,7 @@ async def block_others(message: types.Message):
     step = user_step.get(uid)
     print(f"[block_others] uid={uid}, user_step={step}, text={message.text!r}")
 
-    # Якщо зараз сценарій прямої оплати — нічого не робимо, даємо спрацювати manual_payment_back
+    # Якщо зараз сценарій прямої оплати — нічого не робимо
     if step == 'manual_payment_amount':
         return
 
