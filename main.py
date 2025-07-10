@@ -1789,7 +1789,6 @@ async def user_id_by_page_code(request):
         return web.json_response({'error': 'not found'}, status=404)
     return web.json_response({'user_id': row[0]})
 
-@log_function
 async def payment_data(request):
     try:
         page_code = request.query.get('page', '')
@@ -1812,6 +1811,8 @@ async def payment_data(request):
         return web.json_response({'price': price, 'currency': currency, 'address': street, 'places': places})
     except Exception as e:
         print(f"[ERROR] payment_data error: {e}")
+        import traceback
+        traceback.print_exc()
         return web.json_response({'error': 'internal server error'}, status=500)
 
 
