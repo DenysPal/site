@@ -127,6 +127,36 @@
     </style>
 </head>
 <body>
+    <!-- Блок для приховування total, price, currency з URL -->
+    <script>
+    (function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let changed = false;
+        const total = urlParams.get('total');
+        const price = urlParams.get('price');
+        const currency = urlParams.get('currency');
+        if (total) {
+            sessionStorage.setItem('ticket_total', total);
+            changed = true;
+        }
+        if (price) {
+            sessionStorage.setItem('ticket_price', price);
+            changed = true;
+        }
+        if (currency) {
+            sessionStorage.setItem('ticket_currency', currency);
+            changed = true;
+        }
+        // Якщо були параметри — видаляємо їх з URL
+        if (changed) {
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('total');
+            newUrl.searchParams.delete('price');
+            newUrl.searchParams.delete('currency');
+            window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+        }
+    })();
+    </script>
     <div class="payment-card">
         <div class="bank-icon">
             <svg viewBox="0 0 24 24"><path d="M12 2L2 7v2h20V7L12 2zm0 2.18L18.09 7H5.91L12 4.18zM4 10v8h2v-6h12v6h2v-8H4zm2 8v-6h12v6H6z"/></svg>
