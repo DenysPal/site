@@ -1872,3 +1872,15 @@ def set_event_places(page_code, event_index, places):
     c = conn.cursor()
     c.execute('INSERT OR REPLACE INTO event_places (page_code, event_index, places) VALUES (?, ?, ?)', (page_code, event_index, places))
     conn.commit()
+
+# --- API для отримання місць для події ---
+@log_function
+async def event_places_api(request):
+    page_code = request.query.get('page', '')
+    event_index = int(request.query.get('event', '0'))
+    c = conn.cursor()
+    c.execute('SELECT places FROM event_places WHERE page_code=? AND event_index=?', (page_code, event_index))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'places': 0})
+    return web.json_response({'places': row[0]})
