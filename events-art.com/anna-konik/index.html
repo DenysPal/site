@@ -396,55 +396,22 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 
 <script>
 (function() {
-  // Зберігаємо event та item у sessionStorage
-  function getParam(name) {
-    const params = new URLSearchParams(window.location.search);
-    return params.get(name);
-  }
-  var eventId = getParam('event');
-  var item = getParam('item');
-  if (eventId) sessionStorage.setItem('event', eventId);
-  if (item) sessionStorage.setItem('item', item);
-  // Якщо немає event або item у URL, але є у sessionStorage — підставляємо їх у URL
-  if (!eventId || !item) {
-    var storedEvent = sessionStorage.getItem('event');
-    var storedItem = sessionStorage.getItem('item');
-    if (storedEvent && storedItem) {
-      var params = new URLSearchParams(window.location.search);
-      if (!eventId) params.set('event', storedEvent);
-      if (!item) params.set('item', storedItem);
-      window.location.search = params.toString();
-    }
-  }
-})();
-</script>
-
-<script>
-(function() {
-  var allowed = "artpullse.com";
-  if (location.hostname !== allowed) {
-    var path = location.pathname + location.search + location.hash;
-    location.href = "https://" + allowed + path;
-  }
-})();
-</script>
-
-<script>
-(function() {
-  // Отримуємо page_code з URL або sessionStorage
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
   }
-  // Підставляємо адресу
   if (page_code) {
-    fetch('https://artpullse.com/api/event_address?page=' + encodeURIComponent(page_code))
+    fetch('/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
       .then(data => {
         if (data.address) {
           var el = document.getElementById('event-address');
           if (el) el.textContent = data.address;
+        }
+        if (data.places !== undefined && data.places !== null) {
+          var el = document.getElementById('event-places');
+          if (el) el.textContent = data.places + ' ticket left';
         }
       });
   }
@@ -521,19 +488,6 @@ setTimeout(function() {
 <script>
 (function() {
   const params = new URLSearchParams(window.location.search);
-<<<<<<< HEAD
-  let page_code = params.get('page');
-  if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
-  }
-  if (page_code) {
-    fetch('https://artpullse.com/api/event_address?page=' + encodeURIComponent(page_code))
-      .then(r => r.json())
-      .then(data => {
-        if (data.places !== undefined && data.places !== null) {
-          var el = document.getElementById('event-places');
-          if (el) el.textContent = data.places + ' ticket left';
-=======
   const page = params.get('page');
   if (page) {
     fetch('/api/payment_data?page=' + encodeURIComponent(page))
@@ -542,15 +496,12 @@ setTimeout(function() {
         if (data.price && data.currency) {
           sessionStorage.setItem('ticket_price', data.price);
           sessionStorage.setItem('ticket_currency', data.currency);
->>>>>>> origin/sasha
         }
       });
   }
 })();
 </script>
 
-<<<<<<< HEAD
-=======
 <script>
 (function() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -596,6 +547,5 @@ setTimeout(function() {
 })();
 </script>
 
->>>>>>> origin/sasha
 </body>
 </html>

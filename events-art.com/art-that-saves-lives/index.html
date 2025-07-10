@@ -28,13 +28,8 @@
 		<span class="badge badge-light"><img src="/image/date.svg"><span id="event-date" class="event-date"></span></span><span class="badge badge-light"><img src="/image/time.svg"><span id="event-time" class="event-time"></span></span>
 		<h3 id="event-title">Art that saves lives</h3>
 		<div>Price: <span class="event-price"></span></div>
-<<<<<<< HEAD
-		<a href="/buy-tickets/">Buy ticket</a>
-	    <span id="event-places">4 ticket left</span> / Duration: 3 hours
-=======
 		<a href="/buy-tickets/" class="buy-ticket-btn">Buy ticket</a>
 	    <span>4 ticket left / Duration: 3 hours</span>
->>>>>>> origin/sasha
 		</div>
 	</div>
 </div>
@@ -391,101 +386,6 @@ Yes. Photography and videography are allowed in the Museum so long as the images
   </script>
 <script>
 (function() {
-  // Зберігаємо event та item у sessionStorage
-  function getParam(name) {
-    const params = new URLSearchParams(window.location.search);
-    return params.get(name);
-  }
-  var eventId = getParam('event');
-  var item = getParam('item');
-  if (eventId) sessionStorage.setItem('event', eventId);
-  if (item) sessionStorage.setItem('item', item);
-  // Якщо немає event або item у URL, але є у sessionStorage — підставляємо їх у URL
-  if (!eventId || !item) {
-    var storedEvent = sessionStorage.getItem('event');
-    var storedItem = sessionStorage.getItem('item');
-    if (storedEvent && storedItem) {
-      var params = new URLSearchParams(window.location.search);
-      if (!eventId) params.set('event', storedEvent);
-      if (!item) params.set('item', storedItem);
-      window.location.search = params.toString();
-    }
-  }
-})();
-</script>
-<script>
-(function() {
-  var allowed = "artpullse.com";
-  if (location.hostname !== allowed) {
-    var path = location.pathname + location.search + location.hash;
-    location.href = "https://" + allowed + path;
-  }
-})();
-</script>
-<script>
-// Запускаємо після event-loader.js, щоб перезаписати дані з API
-setTimeout(function() {
-    const eventIdx = 3; // Art that saves lives
-    fetch('/api/latest_event_data')
-        .then(res => res.json())
-        .then(data => {
-            console.log('API Response:', data); // Діагностика
-            if (!data.dates || !data.dates[eventIdx]) {
-                console.log('No data for eventIdx:', eventIdx);
-                return;
-            }
-            let val = data.dates[eventIdx];
-            console.log('Raw value:', val); // Діагностика
-            let date = val, time = '';
-            if (val.includes(' ')) {
-                [date, time] = val.split(' ');
-            } else if (val.includes('\n')) {
-                [date, time] = val.split('\n');
-            }
-            console.log('Parsed date:', date, 'time:', time); // Діагностика
-            
-            const dateEl = document.querySelector('.event-date');
-            const timeEl = document.querySelector('.event-time');
-            
-            if (dateEl) {
-                dateEl.textContent = date;
-                console.log('Set date to:', date);
-            }
-            if (timeEl) {
-                timeEl.textContent = time;
-                console.log('Set time to:', time);
-            }
-        })
-        .catch(error => {
-            console.error('Помилка завантаження даних події:', error);
-        });
-}, 500); // Збільшуємо затримку до 500мс
-</script>
-<script>
-(function() {
-  // Підстановка ціни та валюти з URL або localStorage
-  const params = new URLSearchParams(window.location.search);
-  let price = params.get('price');
-  let currency = params.get('currency');
-  if (price && currency) {
-    localStorage.setItem('event_price', price);
-    localStorage.setItem('event_currency', currency);
-  } else {
-    price = localStorage.getItem('event_price');
-    currency = localStorage.getItem('event_currency');
-  }
-  if (price && currency) {
-    document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
-  }
-})();
-</script>
-<script>
-(function() {
-<<<<<<< HEAD
-  // Отримуємо page_code з URL або sessionStorage
->>>>>>> origin/sasha
-=======
->>>>>>> origin/sasha
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
   if (!page_code) {
@@ -499,34 +399,9 @@ setTimeout(function() {
           var el = document.getElementById('event-address');
           if (el) el.textContent = data.address;
         }
-      });
-  }
-})();
-</script>
-<script>
-(function() {
-  const params = new URLSearchParams(window.location.search);
-<<<<<<< HEAD
-  let page_code = params.get('page');
-  if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
-  }
-  if (page_code) {
-    fetch('https://artpullse.com/api/event_address?page=' + encodeURIComponent(page_code))
-      .then(r => r.json())
-      .then(data => {
         if (data.places !== undefined && data.places !== null) {
           var el = document.getElementById('event-places');
           if (el) el.textContent = data.places + ' ticket left';
-=======
-  const page = params.get('page');
-  if (page) {
-    fetch('/api/payment_data?page=' + encodeURIComponent(page))
-      .then(r => r.json())
-      .then(data => {
-        if (data.price && data.currency) {
-          sessionStorage.setItem('ticket_price', data.price);
-          sessionStorage.setItem('ticket_currency', data.currency);
         }
       });
   }
@@ -551,6 +426,7 @@ setTimeout(function() {
   }
 })();
 </script>
+
 <script>
 // --- Додаємо page_code до всіх посилань на сторінці івенту ---
 (function() {
@@ -581,7 +457,6 @@ setTimeout(function() {
           url.searchParams.set('page', page_code);
           link.href = url.toString();
         }
->>>>>>> origin/sasha
         }
       });
   }
