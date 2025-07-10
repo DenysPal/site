@@ -1291,6 +1291,10 @@ async def block_others(message: types.Message):
     step = user_step.get(uid)
     print(f"[block_others] uid={uid}, user_step={step}, text={message.text!r}")
 
+    # Якщо зараз сценарій прямої оплати — нічого не робимо, даємо спрацювати manual_payment_back
+    if step == 'manual_payment_amount':
+        return
+
     # Якщо user_step не 'admin_panel', скидаємо на 'admin_panel' і показуємо меню
     if step != 'admin_panel':
         user_step[uid] = 'admin_panel'
