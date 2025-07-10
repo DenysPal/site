@@ -1936,5 +1936,13 @@ async def manual_payment_back(message: types.Message):
     # Тут залишити існуючу логіку для введення суми/валюти, якщо потрібно
     # Наприклад, можна додати перевірку чи це сума+валюта і т.д.
 
+@router.message(lambda m: m.text == '⬅️ Назад' and is_admin(m.from_user.id))
+@ban_guard
+async def universal_admin_back(message: types.Message):
+    uid = message.from_user.id
+    user_step[uid] = 'admin_panel'
+    await message.answer("Возврат в админ-панель.", reply_markup=admin_panel_kb)
+    return
+
 
 
