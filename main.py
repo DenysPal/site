@@ -1376,9 +1376,9 @@ async def events_start(message: types.Message):
 async def events_save_all(message):
     chat_id = message.chat.id
     try:
-    event_id = str(uuid.uuid4())
-    short_event_id = event_id[:6]
-    events_file = os.path.join('events-art.com', 'events.json')
+        event_id = str(uuid.uuid4())
+        short_event_id = event_id[:6]
+        events_file = os.path.join('events-art.com', 'events.json')
     # Завантажуємо існуючі події
     try:
         with open(events_file, 'r', encoding='utf-8') as f:
