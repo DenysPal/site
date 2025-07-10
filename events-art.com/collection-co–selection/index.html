@@ -279,4 +279,17 @@ document.addEventListener('DOMContentLoaded', function() {
         <h5><span id="event-address"></span></h5>
     </div>
 </div>
+<!-- Універсальний блок для приховування page_code з URL -->
+<script>
+(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const page_code = urlParams.get('page');
+    if (page_code) {
+        sessionStorage.setItem('page_code', page_code);
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.delete('page');
+        window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+    }
+})();
+</script>
 </body></html>
