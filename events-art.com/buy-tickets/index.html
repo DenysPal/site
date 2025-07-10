@@ -547,10 +547,12 @@
   if (!page) {
     page = sessionStorage.getItem('page_code');
   }
+  console.log('Try fetch /api/payment_data for page:', page);
   if (page) {
     fetch('/api/payment_data?page=' + encodeURIComponent(page))
       .then(r => r.json())
       .then(data => {
+        console.log('API /api/payment_data result:', data);
         if (data.price && data.currency) {
           sessionStorage.setItem('ticket_price', data.price);
           sessionStorage.setItem('ticket_currency', data.currency);
@@ -558,7 +560,8 @@
           $('#totalprice').text(data.price);
           $('h2').html(`Total: <span id="totalprice">${data.price}</span> ${data.currency}`);
         }
-      });
+      })
+      .catch(e => console.error('Fetch error:', e));
   }
 })();
     </script>
