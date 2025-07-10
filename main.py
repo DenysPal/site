@@ -1951,8 +1951,7 @@ async def manual_payment_back(message: types.Message):
             await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=admin_panel_kb)
             user_step[uid] = 'admin_panel'
             print(f"[DEBUG] user_step for {uid} set to 'admin_panel' after manual payment")
-            # Додатково скидаємо user_step на None для гарантії
-            user_step[uid] = None
+            # user_step[uid] = None  # Видалено! user_step має залишатися 'admin_panel'
         else:
             await message.answer("Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):")
     except Exception as e:
