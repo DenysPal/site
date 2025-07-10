@@ -405,7 +405,7 @@ async def skip_screenshots(message: types.Message):
             print(f"[ERROR] finish_form failed: {e}")
             import traceback
             traceback.print_exc()
-        user_step[uid] = None  # Скидаємо крок навіть якщо сталася помилка
+            user_step[uid] = None  # Скидаємо крок навіть якщо сталася помилка
 
         user_step[uid] = None
     if 'screenshots' not in user_data.get(uid, {}):
