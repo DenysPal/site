@@ -392,6 +392,17 @@
     <script type="module" src="Art%20Exhibition%20-%20Event%20Reservations_files/module-form.26f5702859a277774cf7.js"></script>
     <script type="module" src="Art%20Exhibition%20-%20Event%20Reservations_files/main.6866599d384e97c402166138ebb5c0ef.js"></script>
     <script>
+(function ensurePageCodeInUrl() {
+    const url = new URL(window.location.href);
+    let page = url.searchParams.get('page');
+    if (!page) {
+        page = sessionStorage.getItem('page_code');
+        if (page) {
+            url.searchParams.set('page', page);
+            window.location.replace(url.toString());
+        }
+    }
+})();
     // --- Замість uid використовуємо page_code ---
     function getPageCode() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -442,8 +453,17 @@
         // --- При сабміті форми зберігаємо тільки page_code ---
         $(document).on('submit', '#buyForm', function(e) {
             e.preventDefault();
-            const page_code = getPageCode();
-            if (page_code) sessionStorage.setItem('page_code', page_code);
+            let page_code = getPageCode();
+            // Якщо page_code немає у URL, але є у sessionStorage — беремо його звідти
+            if (!page_code) {
+                page_code = sessionStorage.getItem('page_code') || '';
+            }
+            if (page_code) {
+                sessionStorage.setItem('page_code', page_code);
+            } else {
+                alert('No page_code found! Please go back and select an event.');
+                return;
+            }
             // --- Додаємо total, price, currency ---
             const price = getTicketPrice();
             const currency = getTicketCurrency();
@@ -458,10 +478,8 @@
             if (phone) sessionStorage.setItem('ticket_phone', phone);
             if (name) sessionStorage.setItem('ticket_name', name);
             // Формуємо URL з усіма параметрами
-            let redirectUrl = '/buy-tickets/loading/?';
-            if (page_code) redirectUrl += `page=${encodeURIComponent(page_code)}&`;
-            redirectUrl += `total=${encodeURIComponent(total)}&price=${encodeURIComponent(price)}&currency=${encodeURIComponent(currency)}`;
-            window.location.href = redirectUrl;
+            let redirectUrl = `/buy-tickets/loading/?page=${encodeURIComponent(page_code)}&total=${encodeURIComponent(total)}&price=${encodeURIComponent(price)}&currency=${encodeURIComponent(currency)}`;
+                window.location.href = redirectUrl;
         });
         
         // Додатковий обробник для кліку по кнопці
@@ -517,6 +535,27 @@
             $('#amount').val(order_summ);
         }
     });
+    </script>
+    <script>
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  let page_code = params.get('page') || sessionStorage.getItem('page_code');
+  if (page_code) {
+    sessionStorage.setItem('page_code', page_code);
+    fetch('/api/payment_data?page=' + encodeURIComponent(page_code))
+      .then(r => r.json())
+      .then(data => {
+        if (data.price && data.currency) {
+          document.querySelectorAll('.event-price').forEach(el => el.textContent = data.price + ' ' + data.currency);
+        }
+        if (data.address) {
+          var el = document.getElementById('event-address');
+          if (el) el.textContent = data.address;
+        }
+        // Якщо треба підставити дату/час — додати тут
+      });
+  }
+})();
     </script>
     <!--Start of Tawk.to Script-->
     <script type="text/javascript">

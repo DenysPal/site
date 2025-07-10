@@ -256,7 +256,6 @@ Yes. Photography and videography are allowed in the Museum so long as the images
     </div>
     <div class="info-contacts">
         <h5>Corporate, Press and Partnership:</h5>
-        <h5 style="color:#e91e63;">info@artpullse.com</h5>
         <h5 style="color:#e91e63;"><a href="mailto:info@artpullse.com">info@artpullse.com</a></h5>
         <h5>Our Address:</h5>
         <h5><span id="event-address"></span></h5>
@@ -610,7 +609,7 @@ window.addEventListener('DOMContentLoaded', function() {
   }
   // Підставляємо адресу
   if (page_code) {
-    fetch('https://artpullse.com/api/event_address?page=' + encodeURIComponent(page_code))
+    fetch('/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
       .then(data => {
         if (data.address) {
@@ -636,6 +635,41 @@ window.addEventListener('DOMContentLoaded', function() {
   }
   if (price && currency) {
     document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
+  }
+})();
+</script>
+<script>
+// --- Додаємо page_code до всіх посилань "Show info" ---
+(function() {
+  // Отримуємо page_code з URL або sessionStorage
+  const params = new URLSearchParams(window.location.search);
+  let page_code = params.get('page');
+  if (!page_code) {
+    page_code = sessionStorage.getItem('page_code');
+  }
+  
+  if (page_code) {
+    // Додаємо page_code до всіх посилань "Show info"
+    document.querySelectorAll('.medium-event-about a[href*="/"]').forEach(function(link) {
+      if (link.textContent.trim() === 'Show info') {
+        const url = new URL(link.href, window.location.origin);
+        if (!url.searchParams.has('page')) {
+          url.searchParams.set('page', page_code);
+          link.href = url.toString();
+        }
+      }
+    });
+    
+    // Додаємо page_code до посилань в меню
+    document.querySelectorAll('.menu-header .nav-link[href]').forEach(function(link) {
+      if (link.href && link.href.includes(location.hostname)) {
+        const url = new URL(link.href);
+        if (!url.searchParams.has('page')) {
+          url.searchParams.set('page', page_code);
+          link.href = url.toString();
+        }
+        }
+      });
   }
 })();
 </script>

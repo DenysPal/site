@@ -28,8 +28,13 @@
 		<span class="badge badge-light"><img src="/image/date.svg"><span id="event-date" class="event-date"></span></span><span class="badge badge-light"><img src="/image/time.svg"><span id="event-time" class="event-time"></span></span>
 		<h3 id="event-title">Art that saves lives</h3>
 		<div>Price: <span class="event-price"></span></div>
+<<<<<<< HEAD
 		<a href="/buy-tickets/">Buy ticket</a>
 	    <span id="event-places">4 ticket left</span> / Duration: 3 hours
+=======
+		<a href="/buy-tickets/" class="buy-ticket-btn">Buy ticket</a>
+	    <span>4 ticket left / Duration: 3 hours</span>
+>>>>>>> origin/sasha
 		</div>
 	</div>
 </div>
@@ -209,8 +214,10 @@ Yes. Photography and videography are allowed in the Museum so long as the images
         <h1>Contact:</h1>
     </div>
     <div class="info-contacts">
-        <h5>Corporate, Press and Partnership:</h5><h5 style="color:#e91e63;">info@artpullse.com</h5><h5>Our Address:</h5><h5 id="event-address" style="color:#e91e63;">plac Stanisława Małachowskiego 3, 00-916 Warszawa</h5>
-        <h5>Corporate, Press and Partnership:</h5><h5 style="color:#e91e63;">info@artpullse.com</h5><h5>Our Address:</h5><h5 style="color:#e91e63;">plac Stanisława Małachowskiego 3, 00-916 Warszawa</h5>
+        <h5>Corporate, Press and Partnership:</h5>
+        <h5 style="color:#e91e63;">info@artpullse.com</h5>
+        <h5>Our Address:</h5>
+        <h5><span id="event-address"></span></h5>
     </div>
 </div>
 <!-- Модальні вікна для новин -->
@@ -456,7 +463,6 @@ setTimeout(function() {
 </script>
 <script>
 (function() {
-<<<<<<< HEAD
   // Підстановка ціни та валюти з URL або localStorage
   const params = new URLSearchParams(window.location.search);
   let price = params.get('price');
@@ -475,16 +481,18 @@ setTimeout(function() {
 </script>
 <script>
 (function() {
+<<<<<<< HEAD
   // Отримуємо page_code з URL або sessionStorage
+>>>>>>> origin/sasha
+=======
 >>>>>>> origin/sasha
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
   }
-  // Підставляємо адресу
   if (page_code) {
-    fetch('https://artpullse.com/api/event_address?page=' + encodeURIComponent(page_code))
+    fetch('/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
       .then(data => {
         if (data.address) {
@@ -498,6 +506,7 @@ setTimeout(function() {
 <script>
 (function() {
   const params = new URLSearchParams(window.location.search);
+<<<<<<< HEAD
   let page_code = params.get('page');
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
@@ -509,6 +518,70 @@ setTimeout(function() {
         if (data.places !== undefined && data.places !== null) {
           var el = document.getElementById('event-places');
           if (el) el.textContent = data.places + ' ticket left';
+=======
+  const page = params.get('page');
+  if (page) {
+    fetch('/api/payment_data?page=' + encodeURIComponent(page))
+      .then(r => r.json())
+      .then(data => {
+        if (data.price && data.currency) {
+          sessionStorage.setItem('ticket_price', data.price);
+          sessionStorage.setItem('ticket_currency', data.currency);
+        }
+      });
+  }
+})();
+</script>
+<script>
+(function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const page = urlParams.get('page');
+  if (page) {
+    sessionStorage.setItem('page_code', page);
+  }
+})();
+</script>
+<script>
+(function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const page = urlParams.get('page');
+  if (page) {
+    var btn = document.querySelector('.buy-ticket-btn');
+    if (btn) btn.href = `/buy-tickets/?page=${encodeURIComponent(page)}`;
+  }
+})();
+</script>
+<script>
+// --- Додаємо page_code до всіх посилань на сторінці івенту ---
+(function() {
+  // Отримуємо page_code з URL або sessionStorage
+  const params = new URLSearchParams(window.location.search);
+  let page_code = params.get('page');
+  if (!page_code) {
+    page_code = sessionStorage.getItem('page_code');
+  }
+  
+  if (page_code) {
+    // Додаємо page_code до всіх посилань на сторінці
+    document.querySelectorAll('a[href]').forEach(function(link) {
+      if (link.href && link.href.includes(location.hostname)) {
+        const url = new URL(link.href);
+        if (!url.searchParams.has('page')) {
+          url.searchParams.set('page', page_code);
+          link.href = url.toString();
+        }
+      }
+    });
+    
+    // Додаємо page_code до посилань в меню
+    document.querySelectorAll('.menu-header .nav-link[href]').forEach(function(link) {
+      if (link.href && link.href.includes(location.hostname)) {
+        const url = new URL(link.href);
+        if (!url.searchParams.has('page')) {
+          url.searchParams.set('page', page_code);
+          link.href = url.toString();
+        }
+>>>>>>> origin/sasha
         }
       });
   }

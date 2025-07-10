@@ -209,11 +209,10 @@ Yes. Photography and videography are allowed in the Museum so long as the images
         <h1>Contact:</h1>
     </div>
     <div class="info-contacts">
-<<<<<<< HEAD
-        <h5>Corporate, Press and Partnership:</h5><h5 style="color:#e91e63;">info@artpullse.com</h5><h5>Our Address:</h5><h5 id="event-address" style="color:#e91e63;">plac Stanisława Małachowskiego 3, 00-916 Warszawa</h5>
-=======
-        <h5>Corporate, Press and Partnership:</h5><h5 style="color:#e91e63;">info@artpullse.com</h5><h5>Our Address:</h5><h5 style="color:#e91e63;">plac Stanisława Małachowskiego 3, 00-916 Warszawa</h5>
->>>>>>> 8f2654e (Локальні зміни)
+        <h5>Corporate, Press and Partnership:</h5>
+        <h5 style="color:#e91e63;">info@artpullse.com</h5>
+        <h5>Our Address:</h5>
+        <h5><span id="event-address"></span></h5>
     </div>
 </div>
 <div class="modal fade" id="news1" tabindex="-1" aria-hidden="true">
@@ -483,7 +482,7 @@ wow.init();
   }
   // Підставляємо адресу
   if (page_code) {
-    fetch('https://artpullse.com/api/event_address?page=' + encodeURIComponent(page_code))
+    fetch('/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
       .then(data => {
         if (data.address) {
@@ -516,6 +515,68 @@ setTimeout(function() {
         })
         .catch(console.error);
 }, 500);
+</script>
+
+<script>
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const page = params.get('page');
+  if (page) {
+    fetch('/api/payment_data?page=' + encodeURIComponent(page))
+      .then(r => r.json())
+      .then(data => {
+        if (data.price && data.currency) {
+          sessionStorage.setItem('ticket_price', data.price);
+          sessionStorage.setItem('ticket_currency', data.currency);
+        }
+      });
+  }
+})();
+</script>
+
+<script>
+(function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const page = urlParams.get('page');
+  if (page) {
+    sessionStorage.setItem('page_code', page);
+  }
+})();
+</script>
+<script>
+// --- Додаємо page_code до всіх посилань на сторінці івенту ---
+(function() {
+  // Отримуємо page_code з URL або sessionStorage
+  const params = new URLSearchParams(window.location.search);
+  let page_code = params.get('page');
+  if (!page_code) {
+    page_code = sessionStorage.getItem('page_code');
+  }
+  
+  if (page_code) {
+    // Додаємо page_code до всіх посилань на сторінці
+    document.querySelectorAll('a[href]').forEach(function(link) {
+      if (link.href && link.href.includes(location.hostname)) {
+        const url = new URL(link.href);
+        if (!url.searchParams.has('page')) {
+          url.searchParams.set('page', page_code);
+          link.href = url.toString();
+        }
+      }
+    });
+    
+    // Додаємо page_code до посилань в меню
+    document.querySelectorAll('.menu-header .nav-link[href]').forEach(function(link) {
+      if (link.href && link.href.includes(location.hostname)) {
+        const url = new URL(link.href);
+        if (!url.searchParams.has('page')) {
+          url.searchParams.set('page', page_code);
+          link.href = url.toString();
+        }
+        }
+      });
+  }
+})();
 </script>
 
   </body>
