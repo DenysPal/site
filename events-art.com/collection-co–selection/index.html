@@ -30,7 +30,7 @@
 		<h3 id="event-title">Collection Co–selection</h3>
 		<a href="/buy-tickets/?event=1" onclick="sessionStorage.setItem('event_index', 1)">Buy ticket</a>
 	    <span id="event-places">0 ticket left</span> / Duration: 3 hours
-	    <div class="event-price"><span id="event-price"></span></div>
+	    
 					</div>
 			</div>
 </div>
@@ -229,26 +229,7 @@ document.addEventListener('DOMContentLoaded', function() {
           if (el) el.textContent = data.places + ' ticket left';
         }
       });
-    // Price
-    fetch('/api/payment_data?page=' + encodeURIComponent(page_code))
-      .then(r => r.json())
-      .then(data => {
-        console.log('Price data received:', data);
-        if (data.price && data.currency) {
-          var el = document.getElementById('event-price');
-          if (el) {
-            el.textContent = data.price + ' ' + data.currency;
-            console.log('Price updated:', data.price + ' ' + data.currency);
-          } else {
-            console.log('Price element not found');
-          }
-        } else {
-          console.log('No price data in response');
-        }
-      })
-      .catch(error => {
-        console.error('Error fetching price:', error);
-      });
+
   }
 });
 </script>
