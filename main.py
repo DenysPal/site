@@ -73,9 +73,9 @@ CREATE TABLE IF NOT EXISTS users (
 conn.commit()
 
         # 🟢 Скидаємо крок і повертаємо в меню
-        user_step[message.chat.id] = None
-        kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
-        await message.answer("✅ Посилання збережено. Повертаємося в головне меню:", reply_markup=kb)
+user_step[message.chat.id] = None
+kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+await message.answer("✅ Посилання збережено. Повертаємося в головне меню:", reply_markup=kb)
 
 # Гарантируем, что главный админ есть
 c.execute('INSERT OR IGNORE INTO users (user_id, is_admin) VALUES (?, 1)', (7973971109,))
