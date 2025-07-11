@@ -2040,12 +2040,7 @@ async def universal_back_handler(message: types.Message):
     user_step[uid] = None
     await message.answer("Повернення в головне меню.", reply_markup=kb)
 
-@router.message(lambda m: m.text == "⬅️ Назад")
-async def back_to_main_menu(message: types.Message):
-    uid = message.from_user.id
-    user_step[uid] = None
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await message.answer("Повертаємося в головне меню:", reply_markup=kb)
+
 
 # --- Універсальний callback_query-хендлер для всіх inline-кнопок "Назад" ---
 @router.callback_query(lambda c: any(x in c.data.lower() for x in ["назад", "back", "⬅️"]))
@@ -2059,7 +2054,12 @@ async def universal_inline_back_handler(call: types.CallbackQuery):
 
 
 
-
+@router.message(lambda m: m.text == "⬅️ Назад")
+async def back_to_main_menu(message: types.Message):
+    uid = message.from_user.id
+    user_step[uid] = None
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await message.answer("Повертаємося в головне меню:", reply_markup=kb)
 
 
 
