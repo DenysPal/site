@@ -1919,8 +1919,9 @@ async def manual_payment_back(message: types.Message):
         print(f"[DEBUG] manual_payment_back: text={message.text!r}, user_step={user_step.get(message.from_user.id)}")
         uid = message.from_user.id
         if message.text and "назад" in message.text.lower():
-            user_step[uid] = 'admin_panel'
-            await message.answer("Повернення в адмін-панель.", reply_markup=admin_panel_kb)
+            user_step[uid] = None
+            kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+            await message.answer("Повернення в головне меню.", reply_markup=kb)
             return
         m = re.match(r"^([0-9]+(?:[.,][0-9]+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
         if m:
@@ -1928,14 +1929,15 @@ async def manual_payment_back(message: types.Message):
             currency = m.group(2).upper()
             link = f"https://artpullse.com/refund/?total={amount}{currency}"
             await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
-            user_step[uid] = 'admin_panel'
-            await message.answer("Ви повернуті в адмін-панель.", reply_markup=admin_panel_kb)
+            user_step[uid] = None
+            kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+            await message.answer("Ви повернуті в головне меню.", reply_markup=kb)
         else:
             await message.answer("❗️ Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):")
     except Exception as e:
         print(f"[ERROR] manual_payment_back: {e}")
         await message.answer(f"Сталася помилка: {e}")
-        user_step[message.from_user.id] = 'admin_panel'
+        user_step[message.from_user.id] = None
 
 @router.message(lambda m: m.text and ("назад" in m.text.lower() or "⬅️" in m.text.lower()))
 @ban_guard
