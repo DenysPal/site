@@ -1918,6 +1918,11 @@ async def manual_payment_back(message: types.Message):
     try:
         print(f"[DEBUG] manual_payment_back: text={message.text!r}, user_step={user_step.get(message.from_user.id)}")
         uid = message.from_user.id
+        # Додаємо клавіатуру з кнопкою '⬅️ Назад'
+        back_kb = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="⬅️ Назад")]],
+            resize_keyboard=True
+        )
         if message.text and "назад" in message.text.lower():
             user_step[uid] = None
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
@@ -1931,9 +1936,10 @@ async def manual_payment_back(message: types.Message):
             await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
             user_step[uid] = None
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-            await message.answer("Ви повернуті в головне меню.", reply_markup=kb)
+            await message.answer("Ви повернуті в головне меню.", reply_markup=ReplyKeyboardRemove())
+            await message.answer("Головне меню:", reply_markup=kb)
         else:
-            await message.answer("❗️ Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):")
+            await message.answer("❗️ Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):", reply_markup=back_kb)
     except Exception as e:
         print(f"[ERROR] manual_payment_back: {e}")
         await message.answer(f"Сталася помилка: {e}")
