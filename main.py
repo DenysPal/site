@@ -2022,6 +2022,25 @@ async def back_from_links_menu(message: types.Message):
     await message.answer("Главное меню:", reply_markup=kb)
     user_step[message.chat.id] = None
 
+# --- Універсальний хендлер для 'Назад', який не спрацьовує у вкладених меню ---
+@router.message(
+    lambda m: (
+        m.text and ("назад" in m.text.lower() or "⬅️" in m.text.lower())
+        and not (
+            (user_step.get(m.from_user.id, '') or '').startswith('edit_link_menu_') or
+            (user_step.get(m.from_user.id, '') or '').startswith('edit_places_choose_') or
+            user_step.get(m.from_user.id) == 'choose_link_to_edit' or
+            user_step.get(m.from_user.id) == 'links_menu'
+        )
+    )
+)
+@ban_guard
+async def universal_back_handler(message: types.Message):
+    uid = message.from_user.id
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    user_step[uid] = None
+    await message.answer("Повернення в головне меню.", reply_markup=kb)
+
 
 
 
