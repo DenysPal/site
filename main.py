@@ -1969,6 +1969,7 @@ if __name__ == '__main__':
 @router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_choose_') and m.text and 'назад' in m.text.lower())
 @ban_guard
 async def back_from_edit_places_choose(message: types.Message):
+    print("==> back_from_edit_places_choose")
     state = user_step.get(message.from_user.id, '')
     page_code = state.replace('edit_places_choose_', '')
     # Повертаємо в меню редагування цієї ссилки
@@ -1988,6 +1989,7 @@ async def back_from_edit_places_choose(message: types.Message):
 @router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_link_menu_') and m.text and 'назад' in m.text.lower())
 @ban_guard
 async def back_from_edit_link_menu(message: types.Message):
+    print("==> back_from_edit_link_menu")
     # Повертаємо до списку посилань
     c = conn.cursor()
     c.execute('SELECT page_code FROM site_users ORDER BY created_at DESC LIMIT 50')
@@ -2003,6 +2005,7 @@ async def back_from_edit_link_menu(message: types.Message):
 @router.message(lambda m: user_step.get(m.from_user.id) == 'choose_link_to_edit' and m.text and 'назад' in m.text.lower())
 @ban_guard
 async def back_from_choose_link_to_edit(message: types.Message):
+    print("==> back_from_choose_link_to_edit")
     kb = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="Создать ссылку")],
@@ -2018,6 +2021,7 @@ async def back_from_choose_link_to_edit(message: types.Message):
 @router.message(lambda m: user_step.get(m.from_user.id) == 'links_menu' and m.text and 'назад' in m.text.lower())
 @ban_guard
 async def back_from_links_menu(message: types.Message):
+    print("==> back_from_links_menu")
     kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
     await message.answer("Главное меню:", reply_markup=kb)
     user_step[message.chat.id] = None
@@ -2036,6 +2040,7 @@ async def back_from_links_menu(message: types.Message):
 )
 @ban_guard
 async def universal_back_handler(message: types.Message):
+    print("==> universal_back_handler")
     uid = message.from_user.id
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     user_step[uid] = None
