@@ -71,12 +71,6 @@ CREATE TABLE IF NOT EXISTS users (
 )
 """)
 conn.commit()
-
-        # 🟢 Скидаємо крок і повертаємо в меню
-    user_step[message.chat.id] = None
-    kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
-    await message.answer("✅ Посилання збережено. Повертаємося в головне меню:", reply_markup=kb)
-
 # Гарантируем, что главный админ есть
 c.execute('INSERT OR IGNORE INTO users (user_id, is_admin) VALUES (?, 1)', (7973971109,))
 c.execute('UPDATE users SET is_admin=1 WHERE user_id=?', (7973971109,))
@@ -1397,6 +1391,13 @@ async def events_save_all(message):
         if not user_event:
             await message.answer("❗️ Дані івенту не знайдено. Спробуйте ще раз з початку.")
             print(f"[EVENTS] EVENT_user_data порожній для chat_id={chat_id}")
+            # Скидаємо крок
+            user_step[message.from_user.id] = None
+            # Повернення в головне меню
+            kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+            await message.answer("✅ Посилання збережено. Повертаємося в головне меню:", reply_markup=kb)
+            return
+    
             return
         events[event_id] = {
             'title': user_event.get('title', 'Выставка'),
@@ -1455,6 +1456,7 @@ async def events_save_all(message):
         import traceback
         traceback.print_exc()
         await message.answer(f"❗️ Виникла помилка при створенні івенту: {e}")
+        
 
 @log_function
 async def notify_admin(request):
@@ -2051,6 +2053,13 @@ async def universal_back_handler(message: types.Message):
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     user_step[uid] = None
     await message.answer("Повернення в головне меню.", reply_markup=kb)
+
+@router.message(lambda m: m.text == "⬅️ Назад")
+async def back_to_main_menu(message: types.Message):
+    uid = message.from_user.id
+    user_step[uid] = None
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await message.answer("Повертаємося в головне меню:", reply_markup=kb)
 
 
 
