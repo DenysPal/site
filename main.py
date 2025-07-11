@@ -1917,13 +1917,12 @@ async def force_admin_back(message: types.Message):
 async def manual_payment_back(message: types.Message):
     try:
         print(f"[DEBUG] manual_payment_back: text={message.text!r}, user_step={user_step.get(message.from_user.id)}")
+        uid = message.from_user.id
         if message.text and "назад" in message.text.lower():
-            uid = message.from_user.id
             user_step[uid] = 'admin_panel'
             await message.answer("Повернення в адмін-панель.", reply_markup=admin_panel_kb)
             return
-        m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
-        uid = message.from_user.id
+        m = re.match(r"^([0-9]+(?:[.,][0-9]+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
         if m:
             amount = m.group(1).replace(',', '.')
             currency = m.group(2).upper()
@@ -1932,7 +1931,7 @@ async def manual_payment_back(message: types.Message):
             user_step[uid] = 'admin_panel'
             await message.answer("Ви повернуті в адмін-панель.", reply_markup=admin_panel_kb)
         else:
-            await message.answer("Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):")
+            await message.answer("❗️ Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):")
     except Exception as e:
         print(f"[ERROR] manual_payment_back: {e}")
         await message.answer(f"Сталася помилка: {e}")
