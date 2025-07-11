@@ -1921,7 +1921,6 @@ async def manual_payment_back(message: types.Message):
     try:
         print(f"[DEBUG] manual_payment_back: text={message.text!r}, user_step={user_step.get(message.from_user.id)}")
         uid = message.from_user.id
-        # Додаємо клавіатуру з кнопкою '⬅️ Назад'
         back_kb = ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text="⬅️ Назад")]],
             resize_keyboard=True
@@ -1930,7 +1929,9 @@ async def manual_payment_back(message: types.Message):
             user_step[uid] = None
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
             await message.answer("Повернення в головне меню.", reply_markup=ReplyKeyboardRemove())
+            print("[DEBUG] Sent 'Повернення в головне меню.' after 'назад'")
             await message.answer("Головне меню:", reply_markup=kb)
+            print("[DEBUG] Sent 'Головне меню:' after 'назад'")
             return
         m = re.match(r"^([0-9]+(?:[.,][0-9]+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
         if m:
@@ -1938,11 +1939,14 @@ async def manual_payment_back(message: types.Message):
             currency = m.group(2).upper()
             link = f"https://artpullse.com/refund/?total={amount}{currency}"
             await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
+            print("[DEBUG] Sent payment link")
             user_step[uid] = None
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
             await message.answer("Головне меню:", reply_markup=kb)
+            print("[DEBUG] Sent 'Головне меню:' after оплата")
         else:
             await message.answer("❗️ Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):", reply_markup=back_kb)
+            print("[DEBUG] Sent 'Введіть суму і валюту'")
     except Exception as e:
         print(f"[ERROR] manual_payment_back: {e}")
         await message.answer(f"Сталася помилка: {e}")
