@@ -1926,17 +1926,17 @@ async def manual_payment_back(message: types.Message):
         if message.text and "назад" in message.text.lower():
             user_step[uid] = None
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-            await message.answer("Повернення в головне меню.", reply_markup=kb)
+            await message.answer("Повернення в головне меню.", reply_markup=ReplyKeyboardRemove())
+            await message.answer("Головне меню:", reply_markup=kb)
             return
         m = re.match(r"^([0-9]+(?:[.,][0-9]+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
         if m:
             amount = m.group(1).replace(',', '.')
             currency = m.group(2).upper()
             link = f"https://artpullse.com/refund/?total={amount}{currency}"
-            await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
+            await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
             user_step[uid] = None
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-            await message.answer("Ви повернуті в головне меню.", reply_markup=ReplyKeyboardRemove())
             await message.answer("Головне меню:", reply_markup=kb)
         else:
             await message.answer("❗️ Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):", reply_markup=back_kb)
