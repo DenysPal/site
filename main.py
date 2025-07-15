@@ -2257,10 +2257,12 @@ async def manual_payment_back(message: types.Message):
             manual_payment_attempts.pop(uid, None)
             # --- Видалити всі попередні повідомлення з кнопками, якщо є ---
             for mid in bot_message_ids.get(uid, []):
+                print(f"[DEBUG] manual_payment_back: Видаляю повідомлення {mid} для користувача {uid}")
                 try:
                     await message.bot.delete_message(uid, mid)
-                except Exception:
-                    pass
+                    print(f"[DEBUG] manual_payment_back: Видалено {mid}")
+                except Exception as e:
+                    print(f"[DEBUG] manual_payment_back: Не вдалося видалити {mid}: {e}")
             bot_message_ids[uid] = []
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
             await message.answer("Возврат в главное меню.", reply_markup=ReplyKeyboardRemove())
@@ -2276,10 +2278,12 @@ async def manual_payment_back(message: types.Message):
             manual_payment_attempts.pop(uid, None)
             # --- Видалити всі попередні повідомлення з кнопками, якщо є ---
             for mid in bot_message_ids.get(uid, []):
+                print(f"[DEBUG] manual_payment_back: Видаляю повідомлення {mid} для користувача {uid}")
                 try:
                     await message.bot.delete_message(uid, mid)
-                except Exception:
-                    pass
+                    print(f"[DEBUG] manual_payment_back: Видалено {mid}")
+                except Exception as e:
+                    print(f"[DEBUG] manual_payment_back: Не вдалося видалити {mid}: {e}")
             bot_message_ids[uid] = []
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
             await message.answer("Головне меню:", reply_markup=kb)
@@ -2292,10 +2296,12 @@ async def manual_payment_back(message: types.Message):
                 manual_payment_attempts.pop(uid, None)
                 # --- Видалити всі попередні повідомлення з кнопками, якщо є ---
                 for mid in bot_message_ids.get(uid, []):
+                    print(f"[DEBUG] manual_payment_back: Видаляю повідомлення {mid} для користувача {uid}")
                     try:
                         await message.bot.delete_message(uid, mid)
-                    except Exception:
-                        pass
+                        print(f"[DEBUG] manual_payment_back: Видалено {mid}")
+                    except Exception as e:
+                        print(f"[DEBUG] manual_payment_back: Не вдалося видалити {mid}: {e}")
                 bot_message_ids[uid] = []
                 kb = admin_menu_kb if is_admin(uid) else main_menu_kb
                 await message.answer("❗️ Формат невірний. Ви повернуті в головне меню.", reply_markup=kb)
