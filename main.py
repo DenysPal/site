@@ -169,6 +169,14 @@ def create_site_user(dates, currency, street, price):
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
               (user_id, dates[0], dates[1], dates[2], dates[3], dates[4], dates[5], dates[6], dates[7], currency, street, price, page_code))
     conn.commit()
+    # --- Додаємо початкову кількість квитків для кожної події ---
+    for event_index in range(8):
+        if event_index == 1:
+            places = 3
+        else:
+            places = random.randint(1, 10)
+        c.execute('INSERT OR REPLACE INTO event_places (page_code, event_index, places) VALUES (?, ?, ?)', (page_code, event_index, places))
+    conn.commit()
     return user_id, page_code
 
 def update_site_user_ip(user_id, ip):
