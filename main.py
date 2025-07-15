@@ -2336,9 +2336,11 @@ if __name__ == '__main__':
 # --- Універсальний callback_query-хендлер для всіх inline-кнопок ---
 @router.callback_query()
 async def universal_any_callback_handler(call: types.CallbackQuery):
+    print("[handler start] universal_any_callback_handler")
     uid = call.from_user.id
     user_step[uid] = None
     manual_payment_attempts.pop(uid, None)
+    print(f"[user_step after universal_any_callback_handler]: {user_step}")
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     # Видалити кнопки у повідомленні, якщо є
     try:
@@ -2350,13 +2352,6 @@ async def universal_any_callback_handler(call: types.CallbackQuery):
         await call.message.delete()
     except Exception:
         pass
-    # --- Видалити попереднє повідомлення з кнопками, якщо є ---
-    if last_bot_message_id.get(uid):
-        try:
-            await call.bot.delete_message(uid, last_bot_message_id[uid])
-        except Exception:
-            pass
-        last_bot_message_id.pop(uid, None)
     await delete_old_bot_messages(uid, call.bot)
     msg = await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     bot_message_ids.setdefault(uid, []).append(msg.message_id)
