@@ -822,42 +822,14 @@ async def pay_back_handler(call: types.CallbackQuery):
 @router.message(lambda m: user_step.get(m.from_user.id) == 'ban_unban_user')
 @ban_guard
 async def ban_unban_username(message: types.Message):
-    if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
-        uid = message.from_user.id
-        user_step[uid] = None
-        user_data[uid] = {}
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
-        return
     uid = message.from_user.id
-    username = message.text.strip().lstrip('@')
-    c = conn.cursor()
-    c.execute('SELECT user_id, form_json FROM users WHERE LOWER(username)=?', (username.lower(),))
-    row = c.fetchone()
-    if not row:
-        kb = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [InlineKeyboardButton(text="⬅️ Назад", callback_data="ban_back")]
-            ]
-        )
-        await message.answer("Пользователь с таким username не найден. Введите корректный username или нажмите кнопку ниже.", reply_markup=kb)
-        return
-    target_id, form_json = row
-    form_json = json.loads(form_json) if form_json else {}
-    reason = form_json.get('ban_reason', 'Не указана') if form_json.get('banned', False) else ''
-    text = f"Пользователь найден.\nСтатус: {'<b>Забанен</b>' if form_json.get('banned', False) else '<b>Не забанен</b>'}"
-    if form_json.get('banned', False):
-        text += f"\nПричина: <b>{reason}</b>"
-    kb = InlineKeyboardMarkup(
+    back_inline_kb = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Забанить", callback_data=f"ban:{target_id}"),
-             InlineKeyboardButton(text="Разбанить", callback_data=f"unban:{target_id}")],
-            [InlineKeyboardButton(text="⬅️ Назад", callback_data="ban_back")]
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_menu")]
         ]
     )
-    await message.answer(text, parse_mode='HTML', reply_markup=kb)
-    user_data[uid] = {'ban_target': target_id}
-    user_step[uid] = 'ban_wait_action'
+    await message.answer("Введите username пользователя для блокировки/разблокировки (без @):", reply_markup=back_inline_kb)
+    user_step[uid] = 'ban_unban_user'
 
 @router.callback_query(lambda c: c.data.startswith('ban:'))
 async def ban_reason_ask(call: types.CallbackQuery):
