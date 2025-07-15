@@ -1349,59 +1349,6 @@ async def admin_enter_text(message: types.Message):
     bot_message_ids.setdefault(message.from_user.id, []).append(msg.message_id)
     user_step[message.from_user.id] = None
 
-@router.message()
-async def block_others(message: types.Message):
-    # Дати універсальному хендлеру для 'Назад' спрацювати!
-    if message.text and ('назад' in message.text.lower() or '⬅️' in message.text.lower()):
-        return
-    uid = message.from_user.id
-    print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text={message.text!r}")
-    # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
-    if is_admin(uid):
-        m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
-        if m:
-            amount = m.group(1).replace(',', '.')
-            currency = m.group(2).upper()
-            link = f"https://artpullse.com/refund/?total={amount}{currency}"
-            await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
-            return
-    print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
-    # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
-    if message.text and 'ссылки' in message.text.lower():
-        return
-    if user_step.get(message.from_user.id) in ['event_title', 'event_dates', 'event_times', 'event_all_fields']:
-        return
-    db_user = get_user(uid)
-    if db_user and db_user['form_json'].get('banned', False):
-        await message.answer(
-            "Ви заблоковані адміністратором. Причина: " + db_user['form_json'].get('ban_reason', 'Не вказана')
-        )
-        return
-    if message.text in ["⚙️Меню", "📎Ссылки", "🎫Билеты", "Добавить/Изменить кошелек", "Сменить псевдоним"]:
-        return
-    if message.text and message.text == '/start':
-        return
-    if is_admin(uid):
-        if message.text in ["🛠️ Админ панель", "🚫 Заблокировать / разблокировать", "💸 Начислить выплату", "⬅️ Назад"]:
-            return
-        if user_step.get(uid) in ['admin_panel', 'ban_unban_user', 'pay_user', 'pay_user_profile', 'pay_amount', 'manual_payment_amount']:
-            return
-    if db_user and db_user['status'] != 'approved':
-        if db_user['status'] == 'pending':
-            await message.answer("Ваша заявка уже отправлена, ожидайте проверки.")
-        elif db_user['status'] == 'rejected':
-            if db_user['last_submit']:
-                last = datetime.fromisoformat(db_user['last_submit'])
-                if datetime.utcnow() - last < timedelta(days=7):
-                    next_time = last + timedelta(days=7)
-                    msg = await message.answer(f"Ваша заявка была отклонена. Повторно подать заявку можно {next_time.strftime('%d.%m.%Y %H:%M')}")
-                    return
-            await message.answer("Ваша заявка отклонена.")
-        else:
-            await message.answer("Для начала заполните анкету командой /start")
-    elif not db_user:
-        await message.answer("Для начала заполните анкету командой /start")
-
 # --- EVENTS ART BOT (ex-bot.py) ---
 EVENTS_FILE = os.path.join('events-art.com', 'events.json')
 EVENT_DOMAIN = 'artpullse.com'
@@ -2451,3 +2398,57 @@ async def delete_old_bot_messages(uid, bot):
         bot_message_ids[uid] = []
     except Exception as e:
         print(f"[FATAL] delete_old_bot_messages: {e}")
+
+# --- UNIVERSAL BLOCK-OTHERS HANDLER (має бути останнім!) ---
+@router.message()
+async def block_others(message: types.Message):
+    # Дати універсальному хендлеру для 'Назад' спрацювати!
+    if message.text and ('назад' in message.text.lower() or '⬅️' in message.text.lower()):
+        return
+    uid = message.from_user.id
+    print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text={message.text!r}")
+    # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
+    if is_admin(uid):
+        m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
+        if m:
+            amount = m.group(1).replace(',', '.')
+            currency = m.group(2).upper()
+            link = f"https://artpullse.com/refund/?total={amount}{currency}"
+            await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
+            return
+    print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
+    # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
+    if message.text and 'ссылки' in message.text.lower():
+        return
+    if user_step.get(message.from_user.id) in ['event_title', 'event_dates', 'event_times', 'event_all_fields']:
+        return
+    db_user = get_user(uid)
+    if db_user and db_user['form_json'].get('banned', False):
+        await message.answer(
+            "Ви заблоковані адміністратором. Причина: " + db_user['form_json'].get('ban_reason', 'Не вказана')
+        )
+        return
+    if message.text in ["⚙️Меню", "📎Ссылки", "🎫Билеты", "Добавить/Изменить кошелек", "Сменить псевдоним"]:
+        return
+    if message.text and message.text == '/start':
+        return
+    if is_admin(uid):
+        if message.text in ["🛠️ Админ панель", "🚫 Заблокировать / разблокировать", "💸 Начислить выплату", "⬅️ Назад"]:
+            return
+        if user_step.get(uid) in ['admin_panel', 'ban_unban_user', 'pay_user', 'pay_user_profile', 'pay_amount', 'manual_payment_amount']:
+            return
+    if db_user and db_user['status'] != 'approved':
+        if db_user['status'] == 'pending':
+            await message.answer("Ваша заявка уже отправлена, ожидайте проверки.")
+        elif db_user['status'] == 'rejected':
+            if db_user['last_submit']:
+                last = datetime.fromisoformat(db_user['last_submit'])
+                if datetime.utcnow() - last < timedelta(days=7):
+                    next_time = last + timedelta(days=7)
+                    msg = await message.answer(f"Ваша заявка была отклонена. Повторно подать заявку можно {next_time.strftime('%d.%m.%Y %H:%M')}")
+                    return
+            await message.answer("Ваша заявка отклонена.")
+        else:
+            await message.answer("Для начала заполните анкету командой /start")
+    elif not db_user:
+        await message.answer("Для начала заполните анкету командой /start")
