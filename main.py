@@ -1923,24 +1923,25 @@ async def force_admin_back(message: types.Message):
     await message.answer("Повернення в адмін-панель.", reply_markup=admin_panel_kb)
     return
 
+# Додаємо лічильник спроб для manual_payment_amount
+manual_payment_attempts = {}
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
 @ban_guard
 async def manual_payment_back(message: types.Message):
     try:
-        print(f"[DEBUG] manual_payment_back: text={message.text!r}, user_step={user_step.get(message.from_user.id)}")
         uid = message.from_user.id
         back_kb = ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text="⬅️ Назад")]],
             resize_keyboard=True
         )
+        # Скидання за ключовим словом "назад"
         if message.text and "назад" in message.text.lower():
             user_step[uid] = None
+            manual_payment_attempts.pop(uid, None)
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
             await message.answer("Возврат в главное меню.", reply_markup=ReplyKeyboardRemove())
-            print("[DEBUG] Sent 'Возврат в главное меню.' after 'назад'")
             await message.answer("Головне меню:", reply_markup=kb)
-            print("[DEBUG] Sent 'Головне меню:' after 'назад'")
             return
         m = re.match(r"^([0-9]+(?:[.,][0-9]+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
         if m:
@@ -1948,18 +1949,24 @@ async def manual_payment_back(message: types.Message):
             currency = m.group(2).upper()
             link = f"https://artpullse.com/refund/?total={amount}{currency}"
             await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
-            print("[DEBUG] Sent payment link")
             user_step[uid] = None
+            manual_payment_attempts.pop(uid, None)
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
             await message.answer("Головне меню:", reply_markup=kb)
-            print("[DEBUG] Sent 'Головне меню:' after оплата")
         else:
-            await message.answer("❗️ Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):", reply_markup=back_kb)
-            print("[DEBUG] Sent 'Введіть суму і валюту'")
+            # Лічильник спроб
+            manual_payment_attempts[uid] = manual_payment_attempts.get(uid, 0) + 1
+            if manual_payment_attempts[uid] >= 2:
+                user_step[uid] = None
+                manual_payment_attempts.pop(uid, None)
+                kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+                await message.answer("❗️ Формат невірний. Ви повернуті в головне меню.", reply_markup=kb)
+            else:
+                await message.answer("❗️ Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):", reply_markup=back_kb)
     except Exception as e:
-        print(f"[ERROR] manual_payment_back: {e}")
-        await message.answer(f"Сталася помилка: {e}")
         user_step[message.from_user.id] = None
+        manual_payment_attempts.pop(message.from_user.id, None)
+        await message.answer(f"Сталася помилка: {e}")
 
 @router.message(lambda m: m.text and ("назад" in m.text.lower() or "⬅️" in m.text.lower()))
 @ban_guard
