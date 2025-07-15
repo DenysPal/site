@@ -2031,6 +2031,7 @@ async def manual_payment_back(message: types.Message):
             manual_payment_attempts.pop(uid, None)
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
             await message.answer("Головне меню:", reply_markup=kb)
+            return  # <--- Додаємо return, щоб не чекати наступного повідомлення
         else:
             # Лічильник спроб
             manual_payment_attempts[uid] = manual_payment_attempts.get(uid, 0) + 1
