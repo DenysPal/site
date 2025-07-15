@@ -2304,3 +2304,6 @@ async def manual_payment_back(message: types.Message):
                 msg = await message.answer("❗️ Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):", reply_markup=back_kb)
                 bot_message_ids.setdefault(uid, []).append(msg.message_id)
     except Exception as e:
+        user_step[message.from_user.id] = None
+        manual_payment_attempts.pop(message.from_user.id, None)
+        await message.answer(f"Сталася помилка: {e}")
