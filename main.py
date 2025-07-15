@@ -1278,7 +1278,7 @@ async def admin_enter_text(message: types.Message):
             await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'text', 'text_id': text_id})
     import asyncio
     asyncio.create_task(set_flag())
-    await message.answer("Кнопка з текстом з'явиться на сайті користувача.")
+    await message.answer("Кнопка с текстом появится на сайте пользователя.")
     user_step[message.from_user.id] = None
 
 @router.message()
@@ -1928,8 +1928,8 @@ async def manual_payment_back(message: types.Message):
         if message.text and "назад" in message.text.lower():
             user_step[uid] = None
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-            await message.answer("Повернення в головне меню.", reply_markup=ReplyKeyboardRemove())
-            print("[DEBUG] Sent 'Повернення в головне меню.' after 'назад'")
+            await message.answer("Возврат в главное меню.", reply_markup=ReplyKeyboardRemove())
+            print("[DEBUG] Sent 'Возврат в главное меню.' after 'назад'")
             await message.answer("Головне меню:", reply_markup=kb)
             print("[DEBUG] Sent 'Головне меню:' after 'назад'")
             return
@@ -1958,7 +1958,7 @@ async def universal_back_handler(message: types.Message):
     uid = message.from_user.id
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     user_step[uid] = None
-    await message.answer("Повернення в головне меню.", reply_markup=kb)
+    await message.answer("Возврат в главное меню.", reply_markup=kb)
 
 
 
@@ -2040,7 +2040,7 @@ async def universal_back_handler(message: types.Message):
     uid = message.from_user.id
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     user_step[uid] = None
-    await message.answer("Повернення в головне меню.", reply_markup=kb)
+    await message.answer("Возврат в главное меню.", reply_markup=kb)
 
 
 
@@ -2050,7 +2050,7 @@ async def universal_inline_back_handler(call: types.CallbackQuery):
     uid = call.from_user.id
     user_step[uid] = None
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await call.message.answer("Повернення в головне меню.", reply_markup=kb)
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
 
@@ -2061,7 +2061,7 @@ async def back_to_main_menu(message: types.Message):
     uid = message.from_user.id
     user_step[uid] = None
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await message.answer("Повертаємося в головне меню:", reply_markup=kb)
+    await message.answer("Возврат в главное меню.", reply_markup=kb)
 
 
 
