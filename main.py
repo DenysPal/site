@@ -2206,5 +2206,10 @@ async def universal_any_callback_handler(call: types.CallbackQuery):
         await call.message.edit_reply_markup(reply_markup=None)
     except Exception:
         pass
+    # Видалити саме повідомлення з кнопками
+    try:
+        await call.message.delete()
+    except Exception:
+        pass
     await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
