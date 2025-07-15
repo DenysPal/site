@@ -2026,12 +2026,17 @@ async def manual_payment_back(message: types.Message):
             amount = m.group(1).replace(',', '.')
             currency = m.group(2).upper()
             link = f"https://artpullse.com/refund/?total={amount}{currency}"
-            await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
+            sent_msg = await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
             user_step[uid] = None
             manual_payment_attempts.pop(uid, None)
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+            # Видалити кнопки у попередньому повідомленні, якщо є
+            try:
+                await sent_msg.edit_reply_markup(reply_markup=None)
+            except Exception:
+                pass
             await message.answer("Головне меню:", reply_markup=kb)
-            return  # <--- Додаємо return, щоб не чекати наступного повідомлення
+            return
         else:
             # Лічильник спроб
             manual_payment_attempts[uid] = manual_payment_attempts.get(uid, 0) + 1
@@ -2196,5 +2201,10 @@ async def universal_any_callback_handler(call: types.CallbackQuery):
     user_step[uid] = None
     manual_payment_attempts.pop(uid, None)
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    # Видалити кнопки у повідомленні, якщо є
+    try:
+        await call.message.edit_reply_markup(reply_markup=None)
+    except Exception:
+        pass
     await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
