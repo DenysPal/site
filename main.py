@@ -306,6 +306,7 @@ def ban_guard(handler):
 @router.message(Command("start"))
 @ban_guard
 async def cmd_start(message: types.Message):
+    print("[handler start] cmd_start")
     print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")  # Добавляем вывод chat_id
     print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")  # Додаємо вивід chat_id
     uid = message.from_user.id
@@ -324,7 +325,6 @@ async def cmd_start(message: types.Message):
             if db_user['last_submit']:
                 last = datetime.fromisoformat(db_user['last_submit'])
                 if datetime.utcnow() - last < timedelta(days=7):
-                    next_time = last + timedelta(days=7)
                     msg = await message.answer(f"Ваша заявка была отклонена. Повторно подать заявку можно {next_time.strftime('%d.%m.%Y %H:%M')}")
                     return
     user_data[uid] = {}
@@ -336,6 +336,7 @@ async def cmd_start(message: types.Message):
 @router.message(lambda m: m.text and (m.text.lower() == 'отмена' or m.text.lower() == '❌ отмена'))
 @ban_guard
 async def cancel_any_action(message: types.Message):
+    print("[handler start] cancel_any_action")
     uid = message.from_user.id
     user_step[uid] = None
     user_data[uid] = {}
@@ -347,6 +348,7 @@ async def cancel_any_action(message: types.Message):
 @router.message(lambda m: user_step.get(m.from_user.id) == 'source')
 @ban_guard
 async def process_source(message: types.Message):
+    print("[handler start] process_source")
     uid = message.from_user.id
     if message.text not in ["Реклама", "От друга"]:
         await delete_old_bot_messages(uid, message.bot)
@@ -525,6 +527,7 @@ async def process_decision(call: types.CallbackQuery):
 @router.message(lambda m: m.text == "⚙️Меню")
 @ban_guard
 async def show_profile(message: types.Message):
+    print("[handler start] show_profile")
     uid = message.from_user.id
     db_user = get_user(uid)
     nickname = db_user['username'] or db_user['form_json'].get('username') or f"{uid}"
@@ -641,6 +644,7 @@ async def change_wallet_save(message: types.Message):
 @router.message(lambda m: m.text and 'админ панель' in m.text.lower() and is_admin(m.from_user.id))
 @ban_guard
 async def admin_panel(message: types.Message):
+    print("[handler start] admin_panel")
     uid = message.from_user.id
     await delete_old_bot_messages(uid, message.bot)
     msg = await message.answer("Админ-панель. Выберите действие:", reply_markup=admin_panel_kb)
@@ -651,6 +655,7 @@ async def admin_panel(message: types.Message):
 @ban_guard
 @log_function
 async def admin_panel_action(message: types.Message):
+    print("[handler start] admin_panel_action")
     uid = message.from_user.id
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
         kb = admin_menu_kb
@@ -930,6 +935,7 @@ async def ban_back_handler(call: types.CallbackQuery):
 @router.message(lambda m: m.text == "🎫Билеты")
 @ban_guard
 async def tickets_message(message: types.Message):
+    print("[handler start] tickets_message")
     uid = message.from_user.id
     await delete_old_bot_messages(uid, message.bot)
     msg1 = await message.answer("Введите данные для билета:", reply_markup=ReplyKeyboardRemove())
@@ -1029,7 +1035,7 @@ links_template_kb = ReplyKeyboardMarkup(
 @router.message(lambda m: m.text and 'ссылки' in m.text.lower() and (user_step.get(m.from_user.id) is None))
 @ban_guard
 async def handle_links_button(message: types.Message):
-    print("handle_links_button called")
+    print("[handler start] handle_links_button")
     uid = message.from_user.id
     await delete_old_bot_messages(uid, message.bot)
     kb = ReplyKeyboardMarkup(
@@ -2439,11 +2445,14 @@ async def manual_payment_back(message: types.Message):
 
 # --- ХЕЛПЕР ДЛЯ ВИДАЛЕННЯ ВСІХ СТАРИХ ПОВІДОМЛЕНЬ З КНОПКАМИ ---
 async def delete_old_bot_messages(uid, bot):
-    for mid in bot_message_ids.get(uid, []):
-        print(f"[DEBUG] delete_old_bot_messages: Видаляю повідомлення {mid} для користувача {uid}")
-        try:
-            await bot.delete_message(uid, mid)
-            print(f"[DEBUG] delete_old_bot_messages: Видалено {mid}")
-        except Exception as e:
-            print(f"[DEBUG] delete_old_bot_messages: Не вдалося видалити {mid}: {e}")
-    bot_message_ids[uid] = []
+    try:
+        for mid in bot_message_ids.get(uid, []):
+            print(f"[DEBUG] delete_old_bot_messages: Видаляю повідомлення {mid} для користувача {uid}")
+            try:
+                await bot.delete_message(uid, mid)
+                print(f"[DEBUG] delete_old_bot_messages: Видалено {mid}")
+            except Exception as e:
+                print(f"[DEBUG] delete_old_bot_messages: Не вдалося видалити {mid}: {e}")
+        bot_message_ids[uid] = []
+    except Exception as e:
+        print(f"[FATAL] delete_old_bot_messages: {e}")
