@@ -2109,3 +2109,13 @@ if __name__ == '__main__':
         # aiogram polling
         await dp.start_polling(bot)
     asyncio.run(main())
+
+# --- Універсальний callback_query-хендлер для всіх inline-кнопок ---
+@router.callback_query()
+async def universal_any_callback_handler(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.answer()
