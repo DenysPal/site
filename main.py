@@ -332,6 +332,7 @@ async def cmd_start(message: types.Message):
     await delete_old_bot_messages(uid, message.bot)
     msg = await message.answer("📢 Откуда о нас узнали?", reply_markup=source_kb)
     bot_message_ids.setdefault(uid, []).append(msg.message_id)
+    print(f"[user_step after cmd_start]: {user_step}")
 
 @router.message(lambda m: m.text and (m.text.lower() == 'отмена' or m.text.lower() == '❌ отмена'))
 @ban_guard
@@ -2221,12 +2222,14 @@ async def universal_back_handler(message: types.Message):
     bot_message_ids.setdefault(uid, []).append(msg.message_id)
     await message.answer("Возврат в главное меню.", reply_markup=kb)
     await message.answer("Возврат в главное меню.", reply_markup=kb)
+    print(f"[user_step after universal_back_handler]: {user_step}")
 
 
 
 # --- Універсальний callback_query-хендлер для всіх inline-кнопок "Назад" ---
 @router.callback_query(lambda c: any(x in c.data.lower() for x in ["назад", "back", "⬅️"]))
 async def universal_inline_back_handler(call: types.CallbackQuery):
+    print("[handler start] universal_inline_back_handler")
     uid = call.from_user.id
     user_step[uid] = None
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
@@ -2234,6 +2237,7 @@ async def universal_inline_back_handler(call: types.CallbackQuery):
     msg = await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     bot_message_ids.setdefault(uid, []).append(msg.message_id)
     await call.answer()
+    print(f"[user_step after universal_inline_back_handler]: {user_step}")
 
 
 
@@ -2248,6 +2252,7 @@ async def back_to_main_menu(message: types.Message):
     bot_message_ids.setdefault(uid, []).append(msg.message_id)
     await message.answer("Возврат в главное меню.", reply_markup=kb)
     await message.answer("Возврат в главное меню.", reply_markup=kb)
+    print(f"[user_step after back_to_main_menu]: {user_step}")
 
 
 
