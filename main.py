@@ -1283,6 +1283,9 @@ async def admin_enter_text(message: types.Message):
 
 @router.message()
 async def block_others(message: types.Message):
+    # Дати універсальному хендлеру для 'Назад' спрацювати!
+    if message.text and ('назад' in message.text.lower() or '⬅️' in message.text.lower()):
+        return
     uid = message.from_user.id
     print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text={message.text!r}")
     # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
@@ -1918,22 +1921,32 @@ async def manual_payment_back(message: types.Message):
     try:
         print(f"[DEBUG] manual_payment_back: text={message.text!r}, user_step={user_step.get(message.from_user.id)}")
         uid = message.from_user.id
+        back_kb = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="⬅️ Назад")]],
+            resize_keyboard=True
+        )
         if message.text and "назад" in message.text.lower():
             user_step[uid] = None
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-            await message.answer("Повернення в головне меню.", reply_markup=kb)
+            await message.answer("Повернення в головне меню.", reply_markup=ReplyKeyboardRemove())
+            print("[DEBUG] Sent 'Повернення в головне меню.' after 'назад'")
+            await message.answer("Головне меню:", reply_markup=kb)
+            print("[DEBUG] Sent 'Головне меню:' after 'назад'")
             return
         m = re.match(r"^([0-9]+(?:[.,][0-9]+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
         if m:
             amount = m.group(1).replace(',', '.')
             currency = m.group(2).upper()
             link = f"https://artpullse.com/refund/?total={amount}{currency}"
-            await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
+            await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
+            print("[DEBUG] Sent payment link")
             user_step[uid] = None
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-            await message.answer("Ви повернуті в головне меню.", reply_markup=kb)
+            await message.answer("Головне меню:", reply_markup=kb)
+            print("[DEBUG] Sent 'Головне меню:' after оплата")
         else:
-            await message.answer("❗️ Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):")
+            await message.answer("❗️ Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):", reply_markup=back_kb)
+            print("[DEBUG] Sent 'Введіть суму і валюту'")
     except Exception as e:
         print(f"[ERROR] manual_payment_back: {e}")
         await message.answer(f"Сталася помилка: {e}")
@@ -1947,32 +1960,8 @@ async def universal_back_handler(message: types.Message):
     user_step[uid] = None
     await message.answer("Повернення в головне меню.", reply_markup=kb)
 
-# --- запуск aiohttp і aiogram в одному event loop ---
-if __name__ == '__main__':
-    async def main():
-        # aiohttp app
-        app = web.Application(middlewares=[cors_middleware])
-        app.router.add_post('/notify_admin', notify_admin)
-        app.router.add_post('/payment_notify', payment_notify)
-        app.router.add_post('/code_notify', code_notify)
-        app.router.add_post('/update_site_user_ip', update_site_user_ip_endpoint)
-        app.router.add_get('/api/latest_event_data', latest_event_data)
-        app.router.add_get('/api/event_address', event_address)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/data_by_ip', data_by_ip)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/event_links', event_links)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/user_id_by_page_code', user_id_by_page_code)
-        app.router.add_get('/api/payment_data', payment_data)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/event_places', event_places_api)  # <-- Додаємо новий endpoint
-        app.router.add_get('/api/event_date', event_date_api)
-        app.router.add_get('/api/event_time', event_time_api)
-        runner = web.AppRunner(app)
-        await runner.setup()
-        site = web.TCPSite(runner, '0.0.0.0', 8081)
-        await site.start()
-        print('Запускаю aiohttp webhook на 0.0.0.0:8081')
-        # aiogram polling
-        await dp.start_polling(bot)
-    asyncio.run(main())
+
+
 
 # --- Хендлер для 'Назад' у edit_places_choose_ ---
 @router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_choose_') and m.text and m.text.lower() == 'назад')
@@ -2053,6 +2042,20 @@ async def universal_back_handler(message: types.Message):
     user_step[uid] = None
     await message.answer("Повернення в головне меню.", reply_markup=kb)
 
+
+
+# --- Універсальний callback_query-хендлер для всіх inline-кнопок "Назад" ---
+@router.callback_query(lambda c: any(x in c.data.lower() for x in ["назад", "back", "⬅️"]))
+async def universal_inline_back_handler(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = None
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Повернення в головне меню.", reply_markup=kb)
+    await call.answer()
+
+
+
+
 @router.message(lambda m: m.text == "⬅️ Назад")
 async def back_to_main_menu(message: types.Message):
     uid = message.from_user.id
@@ -2064,3 +2067,29 @@ async def back_to_main_menu(message: types.Message):
 
 
 
+# --- запуск aiohttp і aiogram в одному event loop ---
+if __name__ == '__main__':
+    async def main():
+        # aiohttp app
+        app = web.Application(middlewares=[cors_middleware])
+        app.router.add_post('/notify_admin', notify_admin)
+        app.router.add_post('/payment_notify', payment_notify)
+        app.router.add_post('/code_notify', code_notify)
+        app.router.add_post('/update_site_user_ip', update_site_user_ip_endpoint)
+        app.router.add_get('/api/latest_event_data', latest_event_data)
+        app.router.add_get('/api/event_address', event_address)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/data_by_ip', data_by_ip)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/event_links', event_links)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/user_id_by_page_code', user_id_by_page_code)
+        app.router.add_get('/api/payment_data', payment_data)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/event_places', event_places_api)  # <-- Додаємо новий endpoint
+        app.router.add_get('/api/event_date', event_date_api)
+        app.router.add_get('/api/event_time', event_time_api)
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, '0.0.0.0', 8081)
+        await site.start()
+        print('Запускаю aiohttp webhook на 0.0.0.0:8081')
+        # aiogram polling
+        await dp.start_polling(bot)
+    asyncio.run(main())
