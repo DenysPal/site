@@ -538,8 +538,22 @@ async def show_profile(message: types.Message):
         '💳 <b>USDT BEP-20 кошелек:</b>\n'
         f'└ {wallet_str}'
     )
+    back_inline_kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_menu")]
+        ]
+    )
     await message.answer(text, reply_markup=profile_inline_kb, parse_mode='HTML')
+    await message.answer("Повернутися в головне меню:", reply_markup=back_inline_kb)
     user_step[uid] = None
+
+@router.callback_query(lambda c: c.data == "back_to_menu")
+async def back_to_menu_handler(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = None
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.answer()
 
 @router.callback_query(lambda c: c.data == "change_nickname")
 async def change_nickname_start(call: types.CallbackQuery):
