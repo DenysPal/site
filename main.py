@@ -339,7 +339,10 @@ async def cancel_any_action(message: types.Message):
     user_step[uid] = None
     user_data[uid] = {}
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
+    if message.chat.type == "private":
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
+    else:
+        await message.answer('Действие отменено. Вы возвращены в главное меню.')
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'source')
 @ban_guard
@@ -349,7 +352,10 @@ async def process_source(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
+        if message.chat.type == "private":
+            await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
+        else:
+            await message.answer('Действие отменено. Вы возвращены в главное меню.')
         return
     uid = message.from_user.id
     if message.text not in ["Реклама", "От друга"]:
@@ -430,9 +436,11 @@ async def process_other(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
+        if message.chat.type == "private":
+            await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
+        else:
+            await message.answer('Действие отменено. Вы возвращены в главное меню.')
         return
-    # Якщо користувач натиснув "Пропустить" (будь-який регістр/пробіли), не обробляємо тут
     if message.text and message.text.strip().lower() == "пропустить":
         return
     await message.answer("Пожалуйста, отправьте скриншот(ы) или нажмите 'Пропустить'.", reply_markup=skip_kb)
@@ -535,7 +543,10 @@ async def back_to_menu_handler(call: types.CallbackQuery):
     uid = call.from_user.id
     user_step[uid] = None
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    if call.message.chat.type == "private":
+        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    else:
+        await call.message.answer("Возврат в главное меню.")
     await call.answer()
 
 @router.callback_query(lambda c: c.data == "change_nickname")
@@ -616,12 +627,18 @@ async def admin_panel_action(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
+        if message.chat.type == "private":
+            await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
+        else:
+            await message.answer('Действие отменено. Вы возвращены в главное меню.')
         return
     uid = message.from_user.id
     if message.text == "⬅️ Назад":
         kb = admin_menu_kb
-        await message.answer("Возврат в главное меню.", reply_markup=kb)
+        if message.chat.type == "private":
+            await message.answer("Возврат в главное меню.", reply_markup=kb)
+        else:
+            await message.answer("Возврат в главное меню.")
         user_step[uid] = None
         return
     elif message.text == "🚫 Заблокировать / разблокировать":
@@ -636,17 +653,14 @@ async def admin_panel_action(message: types.Message):
         )
         await message.answer("Введите псевдоним пользователя:", reply_markup=kb)
     elif message.text == "Отключить платежку":
-        # Вимкнути платіжку через сервер
         import requests
         try:
             requests.get('http://127.0.0.1:8080/set_payment_disabled?value=1', timeout=2)
-            # Очищення логів через серверний endpoint
             requests.get('http://127.0.0.1:8080/clear_logs', timeout=2)
         except Exception as e:
             print(f"[admin_panel] Error disabling payment: {e}")
         await message.answer("Платёжка временно отключена для всех пользователей.")
     elif message.text == "Включить платежку":
-        # Увімкнути платіжку через сервер
         import requests
         try:
             requests.get('http://127.0.0.1:8080/set_payment_disabled?value=0', timeout=2)
@@ -656,11 +670,8 @@ async def admin_panel_action(message: types.Message):
     elif message.text == "Прямая оплата":
         user_step[message.from_user.id] = 'manual_payment_amount'
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):")
-        # Тут логіка для прямої оплати
-        # await message.answer("Включено режим прямої оплати. Инструкции отправлены пользователям.")
-
     else:
-        pass  # Відповідь на невідому команду тепер тільки у fallback-хендлері
+        pass
 
 @router.callback_query(lambda c: c.data == "payuser_back")
 async def payuser_back_handler(call: types.CallbackQuery):
@@ -2180,7 +2191,10 @@ async def universal_inline_back_handler(call: types.CallbackQuery):
     uid = call.from_user.id
     user_step[uid] = None
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    if call.message.chat.type == "private":
+        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    else:
+        await call.message.answer("Возврат в главное меню.")
     await call.answer()
 
 
@@ -2191,7 +2205,10 @@ async def back_to_main_menu(message: types.Message):
     uid = message.from_user.id
     user_step[uid] = None
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await message.answer("Возврат в главное меню.", reply_markup=kb)
+    if message.chat.type == "private":
+        await message.answer("Возврат в главное меню.", reply_markup=kb)
+    else:
+        await message.answer("Возврат в главное меню.")
 
 
 
@@ -2302,7 +2319,10 @@ async def force_back_to_main(message: types.Message):
     user_step[uid] = None
     print(f"[DEBUG] force_back_to_main: user_step set to None, text={message.text!r}")
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await message.answer("Повернення в головне меню.", reply_markup=kb)
+    if message.chat.type == "private":
+        await message.answer("Повернення в головне меню.", reply_markup=kb)
+    else:
+        await message.answer("Повернення в головне меню.")
     print(f"[DEBUG] force_back_to_main: user_step={user_step.get(uid)}")
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'admin_panel' and m.text and (m.text.strip().lower() == '⬅️ назад' or m.text.strip().lower() == 'назад'))
