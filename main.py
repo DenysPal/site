@@ -1842,10 +1842,16 @@ async def admin_panel_back(message: types.Message):
     await message.answer("", reply_markup=kb)
     print(f"[DEBUG] admin_panel_back: user_step={user_step.get(uid)}")
 
-
-
-
-
+@middleware
+async def cors_middleware(request, handler):
+    if request.method == 'OPTIONS':
+        resp = web.Response()
+    else:
+        resp = await handler(request)
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    resp.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+    resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return resp
 
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
