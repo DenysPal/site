@@ -2318,6 +2318,6 @@ async def force_back_to_main(message: types.Message):
 async def admin_panel_back(message: types.Message):
     uid = message.from_user.id
     user_step[uid] = None
-    kb = admin_menu_kb
-    await message.answer("Повернення в головне меню.", reply_markup=kb)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await message.answer("", reply_markup=kb)
     print(f"[DEBUG] admin_panel_back: user_step={user_step.get(uid)}")
