@@ -2010,7 +2010,8 @@ manual_payment_attempts = {}
 @ban_guard
 async def manual_payment_back(message: types.Message):
     uid = message.from_user.id
-    if message.text and (message.text.strip().lower() == 'назад' or message.text.strip().lower() == '⬅️ назад'):
+    # ОДНА перевірка на 'назад'/'⬅️ назад' на самому початку
+    if message.text and message.text.strip().lower() in ['назад', '⬅️ назад']:
         user_step[uid] = None
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
         await message.answer("Повернення в головне меню.", reply_markup=kb)
@@ -2021,23 +2022,7 @@ async def manual_payment_back(message: types.Message):
             keyboard=[[KeyboardButton(text="⬅️ Назад")]],
             resize_keyboard=True
         )
-        # Якщо "назад" — повернення в головне меню
-        if message.text and "назад" in message.text.lower():
-            user_step[uid] = None
-            print(f"[DEBUG] manual_payment_back: user_step set to None by Назад")
-            manual_payment_attempts.pop(uid, None)
-            for mid in bot_message_ids.get(uid, []):
-                try:
-                    await message.bot.delete_message(uid, mid)
-                except Exception:
-                    pass
-            bot_message_ids[uid] = []
-            kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-            await message.answer("Возврат в главное меню.", reply_markup=ReplyKeyboardRemove())
-            await message.answer("Головне меню:", reply_markup=kb)
-            print(f"[DEBUG] Назад: user_step={user_step.get(uid)}, bot_message_ids={bot_message_ids.get(uid)}")
-            return
-        # Якщо коректна сума+валюта — генеруємо посилання (валюта 2-5 літер, не залежно від регістру)
+        # Далі — тільки логіка для суми/валюти та невалідного вводу
         m = re.match(r"^([0-9]+(?:[.,][0-9]+)?)\s*([A-Za-z]{2,5})$", message.text.strip())
         if m:
             amount = m.group(1).replace(',', '.')
