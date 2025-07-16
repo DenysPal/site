@@ -1879,3 +1879,13 @@ if __name__ == '__main__':
         # aiogram polling
         await dp.start_polling(bot)
     asyncio.run(main())
+
+async def update_site_user_ip_endpoint(request):
+    data = await request.json()
+    user_id = data.get('user_id', '')
+    ip = data.get('ip', '') or request.remote
+    if user_id and ip:
+        update_site_user_ip(user_id, ip)
+        return web.Response(text="OK")
+    else:
+        return web.Response(text="Missing user_id or ip", status=400)
