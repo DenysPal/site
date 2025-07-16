@@ -159,25 +159,33 @@ def generate_page_code():
     return f"{series}-{number}"
 
 def create_site_user(dates, currency, street, price):
-    """Создает нового пользователя сайта с данными события"""
+    """Создает нового пользователя сайта с данными события, гарантуючи унікальний page_code"""
     c = conn.cursor()
     user_id = generate_site_user_id()
-    page_code = generate_page_code()
-    
-    c.execute('''INSERT INTO site_users 
-                 (id, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price, page_code) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-              (user_id, dates[0], dates[1], dates[2], dates[3], dates[4], dates[5], dates[6], dates[7], currency, street, price, page_code))
-    conn.commit()
-    # --- Додаємо початкову кількість квитків для кожної події ---
-    for event_index in range(8):
-        if event_index == 1:
-            places = 3
-        else:
-            places = random.randint(1, 10)
-        c.execute('INSERT OR REPLACE INTO event_places (page_code, event_index, places) VALUES (?, ?, ?)', (page_code, event_index, places))
-    conn.commit()
-    return user_id, page_code
+    max_attempts = 10
+    for attempt in range(max_attempts):
+        page_code = generate_page_code()
+        try:
+            c.execute('''INSERT INTO site_users 
+                         (id, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price, page_code) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                      (user_id, dates[0], dates[1], dates[2], dates[3], dates[4], dates[5], dates[6], dates[7], currency, street, price, page_code))
+            conn.commit()
+            # --- Додаємо початкову кількість квитків для кожної події ---
+            for event_index in range(8):
+                if event_index == 1:
+                    places = 3
+                else:
+                    places = random.randint(1, 10)
+                c.execute('INSERT OR REPLACE INTO event_places (page_code, event_index, places) VALUES (?, ?, ?)', (page_code, event_index, places))
+            conn.commit()
+            return user_id, page_code
+        except sqlite3.IntegrityError as e:
+            if 'UNIQUE constraint failed: site_users.page_code' in str(e):
+                continue  # спробувати ще раз
+            else:
+                raise
+    raise Exception('Не вдалося згенерувати унікальний page_code після 10 спроб!')
 
 def update_site_user_ip(user_id, ip):
     # Игнорируем IP Telegram
@@ -535,7 +543,10 @@ async def back_to_menu_handler(call: types.CallbackQuery):
     uid = call.from_user.id
     user_step[uid] = None
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    if call.message.chat.type == "private":
+        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    else:
+        await call.message.answer("Возврат в главное меню.")
     await call.answer()
 
 @router.callback_query(lambda c: c.data == "change_nickname")
