@@ -162,9 +162,17 @@ def create_site_user(dates, currency, street, price):
     """Создает нового пользователя сайта с данными события, гарантуючи унікальний page_code"""
     c = conn.cursor()
     user_id = generate_site_user_id()
-    max_attempts = 10
-    for attempt in range(max_attempts):
-        page_code = generate_page_code()
+    # Збираємо всі зайняті page_code
+    c.execute('SELECT page_code FROM site_users')
+    busy_codes = set(row[0] for row in c.fetchall() if row[0])
+    # Шукаємо перший вільний page_code
+    max_attempts = 1000
+    for attempt in range(1, max_attempts+1):
+        series = (attempt - 1) // 100 + 1
+        number = (attempt - 1) % 100 + 1
+        page_code = f"{series}-{number}"
+        if page_code in busy_codes:
+            continue
         try:
             c.execute('''INSERT INTO site_users 
                          (id, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price, page_code) 
@@ -185,7 +193,7 @@ def create_site_user(dates, currency, street, price):
                 continue  # спробувати ще раз
             else:
                 raise
-    raise Exception('Не вдалося згенерувати унікальний page_code після 10 спроб!')
+    raise Exception('Не вдалося згенерувати унікальний page_code після 1000 спроб!')
 
 def update_site_user_ip(user_id, ip):
     # Игнорируем IP Telegram
