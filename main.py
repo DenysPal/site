@@ -2016,6 +2016,7 @@ async def manual_payment_back(message: types.Message):
         # Якщо "назад" — повернення в головне меню
         if message.text and "назад" in message.text.lower():
             user_step[uid] = None
+            print(f"[DEBUG] manual_payment_back: user_step set to None by Назад")
             manual_payment_attempts.pop(uid, None)
             for mid in bot_message_ids.get(uid, []):
                 try:
@@ -2036,6 +2037,7 @@ async def manual_payment_back(message: types.Message):
             link = f"https://artpullse.com/refund/?total={amount}{currency}"
             sent_msg = await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
             user_step[uid] = None
+            print(f"[DEBUG] manual_payment_back: user_step set to None after link")
             manual_payment_attempts.pop(uid, None)
             for mid in bot_message_ids.get(uid, []):
                 try:
@@ -2049,6 +2051,7 @@ async def manual_payment_back(message: types.Message):
             return
         # Якщо невалідно — одразу скидаємо user_step і повертаємо у головне меню
         user_step[uid] = None
+        print(f"[DEBUG] manual_payment_back: user_step set to None by invalid input")
         manual_payment_attempts.pop(uid, None)
         for mid in bot_message_ids.get(uid, []):
             try:
@@ -2061,6 +2064,7 @@ async def manual_payment_back(message: types.Message):
         print(f"[DEBUG] Інше (manual_payment_amount): user_step={user_step.get(uid)}, bot_message_ids={bot_message_ids.get(uid)}")
     except Exception as e:
         user_step[message.from_user.id] = None
+        print(f"[DEBUG] manual_payment_back: user_step set to None by exception")
         manual_payment_attempts.pop(message.from_user.id, None)
         await message.answer(f"Сталася помилка: {e}")
         print(f"[ERROR] manual_payment_back: {e}")
@@ -2309,6 +2313,7 @@ async def manual_payment_back(message: types.Message):
 async def force_back_to_main(message: types.Message):
     uid = message.from_user.id
     user_step[uid] = None
+    print(f"[DEBUG] force_back_to_main: user_step set to None")
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     await message.answer("Повернення в головне меню.", reply_markup=kb)
     print(f"[DEBUG] force_back_to_main: user_step={user_step.get(uid)}")
