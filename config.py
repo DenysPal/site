@@ -5,7 +5,8 @@ API_TOKEN = "7986296580:AAFPPanjd-fd4uvyfsoKXt1jaOgLc3J_DBw"  # Main bot token
 BOT_TOKEN = API_TOKEN  # Alias for server scripts
 
 # Telegram Group and Admin IDs
-ADMIN_GROUP_ID = -4857234156  # Main admin group
+ADMIN_GROUP_ID = -1002721179326
+  # <-- ВСТАВ СВІЙ АКТУАЛЬНИЙ CHAT_ID СУПЕРГРУПИ
 PAYMENT_GROUP_ID = -4842159343
 GROUP_ID = ADMIN_GROUP_ID    # Alias for server scripts
 ADMIN_ID =  7973971109       # Main admin user
