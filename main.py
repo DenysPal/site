@@ -1277,8 +1277,10 @@ async def admin_enter_text(message: types.Message):
 
 @router.message()
 async def block_others(message: types.Message):
+    print(f"[DEBUG] block_others: text={getattr(message, 'text', None)!r}, type={getattr(message, 'content_type', None)}, user_step={user_step.get(message.from_user.id)}")
     # Дати універсальному хендлеру для 'Назад' спрацювати!
-    if message.text and (message.text.strip().lower() == 'назад' or message.text.strip().lower() == '⬅️ назад'):
+    text = getattr(message, 'text', None) or getattr(message, 'caption', None)
+    if text and (text.strip().lower() == 'назад' or text.strip().lower() == '⬅️ назад'):
         return
     uid = message.from_user.id
     print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text={message.text!r}")
