@@ -2302,3 +2302,13 @@ async def manual_payment_back(message: types.Message):
         user_step[message.from_user.id] = None
         manual_payment_attempts.pop(message.from_user.id, None)
         await message.answer(f"Сталася помилка: {e}")
+
+# --- Універсальний хендлер для '⬅️ Назад' у будь-якому стані ---
+@router.message(lambda m: m.text and (m.text.strip().lower() == '⬅️ назад' or m.text.strip().lower() == 'назад'))
+@ban_guard
+async def force_back_to_main(message: types.Message):
+    uid = message.from_user.id
+    user_step[uid] = None
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await message.answer("Повернення в головне меню.", reply_markup=kb)
+    print(f"[DEBUG] force_back_to_main: user_step={user_step.get(uid)}")
