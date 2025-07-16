@@ -1278,7 +1278,7 @@ async def admin_enter_text(message: types.Message):
 @router.message()
 async def block_others(message: types.Message):
     # Дати універсальному хендлеру для 'Назад' спрацювати!
-    if message.text and ('назад' in message.text.lower() or '⬅️' in message.text.lower()):
+    if message.text and (message.text.strip().lower() == 'назад' or message.text.strip().lower() == '⬅️ назад'):
         return
     uid = message.from_user.id
     print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text={message.text!r}")
