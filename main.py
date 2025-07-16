@@ -2028,8 +2028,8 @@ async def manual_payment_back(message: types.Message):
             await message.answer("Головне меню:", reply_markup=kb)
             print(f"[DEBUG] Назад: user_step={user_step.get(uid)}, bot_message_ids={bot_message_ids.get(uid)}")
             return
-        # Якщо коректна сума+валюта — генеруємо посилання
-        m = re.match(r"^([0-9]+(?:[.,][0-9]+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
+        # Якщо коректна сума+валюта — генеруємо посилання (валюта 2-5 літер, не залежно від регістру)
+        m = re.match(r"^([0-9]+(?:[.,][0-9]+)?)\s*([A-Za-z]{2,5})$", message.text.strip())
         if m:
             amount = m.group(1).replace(',', '.')
             currency = m.group(2).upper()
@@ -2047,7 +2047,7 @@ async def manual_payment_back(message: types.Message):
             await message.answer("Головне меню:", reply_markup=kb)
             print(f"[DEBUG] Оплата: user_step={user_step.get(uid)}, bot_message_ids={bot_message_ids.get(uid)}")
             return
-        # Якщо користувач надсилає "Прямая оплата" або будь-яке інше повідомлення — одразу повертаємо у головне меню
+        # Якщо невалідно — одразу скидаємо user_step і повертаємо у головне меню
         user_step[uid] = None
         manual_payment_attempts.pop(uid, None)
         for mid in bot_message_ids.get(uid, []):
