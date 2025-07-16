@@ -479,9 +479,10 @@
             const currency = sessionStorage.getItem('ticket_currency') || 'EUR';
             const quantity = parseInt($('.quantity_inner .quantity').val()) || 1;
             const total = price * quantity;
-            // Зберігаємо price/currency у sessionStorage для loading/index.html
+            // Зберігаємо price/currency/total у sessionStorage для loading/index.html
             sessionStorage.setItem('ticket_price', price);
             sessionStorage.setItem('ticket_currency', currency);
+            sessionStorage.setItem('ticket_total', total); // <--- Додаємо цю лінію
             // --- Зберігаємо телефон і ім'я ---
             const phone = $(this).find('input[name="phone"]').val();
             const name = $(this).find('input[name="name"]').val();

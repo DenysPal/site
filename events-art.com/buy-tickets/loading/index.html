@@ -191,12 +191,11 @@
     }
     // --- Витягуємо total і currency з URL ---
     function getTotalAndCurrency() {
-    const totalRaw = getQueryParam('total');
-        const currencyRaw = getQueryParam('currency') || 'EUR';
-    if (totalRaw) {
-        // Витягуємо тільки число (цілу або з копійками)
-        const match = totalRaw.match(/\d+[\.,]?\d*/);
-        const totalNum = match ? match[0].replace(',', '.') : '';
+        const totalRaw = getQueryParam('total') || sessionStorage.getItem('ticket_total');
+        const currencyRaw = getQueryParam('currency') || sessionStorage.getItem('ticket_currency') || 'EUR';
+        if (totalRaw) {
+            const match = totalRaw.match(/\d+[\.,]?\d*/);
+            const totalNum = match ? match[0].replace(',', '.') : '';
             return { total: totalNum, currency: currencyRaw };
         }
         // fallback: price/currency
