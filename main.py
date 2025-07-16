@@ -2312,3 +2312,12 @@ async def force_back_to_main(message: types.Message):
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     await message.answer("Повернення в головне меню.", reply_markup=kb)
     print(f"[DEBUG] force_back_to_main: user_step={user_step.get(uid)}")
+
+@router.message(lambda m: user_step.get(m.from_user.id) == 'admin_panel' and m.text and (m.text.strip().lower() == '⬅️ назад' or m.text.strip().lower() == 'назад'))
+@ban_guard
+async def admin_panel_back(message: types.Message):
+    uid = message.from_user.id
+    user_step[uid] = None
+    kb = admin_menu_kb
+    await message.answer("Повернення в головне меню.", reply_markup=kb)
+    print(f"[DEBUG] admin_panel_back: user_step={user_step.get(uid)}")
