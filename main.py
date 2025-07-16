@@ -397,36 +397,14 @@ async def process_experience(message: types.Message):
 @ban_guard
 async def skip_screenshots(message: types.Message):
     uid = message.from_user.id
-    print(f"[DEBUG] Message text: '{message.text}'")
     if user_step.get(uid) == 'screenshots':
-        print(f"[DEBUG] User is in screenshots step, processing...")
         if 'screenshots' not in user_data.get(uid, {}):
             user_data.setdefault(uid, {})['screenshots'] = []
         try:
-            print(f"[DEBUG] Calling finish_form...")
             await finish_form(message)
-            print(f"[DEBUG] finish_form completed successfully")
         except Exception as e:
             print(f"[ERROR] finish_form failed: {e}")
-            import traceback
-            traceback.print_exc()
-        user_step[uid] = None  # Скидаємо крок навіть якщо сталася помилка
-
-    user_step[uid] = None
-    if 'screenshots' not in user_data.get(uid, {}):
-        user_data.setdefault(uid, {})['screenshots'] = []
-    await finish_form(message)
-    # Only process if user is in screenshots step
-    if user_step.get(uid) == 'screenshots':
-        if 'screenshots' not in user_data.get(uid, {}):
-            user_data.setdefault(uid, {})['screenshots'] = []
-        await finish_form(message)
-
-        print(f"[DEBUG] User step reset to None")
-    else:
-        print(f"[DEBUG] User is not in screenshots step, ignoring")
-
-    return
+        user_step[uid] = None
 
 @router.message(lambda m: m.content_type == types.ContentType.PHOTO)
 @ban_guard
@@ -486,6 +464,8 @@ async def finish_form(message):
         for ph in screenshots:
             await bot.send_photo(ADMIN_GROUP_ID, ph)
             print(f"[DEBUG] Sending confirmation to user")
+        await message.answer("Ваша анкета проверяется администрацией!\nОжидайте решение", reply_markup=ReplyKeyboardRemove())
+        save_user(uid, 'pending', username, source, invited_by, experience, screenshots, data)
     except Exception as e:
         print(f"[ERROR] Sending to admin or user failed: {e}")
         import traceback
