@@ -316,7 +316,10 @@ async def cmd_start(message: types.Message):
             return
         elif db_user['status'] == 'approved':
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-            await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=kb)
+            if message.chat.type == "private":
+                await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=kb)
+            else:
+                await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:")
             return
         elif db_user['status'] == 'rejected':
             if db_user['last_submit']:
@@ -2164,7 +2167,10 @@ async def universal_back_handler(message: types.Message):
     uid = message.from_user.id
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     user_step[uid] = None
-    await message.answer("Возврат в главное меню.", reply_markup=kb)
+    if message.chat.type == "private":
+        await message.answer("Возврат в главное меню.", reply_markup=kb)
+    else:
+        await message.answer("Возврат в главное меню.")
 
 
 
