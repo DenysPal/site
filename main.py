@@ -2047,7 +2047,7 @@ async def manual_payment_back(message: types.Message):
             await message.answer("Головне меню:", reply_markup=kb)
             print(f"[DEBUG] Оплата: user_step={user_step.get(uid)}, bot_message_ids={bot_message_ids.get(uid)}")
             return
-        # Якщо користувач натискає будь-яку іншу кнопку або пише будь-що — одразу повертаємо у головне меню
+        # Якщо користувач надсилає "Прямая оплата" або будь-яке інше повідомлення — одразу повертаємо у головне меню
         user_step[uid] = None
         manual_payment_attempts.pop(uid, None)
         for mid in bot_message_ids.get(uid, []):
@@ -2058,7 +2058,7 @@ async def manual_payment_back(message: types.Message):
         bot_message_ids[uid] = []
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
         await message.answer("Ви повернуті в головне меню.", reply_markup=kb)
-        print(f"[DEBUG] Інше: user_step={user_step.get(uid)}, bot_message_ids={bot_message_ids.get(uid)}")
+        print(f"[DEBUG] Інше (manual_payment_amount): user_step={user_step.get(uid)}, bot_message_ids={bot_message_ids.get(uid)}")
     except Exception as e:
         user_step[message.from_user.id] = None
         manual_payment_attempts.pop(message.from_user.id, None)
