@@ -252,14 +252,42 @@ user_step = {}  # user_id: этап
 user_data = {}  # user_id: временные данные анкеты и прочее
 
 # --- Клавиатуры ---
-# source_kb = ReplyKeyboardMarkup(...)
-# skip_kb = ReplyKeyboardMarkup(...)
-# main_menu_kb = ReplyKeyboardMarkup(...)
-# admin_menu_kb = ReplyKeyboardMarkup(...)
-# profile_inline_kb = InlineKeyboardMarkup(...)
-# def admin_pay_kb(nickname): ...
-# admin_panel_kb = ReplyKeyboardMarkup(...)
-# links_template_kb = ReplyKeyboardMarkup(...)
+source_kb = ReplyKeyboardMarkup(
+    keyboard=[[KeyboardButton(text="Реклама")], [KeyboardButton(text="От друга")]], resize_keyboard=True
+)
+skip_kb = ReplyKeyboardMarkup(
+    keyboard=[[KeyboardButton(text="Пропустить")]], resize_keyboard=True
+)
+main_menu_kb = ReplyKeyboardMarkup(
+    keyboard=[[KeyboardButton(text="⚙️Меню"), KeyboardButton(text="📎Ссылки")], [KeyboardButton(text="🎫Билеты")]], resize_keyboard=True
+)
+admin_menu_kb = ReplyKeyboardMarkup(
+    keyboard=[[KeyboardButton(text="⚙️Меню"), KeyboardButton(text="📎Ссылки")], [KeyboardButton(text="🎫Билеты")], [KeyboardButton(text="🛠️ Админ панель")]], resize_keyboard=True
+)
+profile_inline_kb = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="Добавить/Изменить кошелек", callback_data="change_wallet")],
+        [InlineKeyboardButton(text="Сменить псевдоним", callback_data="change_nickname")]
+    ]
+)
+def admin_pay_kb(nickname):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="💸 Начислить баланс", callback_data=f"pay_add:{nickname}"),
+             InlineKeyboardButton(text="❌ Снять баланс", callback_data=f"pay_sub:{nickname}")],
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="pay_back")]
+        ]
+    )
+admin_panel_kb = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="🚫 Заблокировать / разблокировать")],
+        [KeyboardButton(text="💸 Начислить выплату")],
+        [KeyboardButton(text="Отключить платежку"), KeyboardButton(text="Включить платежку")],
+        [KeyboardButton(text="Прямая оплата")],
+        [KeyboardButton(text="⬅️ Назад")]
+    ],
+    resize_keyboard=True
+)
 
 def ban_guard(handler):
     @wraps(handler)
@@ -633,7 +661,7 @@ async def admin_panel_action(message: types.Message):
             requests.get('http://127.0.0.1:8080/clear_logs', timeout=2)
         except Exception as e:
             print(f"[admin_panel] Error disabling payment: {e}")
-        await message.answer("Платёжка временно отключена для всех пользователей.", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Платёжка временно отключена для всех пользователей.")
     elif message.text == "Включить платежку":
         # Увімкнути платіжку через сервер
         import requests
@@ -641,10 +669,12 @@ async def admin_panel_action(message: types.Message):
             requests.get('http://127.0.0.1:8080/set_payment_disabled?value=0', timeout=2)
         except Exception as e:
             print(f"[admin_panel] Error enabling payment: {e}")
-        await message.answer("Платежка включена для всех пользователей.", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Платежка включена для всех пользователей.")
     elif message.text == "Прямая оплата":
         user_step[message.from_user.id] = 'manual_payment_amount'
-        await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):")
+        # Тут логіка для прямої оплати
+        # await message.answer("Включено режим прямої оплати. Инструкции отправлены пользователям.")
 
     else:
         pass  # Відповідь на невідому команду тепер тільки у fallback-хендлері
@@ -675,12 +705,12 @@ async def admin_pay_user_profile(message: types.Message):
     c.execute('SELECT user_id FROM users WHERE LOWER(username)=?', (nickname.lower(),))
     row = c.fetchone()
     if not row:
-        await message.answer("Пользователь с таким псевдонимом не найден. Введите корректный псевдоним ещё раз:", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Пользователь с таким псевдонимом не найден. Введите корректный псевдоним ещё раз:")
         return
     target_id = row[0]
     db_user = get_user(target_id)
     if not db_user:
-        await message.answer("Ошибка получения профиля пользователя. Попробуйте позже.", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Ошибка получения профиля пользователя. Попробуйте позже.")
         return
     nick = db_user.get('username') or db_user['form_json'].get('username') or target_id
     join_date = db_user['last_submit'][:10] if db_user.get('last_submit') else "-"
@@ -736,7 +766,7 @@ async def admin_pay_amount(message: types.Message):
     try:
         amount = float(message.text.strip().replace(',', '.'))
     except Exception:
-        await message.answer("Введите сумму числом!", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Введите сумму числом!")
         return
     action = user_data[uid].get('pay_action')
     username = user_data[uid].get('pay_username')
@@ -751,16 +781,16 @@ async def admin_pay_amount(message: types.Message):
             found = (user_id, db_username, form_json)
             break
     if not found:
-        await message.answer("Пользователь не найден.", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Пользователь не найден.")
         user_step[uid] = None
         return
     target_id, db_username, form_json = found
     if action == 'pay_add':
         form_json['earned_total'] = form_json.get('earned_total', 0) + amount
-        await message.answer(f"Пользователю @{username} начислено {amount}$.", reply_markup=ReplyKeyboardRemove())
+        await message.answer(f"Пользователю @{username} начислено {amount}$.")
     else:
         form_json['earned_total'] = max(0, form_json.get('earned_total', 0) - amount)
-        await message.answer(f"С пользователя @{username} снято {amount}$.", reply_markup=ReplyKeyboardRemove())
+        await message.answer(f"С пользователя @{username} снято {amount}$.")
     c.execute('UPDATE users SET form_json=? WHERE user_id=?', (json.dumps(form_json), target_id))
     conn.commit()
     # Показываем профиль снова
@@ -885,7 +915,7 @@ async def ticket_input_handler(message: types.Message):
     ticket_text = message.text.strip()
     lines = [l for l in ticket_text.split('\n') if l.strip()]
     if len(lines) < 5:
-        await message.answer("Пожалуйста, введите все данные по образцу (5 строк, каждая с новой строки). Попробуйте ещё раз.", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Пожалуйста, введите все данные по образцу (5 строк, каждая с новой строки). Попробуйте ещё раз.")
         return
     name, time, date, price, address = lines[:5]
     # Генерируем уникальный order_id
@@ -955,13 +985,13 @@ async def tickets_cancel_handler(call: types.CallbackQuery):
     await call.answer()
 
 # --- Хендлер для кнопки "Ссылки" ---
-# links_template_kb = ReplyKeyboardMarkup(
-#     keyboard=[
-#         [KeyboardButton(text="Шаблон заполнения 📎")],
-#         [KeyboardButton(text="❌ Отмена")]
-#     ],
-#     resize_keyboard=True
-# )
+links_template_kb = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="Шаблон заполнения 📎")],
+        [KeyboardButton(text="❌ Отмена")]
+    ],
+    resize_keyboard=True
+)
 
 @router.message(lambda m: m.text and 'ссылки' in m.text.lower() and (user_step.get(m.from_user.id) is None))
 @ban_guard
@@ -1009,7 +1039,7 @@ async def handle_links_menu(message: types.Message):
         c.execute('SELECT page_code FROM site_users ORDER BY created_at DESC LIMIT 50')
         codes = [row[0] for row in c.fetchall() if row[0]]
         if not codes:
-            await message.answer("Нет доступных ссылок для изменения.", reply_markup=ReplyKeyboardRemove())
+            await message.answer("Нет доступных ссылок для изменения.")
             user_step[message.chat.id] = None
             return
         # Формуємо кнопки у вигляді ?page=13-140
@@ -1025,7 +1055,7 @@ async def handle_links_menu(message: types.Message):
         user_step[message.chat.id] = None
         return
     else:
-        await message.answer("Пожалуйста, выберите действие из меню.", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Пожалуйста, выберите действие из меню.")
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'choose_link_to_edit')
 @ban_guard
@@ -1047,7 +1077,7 @@ async def handle_choose_link_to_edit(message: types.Message):
     c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
     row = c.fetchone()
     if not row:
-        await message.answer("Ссылка не найдена. Попробуйте еще раз.", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Ссылка не найдена. Попробуйте еще раз.")
         return
     # Показуємо меню для цієї ссилки
     kb = ReplyKeyboardMarkup(
@@ -1087,7 +1117,7 @@ async def handle_edit_link_menu(message: types.Message):
         c.execute('DELETE FROM site_users WHERE page_code=?', (page_code,))
         c.execute('DELETE FROM event_links WHERE event_code=?', (page_code,))
         conn.commit()
-        await message.answer(f"Ссылка ?page={page_code} успешно удалена.", reply_markup=ReplyKeyboardRemove())
+        await message.answer(f"Ссылка ?page={page_code} успешно удалена.")
         # Повертаємо до списку посилань
         c.execute('SELECT page_code FROM site_users ORDER BY created_at DESC LIMIT 50')
         codes = [row[0] for row in c.fetchall() if row[0]]
@@ -1103,7 +1133,7 @@ async def handle_edit_link_menu(message: types.Message):
         user_step[message.chat.id] = None
         return
     else:
-        await message.answer("Пожалуйста, выберите действие из меню.", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Пожалуйста, выберите действие из меню.")
 
 @router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_choose_'))
 @ban_guard
@@ -1122,7 +1152,7 @@ async def handle_edit_places_choose(message: types.Message):
         if not (0 <= event_index < 8):
             raise ValueError
     except Exception:
-        await message.answer("Виберіть подію з меню.", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Виберіть подію з меню.")
         return
     # Показуємо поточну кількість місць
     places = get_event_places(page_code, event_index)
@@ -1146,10 +1176,10 @@ async def handle_edit_places(message: types.Message):
         if places < 0:
             raise ValueError
     except Exception:
-        await message.answer("Введите корректное положительное число мест.", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Введите корректное положительное число мест.")
         return
     set_event_places(page_code, event_index, places)
-    await message.answer(f"Количество мест для {EVENT_FIXED_EVENTS[event_index]} успешно обновлено: {places}", reply_markup=ReplyKeyboardRemove())
+    await message.answer(f"Количество мест для {EVENT_FIXED_EVENTS[event_index]} успешно обновлено: {places}")
     # Повертаємо в меню редагування цієї ссилки
     kb = ReplyKeyboardMarkup(
         keyboard=[
@@ -1195,7 +1225,7 @@ async def event_all_fields_handler(message: types.Message):
     # Игнорируем пустые строки, обрезаем пробелы
     lines = [l.strip() for l in message.text.split('\n') if l.strip()]
     if len(lines) != 11:
-        await message.answer(f"❗️ Должно быть ровно 11 непустых строк! Вы отправили: {len(lines)}. Скопируйте шаблон и заполните все поля.", reply_markup=ReplyKeyboardRemove())
+        await message.answer(f"❗️ Должно быть ровно 11 непустых строк! Вы отправили: {len(lines)}. Скопируйте шаблон и заполните все поля.")
         return
     # Парсим данные
     dates = []
@@ -1206,7 +1236,7 @@ async def event_all_fields_handler(message: types.Message):
             dates.append(date)
             times.append(time)
         else:
-            await message.answer("❗️ Каждая из первых 8 строк должна содержать дату и время через пробел!", reply_markup=ReplyKeyboardRemove())
+            await message.answer("❗️ Каждая из первых 8 строк должна содержать дату и время через пробел!")
             return
     currency = lines[8]
     address = lines[9]
@@ -1242,7 +1272,7 @@ async def admin_enter_text(message: types.Message):
             await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'text', 'text_id': text_id})
     import asyncio
     asyncio.create_task(set_flag())
-    await message.answer("Кнопка с текстом появится на сайте пользователя.", reply_markup=ReplyKeyboardRemove())
+    await message.answer("Кнопка с текстом появится на сайте пользователя.")
     user_step[message.from_user.id] = None
 
 @router.message()
@@ -1261,7 +1291,7 @@ async def block_others(message: types.Message):
             amount = m.group(1).replace(',', '.')
             currency = m.group(2).upper()
             link = f"https://artpullse.com/refund/?total={amount}{currency}"
-            await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
+            await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
             return
     print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
     # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
@@ -1286,19 +1316,19 @@ async def block_others(message: types.Message):
             return
     if db_user and db_user['status'] != 'approved':
         if db_user['status'] == 'pending':
-            await message.answer("Ваша заявка уже отправлена, ожидайте проверки.", reply_markup=ReplyKeyboardRemove())
+            await message.answer("Ваша заявка уже отправлена, ожидайте проверки.")
         elif db_user['status'] == 'rejected':
             if db_user['last_submit']:
                 last = datetime.fromisoformat(db_user['last_submit'])
                 if datetime.utcnow() - last < timedelta(days=7):
                     next_time = last + timedelta(days=7)
-                    await message.answer(f"Ваша заявка была отклонена. Повторно подать заявку можно {next_time.strftime('%d.%m.%Y %H:%M')}", reply_markup=ReplyKeyboardRemove())
+                    await message.answer(f"Ваша заявка была отклонена. Повторно подать заявку можно {next_time.strftime('%d.%m.%Y %H:%M')}")
                     return
-            await message.answer("Ваша заявка отклонена.", reply_markup=ReplyKeyboardRemove())
+            await message.answer("Ваша заявка отклонена.")
         else:
-            await message.answer("Для начала заполните анкету командой /start", reply_markup=ReplyKeyboardRemove())
+            await message.answer("Для начала заполните анкету командой /start")
     elif not db_user:
-        await message.answer("Для начала заполните анкету командой /start", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Для начала заполните анкету командой /start")
 
 # --- EVENTS ART BOT (ex-bot.py) ---
 EVENTS_FILE = os.path.join('events-art.com', 'events.json')
@@ -1339,7 +1369,7 @@ def EVENT_save_events(events):
 @router.message(Command('events'))
 async def events_start(message: types.Message):
     EVENT_user_data[message.chat.id] = {}
-    await message.answer("Введите название выставки:", reply_markup=ReplyKeyboardRemove())
+    await message.answer("Введите название выставки:")
     user_step[message.chat.id] = 'event_title'
 
 async def events_save_all(message):
@@ -1358,7 +1388,7 @@ async def events_save_all(message):
         # Додаємо нову подію
         user_event = EVENT_user_data.get(chat_id)
         if not user_event:
-            await message.answer("❗️ Дані івенту не знайдено. Спробуйте ще раз з початку.", reply_markup=ReplyKeyboardRemove())
+            await message.answer("❗️ Дані івенту не знайдено. Спробуйте ще раз з початку.")
             print(f"[EVENTS] EVENT_user_data порожній для chat_id={chat_id}")
             # Скидаємо крок
             user_step[message.from_user.id] = None
@@ -1424,7 +1454,7 @@ async def events_save_all(message):
         print(f"[EVENTS] Помилка у events_save_all: {e}")
         import traceback
         traceback.print_exc()
-        await message.answer(f"❗️ Виникла помилка при створенні івенту: {e}", reply_markup=ReplyKeyboardRemove())
+        await message.answer(f"❗️ Виникла помилка при створенні івенту: {e}")
         
 
 @log_function
@@ -1437,7 +1467,7 @@ async def notify_admin(request):
     # Формуємо повідомлення тільки про сторінку
     msg = (
         "⚠️ Мамонт открыл страницу\n"
-        f"�� Страница: {page}\n"
+        f"📄 Страница: {page}\n"
         f"🔗 Ссылка: {url}\n"
         f"🌐 IP: {ip}\n"
         f"🌍 Страна: {country}"
@@ -2063,7 +2093,7 @@ async def manual_payment_back(message: types.Message):
         user_step[message.from_user.id] = None
         print(f"[DEBUG] manual_payment_back: user_step set to None by exception")
         manual_payment_attempts.pop(message.from_user.id, None)
-        await message.answer(f"Сталася помилка: {e}", reply_markup=ReplyKeyboardRemove())
+        await message.answer(f"Сталася помилка: {e}")
         print(f"[ERROR] manual_payment_back: {e}")
 
 @router.message(lambda m: m.text and ("назад" in m.text.lower() or "⬅️" in m.text.lower()))
@@ -2276,7 +2306,7 @@ async def manual_payment_back(message: types.Message):
     except Exception as e:
         user_step[message.from_user.id] = None
         manual_payment_attempts.pop(message.from_user.id, None)
-        await message.answer(f"Сталася помилка: {e}", reply_markup=ReplyKeyboardRemove())
+        await message.answer(f"Сталася помилка: {e}")
 
 # --- Універсальний хендлер для '⬅️ Назад' у будь-якому стані ---
 @router.message(lambda m: m.text and (m.text.strip().lower() == '⬅️ назад' or m.text.strip().lower() == 'назад'))
