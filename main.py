@@ -2007,8 +2007,14 @@ manual_payment_attempts = {}
 @router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
 @ban_guard
 async def manual_payment_back(message: types.Message):
+    uid = message.from_user.id
+    if message.text and (message.text.strip().lower() == 'назад' or message.text.strip().lower() == '⬅️ назад'):
+        user_step[uid] = None
+        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        await message.answer("Повернення в головне меню.", reply_markup=kb)
+        print(f"[DEBUG] manual_payment_back: Назад, user_step={user_step.get(uid)}")
+        return
     try:
-        uid = message.from_user.id
         back_kb = ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text="⬅️ Назад")]],
             resize_keyboard=True
