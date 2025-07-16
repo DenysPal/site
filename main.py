@@ -2313,7 +2313,7 @@ async def manual_payment_back(message: types.Message):
 async def force_back_to_main(message: types.Message):
     uid = message.from_user.id
     user_step[uid] = None
-    print(f"[DEBUG] force_back_to_main: user_step set to None")
+    print(f"[DEBUG] force_back_to_main: user_step set to None, text={message.text!r}")
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     await message.answer("Повернення в головне меню.", reply_markup=kb)
     print(f"[DEBUG] force_back_to_main: user_step={user_step.get(uid)}")
