@@ -2422,13 +2422,6 @@ async def manual_payment_defolt(message: types.Message):
         manual_payment_attempts.pop(message.from_user.id, None)
         await message.answer(f"Сталася помилка: {e}")
 
-// ... existing code ...
-
-
-
-
-
-
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
     async def main():
