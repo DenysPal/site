@@ -1283,6 +1283,29 @@ async def admin_enter_text(message: types.Message):
     await message.answer("Кнопка с текстом появится на сайте пользователя.")
     user_step[message.from_user.id] = None
 
+# --- Обробник для вибору типу оплати (має бути ПЕРЕД block_others) ---
+@router.message(lambda m: user_step.get(m.from_user.id) == 'payment_type_selection')
+@ban_guard
+async def payment_type_selection(message: types.Message):
+    uid = message.from_user.id
+    print(f"[DEBUG] payment_type_selection called for user {uid}, text: {message.text!r}")
+    if message.text == "refund":
+        print(f"[DEBUG] Processing refund for user {uid}")
+        user_step[uid] = 'manual_payment_amount'
+        await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
+    elif message.text == "defolt":
+        print(f"[DEBUG] Processing defolt for user {uid}")
+        user_step[uid] = 'manual_payment_defolt'
+        await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
+    elif message.text == "⬅️ Назад":
+        print(f"[DEBUG] Processing back for user {uid}")
+        user_step[uid] = None
+        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        await message.answer("Возврат в главное меню.", reply_markup=kb)
+    else:
+        print(f"[DEBUG] Unknown text in payment_type_selection: {message.text!r}")
+        await message.answer("Пожалуйста, выберите тип оплаты из меню.")
+
 @router.message()
 async def block_others(message: types.Message):
     print(f"[DEBUG] block_others: text={getattr(message, 'text', None)!r}, type={getattr(message, 'content_type', None)}, user_step={user_step.get(message.from_user.id)}")
@@ -2353,27 +2376,7 @@ async def admin_panel_back(message: types.Message):
     await message.answer("", reply_markup=kb)
     print(f"[DEBUG] admin_panel_back: user_step={user_step.get(uid)}")
 
-@router.message(lambda m: user_step.get(m.from_user.id) == 'payment_type_selection')
-@ban_guard
-async def payment_type_selection(message: types.Message):
-    uid = message.from_user.id
-    print(f"[DEBUG] payment_type_selection called for user {uid}, text: {message.text!r}")
-    if message.text == "refund":
-        print(f"[DEBUG] Processing refund for user {uid}")
-        user_step[uid] = 'manual_payment_amount'
-        await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
-    elif message.text == "defolt":
-        print(f"[DEBUG] Processing defolt for user {uid}")
-        user_step[uid] = 'manual_payment_defolt'
-        await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
-    elif message.text == "⬅️ Назад":
-        print(f"[DEBUG] Processing back for user {uid}")
-        user_step[uid] = None
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer("Возврат в главное меню.", reply_markup=kb)
-    else:
-        print(f"[DEBUG] Unknown text in payment_type_selection: {message.text!r}")
-        await message.answer("Пожалуйста, выберите тип оплаты из меню.")
+
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_defolt')
 @ban_guard
