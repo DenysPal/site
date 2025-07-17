@@ -174,20 +174,20 @@ def create_site_user(dates, currency, street, price):
         if page_code in busy_codes:
             continue
         try:
-            c.execute('''INSERT INTO site_users 
+    c.execute('''INSERT INTO site_users 
                  (id, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price, page_code) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
               (user_id, dates[0], dates[1], dates[2], dates[3], dates[4], dates[5], dates[6], dates[7], currency, street, price, page_code))
-            conn.commit()
-            # --- Додаємо початкову кількість квитків для кожної події ---
-            for event_index in range(8):
-                if event_index == 1:
-                    places = 3
-                else:
-                    places = random.randint(1, 10)
-                c.execute('INSERT OR REPLACE INTO event_places (page_code, event_index, places) VALUES (?, ?, ?)', (page_code, event_index, places))
-            conn.commit()
-            return user_id, page_code
+    conn.commit()
+    # --- Додаємо початкову кількість квитків для кожної події ---
+    for event_index in range(8):
+        if event_index == 1:
+            places = 3
+        else:
+            places = random.randint(1, 10)
+        c.execute('INSERT OR REPLACE INTO event_places (page_code, event_index, places) VALUES (?, ?, ?)', (page_code, event_index, places))
+    conn.commit()
+    return user_id, page_code
         except sqlite3.IntegrityError as e:
             if 'UNIQUE constraint failed: site_users.page_code' in str(e):
                 continue  # спробувати ще раз
@@ -333,7 +333,7 @@ async def cmd_start(message: types.Message):
         elif db_user['status'] == 'approved':
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
             if message.chat.type == "private":
-                await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=kb)
+            await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=kb)
             else:
                 await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:")
             return
@@ -552,7 +552,7 @@ async def back_to_menu_handler(call: types.CallbackQuery):
     user_step[uid] = None
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     if call.message.chat.type == "private":
-        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     else:
         await call.message.answer("Возврат в главное меню.")
     await call.answer()
@@ -2187,7 +2187,7 @@ async def universal_back_handler(message: types.Message):
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     user_step[uid] = None
     if message.chat.type == "private":
-        await message.answer("Возврат в главное меню.", reply_markup=kb)
+    await message.answer("Возврат в главное меню.", reply_markup=kb)
     else:
         await message.answer("Возврат в главное меню.")
 
