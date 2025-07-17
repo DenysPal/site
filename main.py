@@ -2324,6 +2324,14 @@ async def manual_payment_back(message: types.Message):
 @ban_guard
 async def force_back_to_main(message: types.Message):
     uid = message.from_user.id
+    current_step = user_step.get(uid)
+    print(f"[DEBUG] force_back_to_main called for user {uid}, text: {message.text!r}, current_step: {current_step}")
+    
+    # Не обробляємо, якщо користувач знаходиться в payment_type_selection
+    if current_step == 'payment_type_selection':
+        print(f"[DEBUG] Skipping force_back_to_main for payment_type_selection")
+        return
+    
     user_step[uid] = None
     print(f"[DEBUG] force_back_to_main: user_step set to None, text={message.text!r}")
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
@@ -2343,17 +2351,22 @@ async def admin_panel_back(message: types.Message):
 @ban_guard
 async def payment_type_selection(message: types.Message):
     uid = message.from_user.id
+    print(f"[DEBUG] payment_type_selection called for user {uid}, text: {message.text!r}")
     if message.text == "refund":
+        print(f"[DEBUG] Processing refund for user {uid}")
         user_step[uid] = 'manual_payment_amount'
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
     elif message.text == "defolt":
+        print(f"[DEBUG] Processing defolt for user {uid}")
         user_step[uid] = 'manual_payment_defolt'
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
     elif message.text == "⬅️ Назад":
+        print(f"[DEBUG] Processing back for user {uid}")
         user_step[uid] = None
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
         await message.answer("Возврат в главное меню.", reply_markup=kb)
     else:
+        print(f"[DEBUG] Unknown text in payment_type_selection: {message.text!r}")
         await message.answer("Пожалуйста, выберите тип оплаты из меню.")
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_defolt')
