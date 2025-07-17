@@ -335,7 +335,7 @@ async def cmd_start(message: types.Message):
             if message.chat.type == "private":
                 await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=kb)
             else:
-                await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:")
+                await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=ReplyKeyboardRemove())
             return
         elif db_user['status'] == 'rejected':
             if db_user['last_submit']:
