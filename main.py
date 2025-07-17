@@ -347,6 +347,7 @@ async def cmd_start(message: types.Message):
     user_data[uid] = {}
     user_step[uid] = 'source'
     await message.answer("📢 Откуда о нас узнали?")
+    await message.answer(" ", reply_markup=ReplyKeyboardRemove())
 
 @router.message(lambda m: m.text and (m.text.lower() == 'отмена' or m.text.lower() == '❌ отмена'))
 @ban_guard
