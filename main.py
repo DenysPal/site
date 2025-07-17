@@ -1292,6 +1292,12 @@ async def block_others(message: types.Message):
         return
     uid = message.from_user.id
     print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text={message.text!r}")
+    
+    # НЕ обробляємо повідомлення, якщо користувач знаходиться в payment_type_selection
+    if user_step.get(uid) == 'payment_type_selection':
+        print(f"[DEBUG] Skipping block_others for payment_type_selection")
+        return
+    
     # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
     if is_admin(uid):
         m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
@@ -1320,7 +1326,7 @@ async def block_others(message: types.Message):
     if is_admin(uid):
         if message.text in ["🛠️ Админ панель", "🚫 Заблокировать / разблокировать", "💸 Начислить выплату", "⬅️ Назад"]:
             return
-        if user_step.get(uid) in ['admin_panel', 'ban_unban_user', 'pay_user', 'pay_user_profile', 'pay_amount', 'manual_payment_amount']:
+        if user_step.get(uid) in ['admin_panel', 'ban_unban_user', 'pay_user', 'pay_user_profile', 'pay_amount', 'manual_payment_amount', 'manual_payment_defolt']:
             return
     if db_user and db_user['status'] != 'approved':
         if db_user['status'] == 'pending':
