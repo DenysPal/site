@@ -2049,6 +2049,7 @@ async def manual_payment_amount_handler(message: types.Message):
             sent_msg = await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
             user_step[uid] = None
             manual_payment_attempts.pop(uid, None)
+            user_data.pop(uid, None)
             # --- Видалити всі попередні повідомлення з кнопками, якщо є ---
             for mid in bot_message_ids.get(uid, []):
                 try:
