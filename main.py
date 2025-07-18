@@ -1314,12 +1314,10 @@ async def block_others(message: types.Message):
         return
     uid = message.from_user.id
     print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text={message.text!r}")
-    
-    # НЕ обробляємо повідомлення, якщо користувач знаходиться в payment_type_selection
-    if user_step.get(uid) == 'payment_type_selection':
-        print(f"[DEBUG] Skipping block_others for payment_type_selection")
+    # НЕ обробляємо повідомлення, якщо користувач знаходиться в payment_type_selection або manual_payment_amount
+    if user_step.get(uid) in ['payment_type_selection', 'manual_payment_amount']:
+        print(f"[DEBUG] Skipping block_others for payment_type_selection/manual_payment_amount")
         return
-    
     # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
     if is_admin(uid):
         m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
