@@ -1764,6 +1764,16 @@ async def admin_action_handler(call: types.CallbackQuery):
     page_code = parts[2] if action == 'push' and len(parts) > 2 else None
     if action == 'push':
         print(f'[DEBUG] admin_action_handler: push page_code={page_code}, ip={ip}, data={call.data}')
+        import aiohttp as aiohttp_client
+        async with aiohttp_client.ClientSession() as session:
+            print(f'[DEBUG] Sending push to http://127.0.0.1:8080/set_push_flag, page_code={page_code}')
+            try:
+                resp = await session.post('http://127.0.0.1:8080/set_push_flag', json={'page_code': page_code, 'type': 'push'})
+                print(f'[DEBUG] Push response: {resp.status} {await resp.text()}')
+            except Exception as e:
+                print(f'[DEBUG] Push request failed: {e}')
+        await call.answer("Push notification sent")
+        return
     import aiohttp as aiohttp_client
     async with aiohttp_client.ClientSession() as session:
         await session.post('http://127.0.0.1:8080/admin_action', json={'action': action, 'ip': ip})
