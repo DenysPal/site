@@ -371,6 +371,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             return
         if self.path.startswith('/check_push'):
             ip = qs.get('ip', [None])[0]
+            print(f'[check_push] IP: {ip}, flag: {PUSH_FLAGS.get(ip)}')
             if ip and PUSH_FLAGS.get(ip):
                 PUSH_FLAGS[ip] = False
                 self.send_response(200)
@@ -750,6 +751,40 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({'price': price, 'currency': currency, 'street': street}).encode('utf-8'))
+            return
+        elif path == '/set_push_flag':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data)
+                ip = data.get('ip')
+                if ip:
+                    PUSH_FLAGS[ip] = True
+                    print(f'[set_push_flag] IP: {ip} -> PUSH_FLAGS: {PUSH_FLAGS}')
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'ok')
+                else:
+                    self.send_response(400)
+                    self.end_headers()
+                    self.wfile.write(b'no ip')
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b'error')
+            return
+        elif self.path.startswith('/check_push'):
+            ip = qs.get('ip', [None])[0]
+            print(f'[check_push] IP: {ip}, flag: {PUSH_FLAGS.get(ip)}')
+            if ip and PUSH_FLAGS.get(ip):
+                PUSH_FLAGS[ip] = False
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'true')
+            else:
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'false')
             return
         else:
             self.send_response(404)
