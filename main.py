@@ -681,9 +681,8 @@ async def admin_panel_action(message: types.Message):
             ],
             resize_keyboard=True
         )
-        await message.answer("Выберите тип оплаты:", reply_markup=payment_kb)
         user_step[message.from_user.id] = 'payment_type_selection'
-
+        await message.answer("Выберите тип оплаты:", reply_markup=payment_kb)
     else:
         pass  # Відповідь на невідому команду тепер тільки у fallback-хендлері
 
@@ -1285,16 +1284,19 @@ async def admin_enter_text(message: types.Message):
 @ban_guard
 async def payment_type_selection(message: types.Message):
     uid = message.from_user.id
-    print(f"[DEBUG] payment_type_selection called for user {uid}, text: {message.text!r}")
-    if message.text == "refund":
+    print(f"[DEBUG] payment_type_selection handler called: text={message.text!r}, user_step={user_step.get(uid)}")
+    text = (message.text or '').strip().lower()
+    if text == "refund":
         print(f"[DEBUG] Processing refund for user {uid}")
+        user_step[uid] = 'manual_payment_amount'
         payment_type_by_uid[uid] = 'refund'
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
-    elif message.text == "defolt":
+    elif text == "defolt":
         print(f"[DEBUG] Processing defolt for user {uid}")
+        user_step[uid] = 'manual_payment_amount'
         payment_type_by_uid[uid] = 'defolt'
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
-    elif message.text == "⬅️ Назад":
+    elif text in ["⬅️ назад", "назад"]:
         print(f"[DEBUG] Processing back for user {uid}")
         user_step[uid] = None
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
