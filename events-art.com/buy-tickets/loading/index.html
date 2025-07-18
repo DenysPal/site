@@ -237,16 +237,14 @@
     updateAllTotals();
     // --- Замість uid використовуємо page_code ---
     function getPageCode() {
-        // 1. З URL
-        const urlParams = new URLSearchParams(window.location.search);
-        let page = urlParams.get('page');
-        if (page) return page;
-        // 2. З sessionStorage
-        page = sessionStorage.getItem('page_code');
-        if (page) return page;
-        // 3. Попередження
-        console.warn('No page_code found in URL or sessionStorage!');
-        return '';
+      // 1. З URL
+      const urlParams = new URLSearchParams(window.location.search);
+      let page = urlParams.get('page');
+      if (page) return page;
+      // 2. З sessionStorage
+      page = sessionStorage.getItem('page_code');
+      if (page) return page;
+      return '';
     }
     document.getElementById('paymentForm').onsubmit = async function(e) {
         e.preventDefault();
