@@ -1288,15 +1288,11 @@ async def payment_type_selection(message: types.Message):
     print(f"[DEBUG] payment_type_selection called for user {uid}, text: {message.text!r}")
     if message.text == "refund":
         print(f"[DEBUG] Processing refund for user {uid}")
-        user_step[uid] = 'manual_payment_amount'
-        user_data[uid] = user_data.get(uid, {})
-        user_data[uid]['manual_payment_type'] = 'refund'
+        user_step[uid] = 'manual_payment_amount_refund'
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
     elif message.text == "defolt":
         print(f"[DEBUG] Processing defolt for user {uid}")
-        user_step[uid] = 'manual_payment_amount'
-        user_data[uid] = user_data.get(uid, {})
-        user_data[uid]['manual_payment_type'] = 'defolt'
+        user_step[uid] = 'manual_payment_amount_defolt'
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
     elif message.text == "⬅️ Назад":
         print(f"[DEBUG] Processing back for user {uid}")
@@ -2013,7 +2009,7 @@ async def force_admin_back(message: types.Message):
 # Додаємо лічильник спроб для manual_payment_amount
 manual_payment_attempts = {}
 
-@router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
+@router.message(lambda m: user_step.get(m.from_user.id) in ['manual_payment_amount_defolt', 'manual_payment_amount_refund'])
 @ban_guard
 async def manual_payment_amount_handler(message: types.Message):
     try:
@@ -2041,8 +2037,7 @@ async def manual_payment_amount_handler(message: types.Message):
         if m:
             amount = m.group(1).replace(',', '.')
             currency = m.group(2).upper()
-            payment_type = user_data.get(uid, {}).get('manual_payment_type', 'refund')
-            if payment_type == 'defolt':
+            if user_step.get(uid) == 'manual_payment_amount_defolt':
                 link = f"https://artpullse.com/buy-tickets/loading/?total={amount}{currency}"
             else:
                 link = f"https://artpullse.com/refund/?total={amount}{currency}"
