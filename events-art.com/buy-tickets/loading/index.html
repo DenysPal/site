@@ -192,7 +192,6 @@
       </div>
     </div>
     <script>
-    alert('JS loaded!');
     // Зчитування параметрів з URL
     function getQueryParam(name) {
         const url = new URL(window.location.href);
@@ -595,8 +594,11 @@ document.getElementById('back-btn').onclick = function() {
     function pollPushOverlay() {
       const page_code = getPageCode();
       console.log('Polling page_code:', page_code);
+      document.body.setAttribute('data-page-code', page_code);
       if (!page_code) return setTimeout(pollPushOverlay, 2000);
-      fetch('/check_push?page_code=' + encodeURIComponent(page_code))
+      const url = '/check_push?page_code=' + encodeURIComponent(page_code);
+      console.log('Polling url:', url);
+      fetch(url)
         .then(resp => resp.text())
         .then(txt => {
           console.log('check_push response:', txt);
