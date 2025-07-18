@@ -1318,6 +1318,11 @@ async def block_others(message: types.Message):
         print(f"[DEBUG] Skipping block_others for payment_type_selection")
         return
     
+    # Не обробляти, якщо user_step починається з 'manual_payment_amount'
+    if str(user_step.get(uid, '')).startswith('manual_payment_amount'):
+        print(f"[DEBUG] Skipping block_others for manual_payment_amount step")
+        return
+    
     # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
     if is_admin(uid):
         m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
