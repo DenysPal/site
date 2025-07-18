@@ -1698,11 +1698,7 @@ async def admin_action_handler(call: types.CallbackQuery):
         async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
         await call.answer("Код запитується знову")
-    # Завжди після дії повертаємо в меню
-    user_step[call.from_user.id] = None
-    manual_payment_attempts.pop(call.from_user.id, None)
-    kb = admin_menu_kb if is_admin(call.from_user.id) else main_menu_kb
-    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    # НЕ змінюємо клавіатуру!
     await call.answer()
 
 
