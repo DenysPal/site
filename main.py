@@ -1704,23 +1704,7 @@ async def admin_action_handler(call: types.CallbackQuery):
     await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
-@router.callback_query(lambda c: c.data == "payuser_back")
-async def payuser_back_handler(call: types.CallbackQuery):
-    uid = call.from_user.id
-    user_step[uid] = None
-    manual_payment_attempts.pop(uid, None)
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
-    await call.answer()
 
-@router.callback_query(lambda c: c.data == "pay_back")
-async def pay_back_handler(call: types.CallbackQuery):
-    uid = call.from_user.id
-    user_step[uid] = None
-    manual_payment_attempts.pop(uid, None)
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
-    await call.answer()
 
 @router.callback_query(lambda c: c.data.startswith('ban:'))
 async def ban_reason_ask(call: types.CallbackQuery):
@@ -1740,23 +1724,7 @@ async def unban_user(call: types.CallbackQuery):
     await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
-@router.callback_query(lambda c: c.data == "ban_back")
-async def ban_back_handler(call: types.CallbackQuery):
-    uid = call.from_user.id
-    user_step[uid] = None
-    manual_payment_attempts.pop(uid, None)
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
-    await call.answer()
 
-@router.callback_query(lambda c: c.data == "tickets_cancel")
-async def tickets_cancel_handler(call: types.CallbackQuery):
-    uid = call.from_user.id
-    user_step[uid] = None
-    manual_payment_attempts.pop(uid, None)
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await call.message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
-    await call.answer()
 
 @router.callback_query(lambda c: c.data.startswith('approve_') or c.data.startswith('reject_'))
 async def process_decision(call: types.CallbackQuery):
@@ -2238,13 +2206,20 @@ async def universal_back_handler(message: types.Message):
 
 
 
-# --- Універсальний callback_query-хендлер для всіх inline-кнопок "Назад" ---
-@router.callback_query(lambda c: any(x in c.data.lower() for x in ["назад", "back", "⬅️"]))
+# --- Універсальний callback_query-хендлер тільки для кнопок "Назад" ---
+@router.callback_query(lambda c: c.data in ["back_to_menu", "payuser_back", "pay_back", "ban_back", "tickets_cancel"])
 async def universal_inline_back_handler(call: types.CallbackQuery):
     uid = call.from_user.id
     user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    
+    # Специальная обработка для tickets_cancel
+    if call.data == "tickets_cancel":
+        await call.message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
+    else:
+        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    
     await call.answer()
 
 
