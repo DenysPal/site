@@ -1289,10 +1289,12 @@ async def payment_type_selection(message: types.Message):
     if message.text == "refund":
         print(f"[DEBUG] Processing refund for user {uid}")
         user_step[uid] = 'manual_payment_amount_refund'
+        print(f"[DEBUG] payment_type_selection: set user_step[{uid}] = {user_step[uid]}")
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
     elif message.text == "defolt":
         print(f"[DEBUG] Processing defolt for user {uid}")
         user_step[uid] = 'manual_payment_amount_defolt'
+        print(f"[DEBUG] payment_type_selection: set user_step[{uid}] = {user_step[uid]}")
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
     elif message.text == "⬅️ Назад":
         print(f"[DEBUG] Processing back for user {uid}")
@@ -2019,6 +2021,7 @@ manual_payment_attempts = {}
 async def manual_payment_amount_handler(message: types.Message):
     try:
         uid = message.from_user.id
+        print(f"[DEBUG] manual_payment_amount_handler: user_step={user_step.get(uid)}, text={message.text}")
         back_kb = ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text="⬅️ Назад")]],
             resize_keyboard=True
