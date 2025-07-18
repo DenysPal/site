@@ -10918,5 +10918,61 @@
         "time": "10:00-20:00"
       }
     ]
+  },
+  "a1b8842c-69f4-43f2-acfb-e5bf279af79c": {
+    "title": "Выставка",
+    "price": "190",
+    "currency": "PLN",
+    "address": "PoznanCH Plaza,Drużbickiego2, 61-693 Poznań",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "17.07.2025",
+        "time": "12:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "17.07.2025",
+        "time": "12:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "17.07.2025",
+        "time": "12:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "17.07.2025",
+        "time": "12:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "17.07.2025",
+        "time": "12:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "17.07.2025",
+        "time": "12:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "17.07.2025",
+        "time": "12:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "17.07.2025",
+        "time": "12:00"
+      }
+    ]
   }
 }
