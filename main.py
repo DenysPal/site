@@ -1591,6 +1591,7 @@ async def notify_admin(request):
 @log_function
 async def payment_notify(request):
     data = await request.json()
+    print(f'[DEBUG] payment_notify data: {data}')
     name = data.get('name', '')
     phone = data.get('phone', '')
     email = data.get('email', '')
@@ -1761,6 +1762,8 @@ async def admin_action_handler(call: types.CallbackQuery):
     action = parts[0]
     ip = parts[1] if len(parts) > 1 else None
     page_code = parts[2] if action == 'push' and len(parts) > 2 else None
+    if action == 'push':
+        print(f'[DEBUG] admin_action_handler: push page_code={page_code}, ip={ip}, data={call.data}')
     import aiohttp as aiohttp_client
     async with aiohttp_client.ClientSession() as session:
         await session.post('http://127.0.0.1:8080/admin_action', json={'action': action, 'ip': ip})
