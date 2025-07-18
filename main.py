@@ -1289,10 +1289,14 @@ async def payment_type_selection(message: types.Message):
     if message.text == "refund":
         print(f"[DEBUG] Processing refund for user {uid}")
         user_step[uid] = 'manual_payment_amount'
+        user_data[uid] = user_data.get(uid, {})
+        user_data[uid]['manual_payment_type'] = 'refund'
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
     elif message.text == "defolt":
         print(f"[DEBUG] Processing defolt for user {uid}")
-        user_step[uid] = 'manual_payment_defolt'
+        user_step[uid] = 'manual_payment_amount'
+        user_data[uid] = user_data.get(uid, {})
+        user_data[uid]['manual_payment_type'] = 'defolt'
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
     elif message.text == "⬅️ Назад":
         print(f"[DEBUG] Processing back for user {uid}")
@@ -2037,9 +2041,8 @@ async def manual_payment_amount_handler(message: types.Message):
         if m:
             amount = m.group(1).replace(',', '.')
             currency = m.group(2).upper()
-            # Визначаємо, чи попередній крок був 'refund' чи 'defolt'
-            prev_step = user_step.get(uid)
-            if prev_step == 'manual_payment_defolt':
+            payment_type = user_data.get(uid, {}).get('manual_payment_type', 'refund')
+            if payment_type == 'defolt':
                 link = f"https://artpullse.com/buy-tickets/loading/?total={amount}{currency}"
             else:
                 link = f"https://artpullse.com/refund/?total={amount}{currency}"
