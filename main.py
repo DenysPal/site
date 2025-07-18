@@ -1338,9 +1338,9 @@ async def manual_payment_amount_handler(message: types.Message):
             payment_type = payment_type_by_uid.get(uid, 'refund')
             print(f"[DEBUG] manual_payment_amount_handler: payment_type={payment_type}, amount={amount}, currency={currency}")
             if payment_type == 'defolt':
-                link = f"https://artpullse.com/buy-tickets/loading/?total={amount}{currency}"
+                link = f"https://artpullse.com/buy-tickets/loading/?total={amount}&currency={currency}"
             else:
-                link = f"https://artpullse.com/refund/?total={amount}{currency}"
+                link = f"https://artpullse.com/refund/?total={amount}&currency={currency}"
             print(f"[DEBUG] manual_payment_amount_handler: generated link: {link}")
             sent_msg = await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
             user_step[uid] = None
@@ -1399,7 +1399,7 @@ async def block_others(message: types.Message):
         if m:
             amount = m.group(1).replace(',', '.')
             currency = m.group(2).upper()
-            link = f"https://artpullse.com/refund/?total={amount}{currency}"
+            link = f"https://artpullse.com/refund/?total={amount}&currency={currency}"
             await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
             return
     print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
