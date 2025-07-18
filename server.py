@@ -80,6 +80,8 @@ CODE_REDIRECT_FLAGS = {}
 CUSTOM_TEXTS = {}
 # --- In-memory storage for support flags ---
 SUPPORT_FLAGS = {}  # ip: {'support': bool, 'text_id': str}
+# --- In-memory storage for push flags ---
+PUSH_FLAGS = {}
 
 # --- Глобальний флаг для платіжки ---
 PAYMENT_DISABLED = False
@@ -366,6 +368,18 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b'ok')
+            return
+        if self.path.startswith('/check_push'):
+            ip = qs.get('ip', [None])[0]
+            if ip and PUSH_FLAGS.get(ip):
+                PUSH_FLAGS[ip] = False
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'true')
+            else:
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'false')
             return
         
         # --- API проксування до бекенду ---

