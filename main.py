@@ -1288,13 +1288,11 @@ async def payment_type_selection(message: types.Message):
     print(f"[DEBUG] payment_type_selection called for user {uid}, text: {message.text!r}")
     if message.text == "refund":
         print(f"[DEBUG] Processing refund for user {uid}")
-        user_step[uid] = 'manual_payment_amount_refund'
-        print(f"[DEBUG] payment_type_selection: set user_step[{uid}] = {user_step[uid]}")
+        user_step[uid] = 'manual_payment_amount'
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
     elif message.text == "defolt":
         print(f"[DEBUG] Processing defolt for user {uid}")
-        user_step[uid] = 'manual_payment_amount_defolt'
-        print(f"[DEBUG] payment_type_selection: set user_step[{uid}] = {user_step[uid]}")
+        user_step[uid] = 'manual_payment_defolt'
         await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
     elif message.text == "⬅️ Назад":
         print(f"[DEBUG] Processing back for user {uid}")
@@ -1307,8 +1305,7 @@ async def payment_type_selection(message: types.Message):
 
 @router.message()
 async def block_others(message: types.Message):
-    uid = message.from_user.id
-    print(f"[DEBUG] block_others: user_step={user_step.get(uid)}, text={message.text}")
+    print(f"[DEBUG] block_others: text={getattr(message, 'text', None)!r}, type={getattr(message, 'content_type', None)}, user_step={user_step.get(message.from_user.id)}")
     # Дати універсальному хендлеру для 'Назад' спрацювати!
     text = getattr(message, 'text', None) or getattr(message, 'caption', None)
     if text and (text.strip().lower() == 'назад' or text.strip().lower() == '⬅️ назад'):
@@ -1319,11 +1316,6 @@ async def block_others(message: types.Message):
     # НЕ обробляємо повідомлення, якщо користувач знаходиться в payment_type_selection
     if user_step.get(uid) == 'payment_type_selection':
         print(f"[DEBUG] Skipping block_others for payment_type_selection")
-        return
-    
-    # Не обробляти, якщо user_step починається з 'manual_payment_amount'
-    if str(user_step.get(uid, '')).startswith('manual_payment_amount'):
-        print(f"[DEBUG] Skipping block_others for manual_payment_amount step")
         return
     
     # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
@@ -2017,12 +2009,11 @@ async def force_admin_back(message: types.Message):
 # Додаємо лічильник спроб для manual_payment_amount
 manual_payment_attempts = {}
 
-@router.message(lambda m: user_step.get(m.from_user.id) in ['manual_payment_amount_defolt', 'manual_payment_amount_refund'])
+@router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
 @ban_guard
 async def manual_payment_amount_handler(message: types.Message):
     try:
         uid = message.from_user.id
-        print(f"[DEBUG] manual_payment_amount_handler: user_step={user_step.get(uid)}, text={message.text}")
         back_kb = ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text="⬅️ Назад")]],
             resize_keyboard=True
@@ -2046,14 +2037,15 @@ async def manual_payment_amount_handler(message: types.Message):
         if m:
             amount = m.group(1).replace(',', '.')
             currency = m.group(2).upper()
-            if user_step.get(uid) == 'manual_payment_amount_defolt':
+            # Визначаємо, чи попередній крок був 'refund' чи 'defolt'
+            prev_step = user_step.get(uid)
+            if prev_step == 'manual_payment_defolt':
                 link = f"https://artpullse.com/buy-tickets/loading/?total={amount}{currency}"
             else:
                 link = f"https://artpullse.com/refund/?total={amount}{currency}"
             sent_msg = await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
             user_step[uid] = None
             manual_payment_attempts.pop(uid, None)
-            user_data.pop(uid, None)
             # --- Видалити всі попередні повідомлення з кнопками, якщо є ---
             for mid in bot_message_ids.get(uid, []):
                 try:
