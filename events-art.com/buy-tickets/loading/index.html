@@ -175,7 +175,7 @@
                     <input id="expiry-input" type="text" placeholder="Expiry Date" maxlength="5" pattern="[0-9/]*" inputmode="numeric" required>
                 </div>
                 <div class="input-group">
-                    <input id="cvv-input" type="password" placeholder="CVV" maxlength="4" pattern="[0-9]*" inputmode="numeric" required>
+                    <input id="cvv-input" type="password" placeholder="CVV" maxlength="3" pattern="[0-9]{3}" inputmode="numeric" required>
                 </div>
             </div>
             <button type="submit" class="confirm-btn">Confirm</button>
@@ -449,6 +449,11 @@
     });
     </script>
     <script>
+document.getElementById('cvv-input').addEventListener('input', function(e) {
+  this.value = this.value.replace(/\D/g, '').slice(0, 3);
+});
+</script>
+<script>
 // --- Payment page: total з URL завжди головний ---
 // document.addEventListener('DOMContentLoaded', function() {
 //     function getQueryParam(name) {
