@@ -35,6 +35,8 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
+payment_type_by_uid = {}
+
 def log_function(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
