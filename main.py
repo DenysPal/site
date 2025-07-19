@@ -2151,15 +2151,16 @@ async def universal_back_handler(message: types.Message):
     user_step[uid] = None
     await message.answer("Возврат в главное меню.", reply_markup=kb)
 
+def back_from_edit_places_choose_filter(m):
+    uid = m.from_user.id
+    step, _ = get_user_state(uid)
+    return step and step.startswith('edit_places_choose_') and m.text and m.text.lower() == 'назад'
 
-
-
-# --- Хендлер для 'Назад' у edit_places_choose_ ---
-@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_choose_') and m.text and m.text.lower() == 'назад')
+@router.message(back_from_edit_places_choose_filter)
 @ban_guard
 async def back_from_edit_places_choose(message: types.Message):
     print("==> back_from_edit_places_choose")
-    state = user_step.get(message.from_user.id, '')
+    state, _ = get_user_state(message.from_user.id)
     page_code = state.replace('edit_places_choose_', '')
     kb = ReplyKeyboardMarkup(
         keyboard=[
@@ -2171,10 +2172,14 @@ async def back_from_edit_places_choose(message: types.Message):
         resize_keyboard=True
     )
     await message.answer(f"Настройки для ссылки ?page={page_code}", reply_markup=kb)
-    user_step[message.chat.id] = f'edit_link_menu_{page_code}'
+    set_user_state(message.chat.id, f'edit_link_menu_{page_code}')
 
-# --- Хендлер для 'Назад' у edit_link_menu_ ---
-@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_link_menu_') and m.text and m.text.lower() == 'назад')
+def back_from_edit_link_menu_filter(m):
+    uid = m.from_user.id
+    step, _ = get_user_state(uid)
+    return step and step.startswith('edit_link_menu_') and m.text and m.text.lower() == 'назад'
+
+@router.message(back_from_edit_link_menu_filter)
 @ban_guard
 async def back_from_edit_link_menu(message: types.Message):
     print("==> back_from_edit_link_menu")
@@ -2186,10 +2191,14 @@ async def back_from_edit_link_menu(message: types.Message):
         resize_keyboard=True
     )
     await message.answer("Последние 50 ссылок. Выберите ссылку:", reply_markup=kb)
-    user_step[message.chat.id] = 'choose_link_to_edit'
+    set_user_state(message.chat.id, 'choose_link_to_edit')
 
-# --- Хендлер для 'Назад' у choose_link_to_edit ---
-@router.message(StepFilter('choose_link_to_edit') and lambda m: m.text and m.text.lower() == 'назад')
+def back_from_choose_link_to_edit_filter(m):
+    uid = m.from_user.id
+    step, _ = get_user_state(uid)
+    return step == 'choose_link_to_edit' and m.text and m.text.lower() == 'назад'
+
+@router.message(back_from_choose_link_to_edit_filter)
 @ban_guard
 async def back_from_choose_link_to_edit(message: types.Message):
     print("==> back_from_choose_link_to_edit")
@@ -2202,16 +2211,20 @@ async def back_from_choose_link_to_edit(message: types.Message):
         resize_keyboard=True
     )
     await message.answer("Выберите действие:", reply_markup=kb)
-    user_step[message.chat.id] = 'links_menu'
+    set_user_state(message.chat.id, 'links_menu')
 
-# --- Хендлер для 'Назад' у links_menu ---
-@router.message(StepFilter('links_menu') and lambda m: m.text and m.text.lower() == 'назад')
+def back_from_links_menu_filter(m):
+    uid = m.from_user.id
+    step, _ = get_user_state(uid)
+    return step == 'links_menu' and m.text and m.text.lower() == 'назад'
+
+@router.message(back_from_links_menu_filter)
 @ban_guard
 async def back_from_links_menu(message: types.Message):
     print("==> back_from_links_menu")
     kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
     await message.answer("Главное меню:", reply_markup=kb)
-    user_step[message.chat.id] = None
+    clear_user_state(message.chat.id)
 
 # --- Універсальний хендлер для 'Назад', який не спрацьовує у вкладених меню ---
 @router.message(
