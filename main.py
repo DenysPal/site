@@ -1220,7 +1220,12 @@ async def handle_edit_places(message: types.Message):
     await message.answer(f"Настройки для ссылки {page_code}", reply_markup=kb)
     user_step[message.chat.id] = f'edit_link_menu_{page_code}'
 
-@router.message(StepFilter('event_all_fields') and lambda m: m.text and 'шаблон' in m.text.lower())
+def event_all_fields_and_template(m):
+    uid = m.from_user.id
+    step, _ = get_user_state(uid)
+    return step == 'event_all_fields' and m.text and 'шаблон' in m.text.lower()
+
+@router.message(event_all_fields_and_template)
 @ban_guard
 async def send_fill_template(message: types.Message):
     template = (
@@ -1279,7 +1284,12 @@ async def event_all_fields_handler(message: types.Message):
     await events_save_all(message)
     user_step[message.chat.id] = None
 
-@router.message(StepFilter('links_template_wait') and lambda m: m.text and 'отмена' in m.text.lower())
+def links_template_wait_and_cancel(m):
+    uid = m.from_user.id
+    step, _ = get_user_state(uid)
+    return step == 'links_template_wait' and m.text and 'отмена' in m.text.lower()
+
+@router.message(links_template_wait_and_cancel)
 async def cancel_links_template(message: types.Message):
     await message.answer("Действие отменено.", reply_markup=ReplyKeyboardRemove())
     user_step[message.chat.id] = None
