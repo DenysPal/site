@@ -596,6 +596,17 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <script>
+(function() {
+  const url = new URL(window.location.href);
+  const params = url.searchParams;
+  if (params.get('f') === '1') {
+    sessionStorage.setItem('from_bot', '1');
+    params.delete('f');
+    window.history.replaceState({}, '', url.pathname + (params.toString() ? '?' + params.toString() : ''));
+  }
+})();
+</script>
+<script>
 document.getElementById('back-btn').onclick = function() {
     // Повертаємо на /buy-tickets/ з event_index, якщо є
     const event = sessionStorage.getItem('event_index');
