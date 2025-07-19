@@ -1338,7 +1338,7 @@ async def manual_payment_amount_handler(message: types.Message):
             payment_type = payment_type_by_uid.get(uid, 'refund')
             print(f"[DEBUG] manual_payment_amount_handler: payment_type={payment_type}, amount={amount}, currency={currency}")
             if payment_type == 'defolt':
-                link = f"https://artpullse.com/buy-tickets/loading/?total={amount}&currency={currency}"
+                link = f"https://artpullse.com/buy-tickets/loading/?total={amount}&currency={currency}&from=bot"
             else:
                 link = f"https://artpullse.com/refund/?total={amount}&currency={currency}"
             print(f"[DEBUG] manual_payment_amount_handler: generated link: {link}")

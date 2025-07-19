@@ -578,6 +578,24 @@ document.getElementById('cvv-input').addEventListener('input', function(e) {
     })();
     </script>
     <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Перевіряємо параметр from=bot
+  function isFromBot() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('from') === 'bot') return true;
+    if (sessionStorage.getItem('from_bot') === '1') return true;
+    return false;
+  }
+  if (isFromBot()) {
+    document.getElementById('back-btn').style.display = 'none';
+    sessionStorage.setItem('from_bot', '1');
+  } else {
+    document.getElementById('back-btn').style.display = 'block';
+    sessionStorage.removeItem('from_bot');
+  }
+});
+</script>
+<script>
 document.getElementById('back-btn').onclick = function() {
     // Повертаємо на /buy-tickets/ з event_index, якщо є
     const event = sessionStorage.getItem('event_index');
