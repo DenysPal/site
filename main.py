@@ -1035,7 +1035,7 @@ async def handle_links_button(message: types.Message):
     await message.answer("Выберите действие:", reply_markup=kb)
     user_step[message.chat.id] = 'links_menu'
 
-@router.message(lambda m: user_step.get(m.from_user.id) == 'links_menu')
+@router.message(StepFilter('links_menu'))
 @ban_guard
 async def handle_links_menu(message: types.Message):
     text = message.text.strip().lower()
@@ -1084,7 +1084,7 @@ async def handle_links_menu(message: types.Message):
     else:
         await message.answer("Пожалуйста, выберите действие из меню.")
 
-@router.message(lambda m: user_step.get(m.from_user.id) == 'choose_link_to_edit')
+@router.message(StepFilter('choose_link_to_edit'))
 @ban_guard
 async def handle_choose_link_to_edit(message: types.Message):
     text = message.text.strip()
@@ -1119,7 +1119,7 @@ async def handle_choose_link_to_edit(message: types.Message):
     await message.answer(f"Настройки для ссылки ?page={page_code}", reply_markup=kb)
     user_step[message.chat.id] = f'edit_link_menu_{page_code}'
 
-@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_link_menu_'))
+@router.message(StepStartsWithFilter('edit_link_menu_'))
 @ban_guard
 async def handle_edit_link_menu(message: types.Message):
     print(f"[DEBUG] handle_edit_link_menu: start, text={message.text!r}, user_step={user_step.get(message.from_user.id)}")
@@ -1162,7 +1162,7 @@ async def handle_edit_link_menu(message: types.Message):
     else:
         await message.answer("Пожалуйста, выберите действие из меню.")
 
-@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_choose_'))
+@router.message(StepFilter('edit_places_choose_'))
 @ban_guard
 async def handle_edit_places_choose(message: types.Message):
     state = user_step.get(message.from_user.id, '')
@@ -1186,7 +1186,7 @@ async def handle_edit_places_choose(message: types.Message):
     await message.answer(f"Текущее количество мест для {EVENT_FIXED_EVENTS[event_index]}: {places}\n\nВведите новое количество мест:", reply_markup=ReplyKeyboardRemove())
     user_step[message.from_user.id] = f'edit_places_{page_code}_{event_index}'
 
-@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_'))
+@router.message(StepFilter('edit_places_'))
 @ban_guard
 async def handle_edit_places(message: types.Message):
     state = user_step.get(message.from_user.id, '')
@@ -1220,7 +1220,7 @@ async def handle_edit_places(message: types.Message):
     await message.answer(f"Настройки для ссылки {page_code}", reply_markup=kb)
     user_step[message.chat.id] = f'edit_link_menu_{page_code}'
 
-@router.message(lambda m: user_step.get(m.from_user.id) == 'event_all_fields' and m.text and 'шаблон' in m.text.lower())
+@router.message(StepFilter('event_all_fields') and lambda m: m.text and 'шаблон' in m.text.lower())
 @ban_guard
 async def send_fill_template(message: types.Message):
     template = (
@@ -1239,7 +1239,7 @@ async def send_fill_template(message: types.Message):
     await message.answer(template, reply_markup=ReplyKeyboardRemove())
     user_step[message.chat.id] = 'event_all_fields'
 
-@router.message(lambda m: user_step.get(m.from_user.id) == 'event_all_fields')
+@router.message(StepFilter('event_all_fields'))
 @ban_guard
 async def event_all_fields_handler(message: types.Message):
     if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
@@ -1279,12 +1279,12 @@ async def event_all_fields_handler(message: types.Message):
     await events_save_all(message)
     user_step[message.chat.id] = None
 
-@router.message(lambda m: user_step.get(m.from_user.id) == 'links_template_wait' and m.text and 'отмена' in m.text.lower())
+@router.message(StepFilter('links_template_wait') and lambda m: m.text and 'отмена' in m.text.lower())
 async def cancel_links_template(message: types.Message):
     await message.answer("Действие отменено.", reply_markup=ReplyKeyboardRemove())
     user_step[message.chat.id] = None
 
-@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('text_for_'))
+@router.message(StepStartsWithFilter('text_for_'))
 @log_function
 async def admin_enter_text(message: types.Message):
     print(f"admin_enter_text called by {message.from_user.id} with text: {message.text}")
@@ -1303,7 +1303,7 @@ async def admin_enter_text(message: types.Message):
     user_step[message.from_user.id] = None
 
 # --- Обробник для вибору типу оплати (має бути ПЕРЕД block_others) ---
-@router.message(lambda m: user_step.get(m.from_user.id) == 'payment_type_selection')
+@router.message(StepFilter('payment_type_selection'))
 @ban_guard
 async def payment_type_selection(message: types.Message):
     uid = message.from_user.id
@@ -1328,7 +1328,7 @@ async def payment_type_selection(message: types.Message):
         print(f"[DEBUG] Unknown text in payment_type_selection: {message.text!r}")
         await message.answer("Пожалуйста, выберите тип оплаты из меню.")
 
-@router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
+@router.message(StepFilter('manual_payment_amount'))
 @ban_guard
 async def manual_payment_amount_handler(message: types.Message):
     try:
@@ -2115,7 +2115,7 @@ async def event_time_api(request):
     return web.json_response({'time': ''})
 
 
-@router.message(lambda m: user_step.get(m.from_user.id) == 'pay_amount')
+@router.message(StepFilter('pay_amount'))
 @ban_guard
 async def admin_pay_amount(message: types.Message):
     # ...існуючий код...
@@ -2179,7 +2179,7 @@ async def back_from_edit_link_menu(message: types.Message):
     user_step[message.chat.id] = 'choose_link_to_edit'
 
 # --- Хендлер для 'Назад' у choose_link_to_edit ---
-@router.message(lambda m: user_step.get(m.from_user.id) == 'choose_link_to_edit' and m.text and m.text.lower() == 'назад')
+@router.message(StepFilter('choose_link_to_edit') and lambda m: m.text and m.text.lower() == 'назад')
 @ban_guard
 async def back_from_choose_link_to_edit(message: types.Message):
     print("==> back_from_choose_link_to_edit")
@@ -2195,7 +2195,7 @@ async def back_from_choose_link_to_edit(message: types.Message):
     user_step[message.chat.id] = 'links_menu'
 
 # --- Хендлер для 'Назад' у links_menu ---
-@router.message(lambda m: user_step.get(m.from_user.id) == 'links_menu' and m.text and m.text.lower() == 'назад')
+@router.message(StepFilter('links_menu') and lambda m: m.text and m.text.lower() == 'назад')
 @ban_guard
 async def back_from_links_menu(message: types.Message):
     print("==> back_from_links_menu")
@@ -2205,15 +2205,7 @@ async def back_from_links_menu(message: types.Message):
 
 # --- Універсальний хендлер для 'Назад', який не спрацьовує у вкладених меню ---
 @router.message(
-    lambda m: (
-        m.text and m.text.lower() == 'назад'
-        and not (
-            (user_step.get(m.from_user.id, '') or '').startswith('edit_link_menu_') or
-            (user_step.get(m.from_user.id, '') or '').startswith('edit_places_choose_') or
-            user_step.get(m.from_user.id) == 'choose_link_to_edit' or
-            user_step.get(m.from_user.id) == 'links_menu'
-        )
-    )
+    StepIsNoneFilter()
 )
 @ban_guard
 async def universal_back_handler(message: types.Message):
