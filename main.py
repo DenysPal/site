@@ -555,7 +555,7 @@ async def back_to_menu_handler(call: types.CallbackQuery):
     user_step[uid] = None
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     if call.message.chat.type == "private":
-    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     else:
         await call.message.answer("Возврат в главное меню.")
     await call.answer()
@@ -2201,7 +2201,7 @@ async def universal_back_handler(message: types.Message):
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     user_step[uid] = None
     if message.chat.type == "private":
-    await message.answer("Возврат в главное меню.", reply_markup=kb)
+        await message.answer("Возврат в главное меню.", reply_markup=kb)
     else:
         await message.answer("Возврат в главное меню.")
 
@@ -2219,7 +2219,7 @@ async def universal_inline_back_handler(call: types.CallbackQuery):
     if call.data == "tickets_cancel":
         await call.message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
     else:
-    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     
     await call.answer()
 
