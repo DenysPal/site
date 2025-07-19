@@ -533,6 +533,7 @@ async def process_decision(call: types.CallbackQuery):
 @ban_guard
 async def show_profile(message: types.Message):
     uid = message.from_user.id
+    set_user_state(uid, 'menu', {})
     db_user = get_user(uid)
     nickname = db_user['username'] or db_user['form_json'].get('username') or f"{uid}"
     join_date = db_user['last_submit'][:10] if db_user and db_user['last_submit'] else "-"
@@ -560,7 +561,6 @@ async def show_profile(message: types.Message):
     await message.answer(text, reply_markup=profile_inline_kb, parse_mode='HTML')
     await message.answer("Повернутися в головне меню:", reply_markup=back_inline_kb)
     clear_user_state(uid)
-    set_user_state(uid, 'menu', {})
 
 @router.callback_query(lambda c: c.data == "back_to_menu")
 async def back_to_menu_handler(call: types.CallbackQuery):
@@ -1024,7 +1024,8 @@ links_template_kb = ReplyKeyboardMarkup(
 @router.message(lambda m: m.text and 'ссылки' in m.text.lower() and (user_step.get(m.from_user.id) is None))
 @ban_guard
 async def handle_links_button(message: types.Message):
-    print("handle_links_button called")
+    uid = message.from_user.id
+    set_user_state(uid, 'links_menu', {})  # <-- Спочатку!
     kb = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="Создать ссылку")],
@@ -1035,7 +1036,6 @@ async def handle_links_button(message: types.Message):
     )
     await message.answer("Выберите действие:", reply_markup=kb)
     user_step[message.chat.id] = 'links_menu'
-    set_user_state(message.from_user.id, 'links_menu', {})
 
 @router.message(StepFilter('links_menu'))
 @ban_guard
