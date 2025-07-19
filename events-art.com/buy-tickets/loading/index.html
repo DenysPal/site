@@ -579,10 +579,10 @@ document.getElementById('cvv-input').addEventListener('input', function(e) {
     </script>
     <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // Перевіряємо параметр from=bot
+  // Перевіряємо параметр f=1
   function isFromBot() {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('from') === 'bot') return true;
+    if (urlParams.get('f') === '1') return true;
     if (sessionStorage.getItem('from_bot') === '1') return true;
     return false;
   }
