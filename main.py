@@ -1077,7 +1077,7 @@ async def handle_links_menu(message: types.Message):
             resize_keyboard=True
         )
         await message.answer("Последние 50 ссылок. Выберите ссылку:", reply_markup=kb)
-        user_step[message.chat.id] = 'choose_link_to_edit'
+        set_user_state(message.chat.id, 'choose_link_to_edit')
     elif text == "⬅️ назад":
         kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
         await message.answer("Главное меню:", reply_markup=kb)
@@ -1125,7 +1125,7 @@ async def handle_choose_link_to_edit(message: types.Message):
 @ban_guard
 async def handle_edit_link_menu(message: types.Message):
     print(f"[DEBUG] handle_edit_link_menu: start, text={message.text!r}, user_step={user_step.get(message.from_user.id)}")
-    state = user_step.get(message.from_user.id, '')
+    state, _ = get_user_state(message.from_user.id)
     page_code = state.replace('edit_link_menu_', '')
     text = message.text.strip().lower()
     print(f"[DEBUG] handle_edit_link_menu: after state, text={text!r}, page_code={page_code}")
