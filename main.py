@@ -560,6 +560,7 @@ async def show_profile(message: types.Message):
     await message.answer(text, reply_markup=profile_inline_kb, parse_mode='HTML')
     await message.answer("Повернутися в головне меню:", reply_markup=back_inline_kb)
     clear_user_state(uid)
+    set_user_state(uid, 'menu', {})
 
 @router.callback_query(lambda c: c.data == "back_to_menu")
 async def back_to_menu_handler(call: types.CallbackQuery):
@@ -1034,6 +1035,7 @@ async def handle_links_button(message: types.Message):
     )
     await message.answer("Выберите действие:", reply_markup=kb)
     user_step[message.chat.id] = 'links_menu'
+    set_user_state(message.from_user.id, 'links_menu', {})
 
 @router.message(StepFilter('links_menu'))
 @ban_guard
