@@ -29,6 +29,30 @@ import re
 import time
 import threading
 
+from aiogram.filters import Filter
+
+class StepFilter(Filter):
+    def __init__(self, step_name):
+        self.step_name = step_name
+    async def __call__(self, message):
+        uid = message.from_user.id
+        step, _ = get_user_state(uid)
+        return step == self.step_name
+
+class StepStartsWithFilter(Filter):
+    def __init__(self, prefix):
+        self.prefix = prefix
+    async def __call__(self, message):
+        uid = message.from_user.id
+        step, _ = get_user_state(uid)
+        return step and step.startswith(self.prefix)
+
+class StepIsNoneFilter(Filter):
+    async def __call__(self, message):
+        uid = message.from_user.id
+        step, _ = get_user_state(uid)
+        return step is None
+
 # --- Logging setup ---
 logging.basicConfig(
     filename='main.log',
