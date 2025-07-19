@@ -335,7 +335,7 @@ async def cmd_start(message: types.Message):
         elif db_user['status'] == 'approved':
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
             if message.chat.type == "private":
-            await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=kb)
+                await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=kb)
             else:
                 await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=ReplyKeyboardRemove())
             return
