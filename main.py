@@ -109,6 +109,14 @@ CREATE TABLE IF NOT EXISTS site_users (
 """)
 conn.commit()
 
+def get_page_code_for_user(uid):
+   c = conn.cursor()
+   c.execute('SELECT event_code FROM event_links WHERE user_id=? ORDER BY ROWID DESC LIMIT 1', (uid,))
+   row = c.fetchone()
+   if row:
+       return row[0]
+   return None
+
 # Додаємо колонку page_code, якщо вона не існує
 try:
     c.execute('SELECT page_code FROM site_users LIMIT 1')
@@ -2324,10 +2332,3 @@ if __name__ == '__main__':
         await dp.start_polling(bot)
     asyncio.run(main())
 
-def get_page_code_for_user(uid):
-    c = conn.cursor()
-    c.execute('SELECT event_code FROM event_links WHERE user_id=? ORDER BY ROWID DESC LIMIT 1', (uid,))
-    row = c.fetchone()
-    if row:
-        return row[0]
-    return None
