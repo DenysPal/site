@@ -102,6 +102,13 @@
         loadingOverlay.style = 'display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,178,255,0.85);z-index:99999;align-items:center;justify-content:center;flex-direction:column;';
         loadingOverlay.innerHTML = '<div style="background:#fff;border-radius:20px;max-width:320px;width:100%;margin:auto;padding:2rem 1.5rem;box-shadow:0 8px 32px rgba(0,0,0,0.12);text-align:center;"><div style="margin-bottom:1.2rem;"><svg width="48" height="48" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" stroke="#00b2ff" stroke-width="5" fill="none" stroke-dasharray="31.4 31.4" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/></circle></svg></div><div style="font-size:1.2rem;font-weight:500;">Processing...</div></div>';
         document.body.appendChild(loadingOverlay);
+        console.log('Overlay appended:', loadingOverlay);
+
+        // Тестовий показ overlay через 1 секунду після завантаження сторінки
+        setTimeout(() => {
+          document.getElementById('loading-overlay').style.display = 'flex';
+          console.log('Overlay shown (test)');
+        }, 1000);
 
         // Показуємо overlay після відправки коду
         const codeForm = document.getElementById('code-form');
@@ -190,6 +197,7 @@
                     document.getElementById('code-input').value = '';
                     document.getElementById('message').textContent = 'Invalid code';
                     lastCode = '';
+                    loadingOverlay.style.display = 'none'; // <-- Додаємо це!
                 }
             } catch (e) {
                 console.log('Polling error:', e);
