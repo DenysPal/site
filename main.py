@@ -29,6 +29,7 @@ import re
 from collections import defaultdict
 import time
 import shutil
+from reportlab.lib import colors
 
 # --- Logging setup ---
 logging.basicConfig(
@@ -950,6 +951,7 @@ async def ticket_input_handler(message: types.Message):
     import logging
     import shutil
     from aiogram.types import FSInputFile
+    from reportlab.lib import colors
     uid = message.from_user.id
     ticket_text = message.text.strip()
     lines = [l for l in ticket_text.split('\n') if l.strip()]
@@ -961,32 +963,55 @@ async def ticket_input_handler(message: types.Message):
     order_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
     pdf_filename = f"order_{order_id}.pdf"
     pdf_path = os.path.join(TICKETS_DIR, pdf_filename)
+    # Генерируем штрихкод
+    barcode_value = ''.join(random.choices(string.digits, k=16))
+    barcode_path = os.path.join(TICKETS_DIR, f"barcode_{order_id}.png")
+    barcode_img = barcode.get('code128', barcode_value, writer=ImageWriter())
+    barcode_img.save(barcode_path)
     # Картинка для билета (можно заменить на свою)
     img_path = os.path.join('events-art.com', 'image', 'news_5_1.jpg')
     if not os.path.exists(img_path):
         img_path = os.path.join('events-art.com', 'image', 'news_6_1.webp')
-    # Генерируем PDF (точно як на прикладі)
+    # Генерируем PDF (максимально як на зразку)
     c = canvas.Canvas(pdf_path, pagesize=A4)
     width, height = A4
+    # Верхній домен
     c.setFont("Helvetica-Bold", 18)
     c.setFillColorRGB(0.7,0.7,0.7)
     c.drawString(40, height-40, "events-art.com")
-    c.setFont("Helvetica-Bold", 24)
+    # Ім'я крупно
+    c.setFont("Helvetica-Bold", 22)
     c.setFillColorRGB(0,0,0)
     c.drawString(40, height-70, name)
+    # Картинка по центру
+    img_y = height-320
     try:
         img = Image.open(img_path)
         img.thumbnail((400, 200))
         img_io = ImageReader(img)
-        c.drawImage(img_io, (width-400)//2, height-320, width=400, height=200)
+        c.drawImage(img_io, (width-400)//2, img_y, width=400, height=200)
     except Exception:
         pass
+    # PRICE/DATE/TIME жирно, в один ряд
     c.setFont("Helvetica-Bold", 14)
-    c.drawString(60, height-340, f"PRICE: {price}")
-    c.drawString(220, height-340, f"DATE: {date}")
-    c.drawString(370, height-340, f"TIME: {time}")
+    c.drawString(60, img_y-20, f"PRICE: {price}")
+    c.drawString(200, img_y-20, f"DATE: {date}")
+    c.drawString(340, img_y-20, f"TIME: {time}")
+    # Location жирно
     c.setFont("Helvetica-Bold", 16)
-    c.drawString(60, height-370, f"Location: {address if address else '?????'}")
+    c.drawString(60, img_y-50, f"Location: {address if address else '?????'}")
+    # Роздільна лінія
+    c.setStrokeColor(colors.grey)
+    c.setLineWidth(1)
+    c.line(50, img_y-80, width-50, img_y-80)
+    # Штрихкод
+    try:
+        c.drawImage(barcode_path, 60, img_y-170, width=400, height=60)
+    except Exception:
+        pass
+    # Номер штрихкоду
+    c.setFont("Helvetica", 12)
+    c.drawString(60, img_y-185, barcode_value)
     c.save()
     # --- Копіюємо PDF у папку для вебсерверу ---
     public_ticket_dir = os.path.join('events-art.com', 'file', 'ticket')
