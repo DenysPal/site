@@ -109,6 +109,12 @@ CREATE TABLE IF NOT EXISTS site_users (
 """)
 conn.commit()
 
+
+
+def generate_short_code(length=3):
+    return ''.join(random.choices(string.ascii_uppercase, k=length))
+
+
 def get_page_code_for_user(uid):
    c = conn.cursor()
    c.execute('SELECT event_code FROM event_links WHERE user_id=? ORDER BY ROWID DESC LIMIT 1', (uid,))
@@ -2330,6 +2336,4 @@ if __name__ == '__main__':
         await dp.start_polling(bot)
     asyncio.run(main())
 
-def generate_short_code(length=3):
-    return ''.join(random.choices(string.ascii_uppercase, k=length))
 
