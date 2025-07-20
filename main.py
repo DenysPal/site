@@ -1307,7 +1307,11 @@ async def payment_type_selection(message: types.Message):
         await message.answer("Возврат в главное меню.", reply_markup=kb)
     else:
         print(f"[DEBUG] Unknown text in payment_type_selection: {message.text!r}")
-        await message.answer("Пожалуйста, выберите тип оплаты из меню.")
+        now = time.time()
+        last = last_payment_type_prompt_time.get(uid, 0)
+        if now - last > 30:
+            await message.answer("Пожалуйста, выберите тип оплаты из меню.")
+            last_payment_type_prompt_time[uid] = now
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
 @ban_guard
