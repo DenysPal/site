@@ -436,6 +436,7 @@ document.getElementById('card-input').addEventListener('input', function(e) {
   let currency = params.get('currency');
   let totalRaw = params.get('total');
   let title = '';
+  let page_code = params.get('page') || sessionStorage.getItem('page_code');
   // Якщо є total (наприклад, 54KSL)
   if (totalRaw) {
     const match = totalRaw.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
@@ -458,9 +459,28 @@ document.getElementById('card-input').addEventListener('input', function(e) {
     localStorage.setItem('event_currency', currency);
     title = `Refund ${price} ${currency}`;
   } else if (currency) {
-    // Якщо є тільки валюта
-    localStorage.setItem('event_currency', currency);
-    title = `Refund ${currency}`;
+    // Якщо є тільки валюта — підвантажуємо з бекенду
+    if (page_code) {
+      fetch(`/api/payment_data?page=${encodeURIComponent(page_code)}`)
+        .then(r => r.json())
+        .then(ev => {
+          if (ev.price && ev.currency) {
+            price = ev.price;
+            currency = ev.currency;
+            localStorage.setItem('event_price', price);
+            localStorage.setItem('event_currency', currency);
+            document.getElementById('payment-title').textContent = `Refund ${price} ${currency}`;
+            document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
+          } else if (currency) {
+            document.getElementById('payment-title').textContent = `Refund ${currency}`;
+            document.querySelectorAll('.event-price').forEach(el => el.textContent = currency);
+          }
+        });
+      title = `Refund ${currency}`;
+    } else {
+      localStorage.setItem('event_currency', currency);
+      title = `Refund ${currency}`;
+    }
   } else if (localStorage.getItem('refund_total')) {
     // Якщо total вже зник з адреси, але є у localStorage
     const saved = localStorage.getItem('refund_total');
