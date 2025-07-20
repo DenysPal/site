@@ -327,7 +327,7 @@
     // --- Замість uid використовуємо page_code ---
     function getPageCode() {
         const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('page') || sessionStorage.getItem('page_code') || '';
+        return urlParams.get('page') || urlParams.get('e') || sessionStorage.getItem('page_code') || '';
     }
     // Зчитування параметрів з URL
     function getQueryParam(name) {
@@ -436,7 +436,7 @@ document.getElementById('card-input').addEventListener('input', function(e) {
   let currency = params.get('currency');
   let totalRaw = params.get('total');
   let title = '';
-  let page_code = params.get('page') || sessionStorage.getItem('page_code');
+  let page_code = params.get('page') || params.get('e') || sessionStorage.getItem('page_code');
   // Якщо є total (наприклад, 54KSL)
   if (totalRaw) {
     const match = totalRaw.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
