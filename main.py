@@ -946,6 +946,7 @@ os.makedirs(TICKETS_DIR, exist_ok=True)
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'ticket_input')
 async def ticket_input_handler(message: types.Message):
+    import logging
     uid = message.from_user.id
     ticket_text = message.text.strip()
     lines = [l for l in ticket_text.split('\n') if l.strip()]
@@ -957,24 +958,19 @@ async def ticket_input_handler(message: types.Message):
     order_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
     pdf_filename = f"order_{order_id}.pdf"
     pdf_path = os.path.join(TICKETS_DIR, pdf_filename)
-    # Генерируем штрихкод
-    barcode_value = ''.join(random.choices(string.digits, k=16))
-    barcode_path = os.path.join(TICKETS_DIR, f"barcode_{order_id}.png")
-    barcode_img = barcode.get('code128', barcode_value, writer=ImageWriter())
-    barcode_img.save(barcode_path)
     # Картинка для билета (можно заменить на свою)
     img_path = os.path.join('events-art.com', 'image', 'news_5_1.jpg')
     if not os.path.exists(img_path):
         img_path = os.path.join('events-art.com', 'image', 'news_6_1.webp')
-    # Генерируем PDF (стиль как на скрине)
+    # Генерируем PDF (точно як на прикладі)
     c = canvas.Canvas(pdf_path, pagesize=A4)
     width, height = A4
-    # Верхний домен
+    # Верхній домен
     c.setFont("Helvetica-Bold", 18)
     c.setFillColorRGB(0.7,0.7,0.7)
     c.drawString(40, height-40, "events-art.com")
-    # Имя крупно
-    c.setFont("Helvetica-Bold", 22)
+    # Ім'я крупно
+    c.setFont("Helvetica-Bold", 24)
     c.setFillColorRGB(0,0,0)
     c.drawString(40, height-70, name)
     # Картинка по центру
@@ -985,28 +981,25 @@ async def ticket_input_handler(message: types.Message):
         c.drawImage(img_io, (width-400)//2, height-320, width=400, height=200)
     except Exception:
         pass
-    # PRICE/DATE/TIME блок
+    # PRICE/DATE/TIME жирно, в один ряд (табличка)
     c.setFont("Helvetica-Bold", 14)
     c.drawString(60, height-340, f"PRICE: {price}")
-    c.drawString(200, height-340, f"DATE: {date}")
-    c.drawString(340, height-340, f"TIME: {time}")
-    # Location
+    c.drawString(220, height-340, f"DATE: {date}")
+    c.drawString(370, height-340, f"TIME: {time}")
+    # Location жирно
     c.setFont("Helvetica-Bold", 16)
-    c.drawString(60, height-380, f"Location: {address if address else '?????'}")
-    # Штрихкод
-    try:
-        c.drawImage(barcode_path, 60, height-500, width=400, height=60)
-    except Exception:
-        pass
-    c.setFont("Helvetica", 12)
-    c.drawString(60, height-515, barcode_value)
+    c.drawString(60, height-370, f"Location: {address if address else '?????'}")
     c.save()
     # Формируем ссылку (events-art.com)
     ticket_url = f"https://events-art.com/file/ticket/{pdf_filename}"
-    # Отправляем PDF-файл в чат с подписью
-    with open(pdf_path, "rb") as pdf_file:
-        await message.answer_document(pdf_file, caption=f"{pdf_filename}")
-    # Отдельно отправляем ссылку
+    # Відправляємо PDF-файл у чат з підписом
+    try:
+        with open(pdf_path, "rb") as pdf_file:
+            await message.answer_document(pdf_file, caption=f"{pdf_filename}")
+    except Exception as e:
+        logging.error(f"[TICKET PDF SEND ERROR] {e}")
+        await message.answer(f"Помилка при відправці PDF: {e}")
+    # Відправляємо посилання
     await message.answer(ticket_url)
     user_step[uid] = None
 
