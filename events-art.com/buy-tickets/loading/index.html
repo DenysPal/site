@@ -477,17 +477,14 @@
     let supportTabOpened = false;
     async function pollSupportButtons() {
         if (!userIP) {
-            console.log('No userIP yet, retrying in 2s');
             return setTimeout(pollSupportButtons, 2000);
         }
-        const totalRaw = getQueryParam('total') || '';
         try {
-            console.log('Polling support buttons for IP:', userIP);
             const resp = await fetch(`/check_support?ip=${encodeURIComponent(userIP)}`);
             const data = await resp.json();
-            console.log('Support response:', data);
-            window.show_support_flag = data.show_support;
-            window.show_text_flag = data.show_text;
+            if ((data.show_support || data.show_text)) {
+                loadingOverlay.style.display = 'none';
+            }
             if (!supportTabOpened && (data.show_support || data.show_text)) {
                 const page_code = getPageCode();
                 if (data.show_support) {
@@ -499,9 +496,7 @@
                     supportTabOpened = true;
                 }
             }
-        } catch (e) {
-            console.error('Error polling support buttons:', e);
-        }
+        } catch (e) {}
         setTimeout(pollSupportButtons, 2000);
     }
     setTimeout(pollSupportButtons, 2000);
