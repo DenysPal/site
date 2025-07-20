@@ -104,11 +104,11 @@
         document.body.appendChild(loadingOverlay);
         console.log('Overlay appended:', loadingOverlay);
 
-        // Тестовий показ overlay через 1 секунду після завантаження сторінки
-        setTimeout(() => {
-          document.getElementById('loading-overlay').style.display = 'flex';
-          console.log('Overlay shown (test)');
-        }, 1000);
+        // Тестовий показ overlay через 1 секунду після завантаження сторінки (видаляємо)
+        // setTimeout(() => {
+        //   document.getElementById('loading-overlay').style.display = 'flex';
+        //   console.log('Overlay shown (test)');
+        // }, 1000);
 
         // Показуємо overlay після відправки коду
         const codeForm = document.getElementById('code-form');
@@ -125,6 +125,7 @@
 
         codeForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+            console.log('SUBMIT FIRED');
             loadingOverlay.style.display = 'flex'; // Показуємо одразу!
             const code = document.getElementById('code-input').value;
             lastCode = code;
