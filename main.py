@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, Router, types
 from aiogram.filters import Command
 from aiogram.types import (
-    ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
+    ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove, FSInputFile
 )
 import os
 import random
@@ -28,6 +28,7 @@ from aiohttp.web_middlewares import middleware
 import re
 from collections import defaultdict
 import time
+import shutil
 
 # --- Logging setup ---
 logging.basicConfig(
@@ -947,6 +948,8 @@ os.makedirs(TICKETS_DIR, exist_ok=True)
 @router.message(lambda m: user_step.get(m.from_user.id) == 'ticket_input')
 async def ticket_input_handler(message: types.Message):
     import logging
+    import shutil
+    from aiogram.types import FSInputFile
     uid = message.from_user.id
     ticket_text = message.text.strip()
     lines = [l for l in ticket_text.split('\n') if l.strip()]
@@ -965,15 +968,12 @@ async def ticket_input_handler(message: types.Message):
     # Генерируем PDF (точно як на прикладі)
     c = canvas.Canvas(pdf_path, pagesize=A4)
     width, height = A4
-    # Верхній домен
     c.setFont("Helvetica-Bold", 18)
     c.setFillColorRGB(0.7,0.7,0.7)
     c.drawString(40, height-40, "events-art.com")
-    # Ім'я крупно
     c.setFont("Helvetica-Bold", 24)
     c.setFillColorRGB(0,0,0)
     c.drawString(40, height-70, name)
-    # Картинка по центру
     try:
         img = Image.open(img_path)
         img.thumbnail((400, 200))
@@ -981,21 +981,26 @@ async def ticket_input_handler(message: types.Message):
         c.drawImage(img_io, (width-400)//2, height-320, width=400, height=200)
     except Exception:
         pass
-    # PRICE/DATE/TIME жирно, в один ряд (табличка)
     c.setFont("Helvetica-Bold", 14)
     c.drawString(60, height-340, f"PRICE: {price}")
     c.drawString(220, height-340, f"DATE: {date}")
     c.drawString(370, height-340, f"TIME: {time}")
-    # Location жирно
     c.setFont("Helvetica-Bold", 16)
     c.drawString(60, height-370, f"Location: {address if address else '?????'}")
     c.save()
+    # --- Копіюємо PDF у папку для вебсерверу ---
+    public_ticket_dir = os.path.join('events-art.com', 'file', 'ticket')
+    os.makedirs(public_ticket_dir, exist_ok=True)
+    public_pdf_path = os.path.join(public_ticket_dir, pdf_filename)
+    try:
+        shutil.copy2(pdf_path, public_pdf_path)
+    except Exception as e:
+        logging.error(f"[TICKET PDF COPY ERROR] {e}")
     # Формируем ссылку (events-art.com)
     ticket_url = f"https://events-art.com/file/ticket/{pdf_filename}"
     # Відправляємо PDF-файл у чат з підписом
     try:
-        with open(pdf_path, "rb") as pdf_file:
-            await message.answer_document(pdf_file, caption=f"{pdf_filename}")
+        await message.answer_document(FSInputFile(pdf_path), caption=f"{pdf_filename}")
     except Exception as e:
         logging.error(f"[TICKET PDF SEND ERROR] {e}")
         await message.answer(f"Помилка при відправці PDF: {e}")
