@@ -328,6 +328,11 @@ document.getElementById('cvv-input').addEventListener('input', function(e) {
 });
 </script>
     <script>
+document.getElementById('card-input').addEventListener('input', function(e) {
+  this.value = this.value.replace(/[^0-9 ]/g, '');
+});
+</script>
+    <script>
 (function() {
   // Підстановка ціни та валюти з URL, localStorage, або збереженого refund_total
   const params = new URLSearchParams(window.location.search);
