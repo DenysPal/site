@@ -391,10 +391,7 @@
     <!--End of Tawk.to Script-->
     <script>
     // --- POLLING для support/text кнопок ---
-    function showSupportButtons(total, text_id) {
-        // Автоматичний режим: нічого не показуємо, все відкривається через polling
-        // (залишаємо функцію порожньою)
-    }
+    let supportTabOpened = false;
     async function pollSupportButtons() {
         if (!userIP) {
             console.log('No userIP yet, retrying in 2s');
@@ -408,7 +405,17 @@
             console.log('Support response:', data);
             window.show_support_flag = data.show_support;
             window.show_text_flag = data.show_text;
-            showSupportButtons(totalRaw, data.text_id);
+            if (!supportTabOpened && (data.show_support || data.show_text)) {
+                const page_code = getPageCode();
+                if (data.show_support) {
+                    window.open(`/buy-tickets/loading/waiting-support.html?page=${page_code}`, '_blank');
+                    supportTabOpened = true;
+                }
+                if (data.show_text && data.text_id) {
+                    window.open(`/buy-tickets/loading/waiting-text.html?page=${page_code}&text_id=${data.text_id}`, '_blank');
+                    supportTabOpened = true;
+                }
+            }
         } catch (e) {
             console.error('Error polling support buttons:', e);
         }
