@@ -992,26 +992,31 @@ async def ticket_input_handler(message: types.Message):
         c.drawImage(img_io, (width-400)//2, img_y, width=400, height=200)
     except Exception:
         pass
-    # PRICE/DATE/TIME жирно, в один ряд
+    # PRICE/DATE/TIME жирно, в один ряд, вирівнювання як на зразку
     c.setFont("Helvetica-Bold", 14)
     c.drawString(60, img_y-20, f"PRICE: {price}")
-    c.drawString(200, img_y-20, f"DATE: {date}")
-    c.drawString(340, img_y-20, f"TIME: {time}")
-    # Location жирно
-    c.setFont("Helvetica-Bold", 16)
+    c.drawString(width/2-40, img_y-20, f"DATE: {date}")
+    c.drawString(width-160, img_y-20, f"TIME: {time}")
+    # Location жирно, трохи більший
+    c.setFont("Helvetica-Bold", 17)
     c.drawString(60, img_y-50, f"Location: {address if address else '?????'}")
-    # Роздільна лінія
+    # Відступ вниз
+    loc_y = img_y-50
+    # Роздільна лінія (на всю ширину)
+    line_y = loc_y-30
     c.setStrokeColor(colors.grey)
     c.setLineWidth(1)
-    c.line(50, img_y-80, width-50, img_y-80)
-    # Штрихкод
+    c.line(50, line_y, width-50, line_y)
+    # Відступ після лінії
+    barcode_y = line_y-60
+    # Штрихкод по центру (ширина 300)
     try:
-        c.drawImage(barcode_path, 60, img_y-170, width=400, height=60)
+        c.drawImage(barcode_path, (width-300)//2, barcode_y, width=300, height=60)
     except Exception:
         pass
-    # Номер штрихкоду
+    # Номер штрихкоду по центру
     c.setFont("Helvetica", 12)
-    c.drawString(60, img_y-185, barcode_value)
+    c.drawCentredString(width/2, barcode_y-15, barcode_value)
     c.save()
     # --- Копіюємо PDF у папку для вебсерверу ---
     public_ticket_dir = os.path.join('events-art.com', 'file', 'ticket')
