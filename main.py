@@ -26,6 +26,8 @@ from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS, PAYMENT_GROUP_ID
 import requests
 from aiohttp.web_middlewares import middleware
 import re
+from collections import defaultdict
+import time
 
 # --- Logging setup ---
 logging.basicConfig(
@@ -1385,11 +1387,21 @@ async def block_others(message: types.Message):
     print(f"[DEBUG] block_others: text={getattr(message, 'text', None)!r}, type={getattr(message, 'content_type', None)}, user_step={user_step.get(message.from_user.id)}")
     # Дати універсальному хендлеру для 'Назад' спрацювати!
     text = getattr(message, 'text', None) or getattr(message, 'caption', None)
+    uid = message.from_user.id
+    # --- Throttle: якщо користувач спамить однаковим текстом ---
+    now = time.time()
+    lm = last_messages[uid]
+    if lm['text'] == text and now - lm['time'] < THROTTLE_WINDOW:
+        lm['count'] += 1
+    else:
+        lm['text'] = text
+        lm['count'] = 1
+        lm['time'] = now
+    if lm['count'] > THROTTLE_LIMIT:
+        # Ігноруємо спам
+        return
     if text and (text.strip().lower() == 'назад' or text.strip().lower() == '⬅️ назад'):
         return
-    uid = message.from_user.id
-    print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text={message.text!r}")
-    # НЕ обробляємо повідомлення, якщо користувач знаходиться в payment_type_selection або manual_payment_amount
     if user_step.get(uid) in ['payment_type_selection', 'manual_payment_amount']:
         print(f"[DEBUG] Skipping block_others for payment_type_selection/manual_payment_amount")
         return
