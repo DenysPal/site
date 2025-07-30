@@ -400,15 +400,29 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             
             flag = SUPPORT_FLAGS.get(ip, {}) if ip else {}
             print(f"[check_support] IP: {ip}, flags: {flag}")
+            
+            # ВАЖНО: Проверяем флаг и помечаем как использованный
+            response_data = {
+                'show_support': bool(flag.get('support') and not flag.get('used', True)),
+                'show_text': bool(flag.get('text_id') and not flag.get('used', True)),
+                'text_id': flag.get('text_id', '') if not flag.get('used', True) else ''
+            }
+            
+            # Помечаем флаг как использованный или удаляем
+            if flag.get('support') or flag.get('text_id'):
+                if not flag.get('used', True):
+                    # Помечаем как использованный
+                    SUPPORT_FLAGS[ip] = {**flag, 'used': True}
+                    print(f"[check_support] Flag marked as used for IP: {ip}")
+                else:
+                    # Удаляем использованный флаг
+                    del SUPPORT_FLAGS[ip]
+                    print(f"[check_support] Used flag cleared for IP: {ip}")
+            
+            print(f"[check_support] Response: {response_data}")
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
-            response_data = {
-                'show_support': bool(flag.get('support')),
-                'show_text': bool(flag.get('text_id')),
-                'text_id': flag.get('text_id', '')
-            }
-            print(f"[check_support] Response: {response_data}")
             self.wfile.write(json.dumps(response_data).encode('utf-8'))
             return
         if self.path.startswith('/reset_support_flag'):
@@ -424,12 +438,21 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             page_code = qs.get('page_code', [None])[0]
             print(f'[check_push] page_code: {page_code}, flag: {PUSH_FLAGS.get(page_code)}')
             if page_code and page_code in PUSH_FLAGS:
-                # Сбрасываем флаг после использования (только один раз)
-                del PUSH_FLAGS[page_code]
-                print(f'[check_push] Push flag used and cleared for page_code: {page_code}')
-                self.send_response(200)
-                self.end_headers()
-                self.wfile.write(b'true')
+                flag_data = PUSH_FLAGS[page_code]
+                if isinstance(flag_data, dict) and not flag_data.get('used', True):
+                    # Помечаем как использованный
+                    PUSH_FLAGS[page_code] = {'used': True}
+                    print(f'[check_push] Push flag used for page_code: {page_code}')
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'true')
+                else:
+                    # Удаляем использованный флаг
+                    del PUSH_FLAGS[page_code]
+                    print(f'[check_push] Push flag cleared for page_code: {page_code}')
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'false')
             else:
                 self.send_response(200)
                 self.end_headers()
@@ -752,10 +775,10 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 print(f"[set_support_flag] Cleared all old support flags")
                 
                 if ip and flag_type == 'support':
-                    SUPPORT_FLAGS[ip] = {'support': True}
+                    SUPPORT_FLAGS[ip] = {'support': True, 'used': False}
                     print(f"[set_support_flag] Set support flag ONLY for IP: {ip}")
                 elif ip and flag_type == 'text' and text_id:
-                    SUPPORT_FLAGS[ip] = {'text_id': text_id}
+                    SUPPORT_FLAGS[ip] = {'text_id': text_id, 'used': False}
                     print(f"[set_support_flag] Set text flag ONLY for IP: {ip} with text_id: {text_id}")
                 self.send_response(200)
                 self.end_headers()
@@ -826,7 +849,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     PUSH_FLAGS.clear()
                     print(f'[set_push_flag] Cleared all old push flags')
                     
-                    PUSH_FLAGS[page_code] = True
+                    PUSH_FLAGS[page_code] = {'used': False}
                     print(f'[set_push_flag] Set push flag ONLY for page_code: {page_code}')
                     self.send_response(200)
                     self.end_headers()
