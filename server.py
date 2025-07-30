@@ -86,6 +86,33 @@ PUSH_FLAGS = {}
 # Глобальные переменные для флагов
 USER_SESSIONS = {}  # ip: timestamp для отслеживания сессий
 
+def clear_old_flags():
+    """Очищает старые флаги для неактивных пользователей"""
+    current_time = time.time()
+    expired_ips = []
+    
+    # Очищаем старые сессии
+    for ip, timestamp in USER_SESSIONS.items():
+        if current_time - timestamp > 300:  # 5 минут
+            expired_ips.append(ip)
+    
+    # Удаляем старые сессии
+    for ip in expired_ips:
+        del USER_SESSIONS[ip]
+        if ip in SUPPORT_FLAGS:
+            del SUPPORT_FLAGS[ip]
+            print(f"[clear_old_flags] Cleared expired session and flags for IP: {ip}")
+    
+    # Очищаем push флаги старше 5 минут
+    expired_pages = []
+    for page_code, timestamp in PUSH_FLAGS.items():
+        if isinstance(timestamp, (int, float)) and current_time - timestamp > 300:
+            expired_pages.append(page_code)
+    
+    for page_code in expired_pages:
+        del PUSH_FLAGS[page_code]
+        print(f"[clear_old_flags] Cleared expired push flag for page_code: {page_code}")
+
 # --- Глобальний флаг для платіжки ---
 PAYMENT_DISABLED = False
 
@@ -349,17 +376,24 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps({'text': text}).encode('utf-8'))
             return
         if self.path.startswith('/check_support'):
+            # Очищаем старые флаги
+            clear_old_flags()
+            
             ip = qs.get('ip', [None])[0]
             current_time = time.time()
             
-            # Проверяем, новый ли это пользователь (сессия старше 5 минут)
+            # Сбрасываем флаги для новых пользователей (если IP не был активен в последние 5 минут)
             if ip in USER_SESSIONS:
                 session_age = current_time - USER_SESSIONS[ip]
                 if session_age > 300:  # 5 минут
-                    # Сбрасываем флаги для нового пользователя
                     if ip in SUPPORT_FLAGS:
                         del SUPPORT_FLAGS[ip]
                         print(f"[check_support] Reset flags for new user session: {ip}")
+            else:
+                # Если это первый раз для этого IP, очищаем старые флаги
+                if ip in SUPPORT_FLAGS:
+                    del SUPPORT_FLAGS[ip]
+                    print(f"[check_support] First time for IP, cleared flags: {ip}")
             
             # Обновляем время сессии
             USER_SESSIONS[ip] = current_time
@@ -390,8 +424,9 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             page_code = qs.get('page_code', [None])[0]
             print(f'[check_push] page_code: {page_code}, flag: {PUSH_FLAGS.get(page_code)}')
             if page_code and page_code in PUSH_FLAGS:
-                # Сбрасываем флаг после использования
+                # Сбрасываем флаг после использования (только один раз)
                 del PUSH_FLAGS[page_code]
+                print(f'[check_push] Push flag used and cleared for page_code: {page_code}')
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b'true')
@@ -709,24 +744,19 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 text_id = data.get('text_id')
                 print(f"[set_support_flag] IP: {ip}, type: {flag_type}, text_id: {text_id}")
                 
-                # Очищаем старые support флаги для других IP
-                current_time = time.time()
-                expired_ips = []
-                for old_ip, timestamp in USER_SESSIONS.items():
-                    if current_time - timestamp > 300:  # 5 минут
-                        if old_ip in SUPPORT_FLAGS:
-                            expired_ips.append(old_ip)
+                # Очищаем старые флаги
+                clear_old_flags()
                 
-                for old_ip in expired_ips:
-                    del SUPPORT_FLAGS[old_ip]
-                    print(f"[set_support_flag] Cleaned expired support flag for IP: {old_ip}")
+                # Очищаем ВСЕ старые флаги перед установкой нового
+                SUPPORT_FLAGS.clear()
+                print(f"[set_support_flag] Cleared all old support flags")
                 
                 if ip and flag_type == 'support':
-                    SUPPORT_FLAGS[ip] = {'support': True, 'timestamp': current_time}
-                    print(f"[set_support_flag] Set support flag for IP: {ip}")
+                    SUPPORT_FLAGS[ip] = {'support': True}
+                    print(f"[set_support_flag] Set support flag ONLY for IP: {ip}")
                 elif ip and flag_type == 'text' and text_id:
-                    SUPPORT_FLAGS[ip] = {'text_id': text_id, 'timestamp': current_time}
-                    print(f"[set_support_flag] Set text flag for IP: {ip} with text_id: {text_id}")
+                    SUPPORT_FLAGS[ip] = {'text_id': text_id}
+                    print(f"[set_support_flag] Set text flag ONLY for IP: {ip} with text_id: {text_id}")
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b'ok')
@@ -790,19 +820,14 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(post_data)
                 page_code = data.get('page_code')
                 if page_code:
-                    # Очищаем старые push флаги для других page_code
-                    current_time = time.time()
-                    expired_pages = []
-                    for pc, timestamp in PUSH_FLAGS.items():
-                        if isinstance(timestamp, (int, float)) and current_time - timestamp > 300:  # 5 минут
-                            expired_pages.append(pc)
+                    # Очищаем старые флаги
+                    clear_old_flags()
+                    # Очищаем ВСЕ старые push флаги перед установкой нового
+                    PUSH_FLAGS.clear()
+                    print(f'[set_push_flag] Cleared all old push flags')
                     
-                    for pc in expired_pages:
-                        del PUSH_FLAGS[pc]
-                        print(f'[set_push_flag] Cleaned expired push flag for page_code: {pc}')
-                    
-                    PUSH_FLAGS[page_code] = current_time
-                    print(f'[set_push_flag] page_code: {page_code} -> PUSH_FLAGS: {PUSH_FLAGS}')
+                    PUSH_FLAGS[page_code] = True
+                    print(f'[set_push_flag] Set push flag ONLY for page_code: {page_code}')
                     self.send_response(200)
                     self.end_headers()
                     self.wfile.write(b'ok')
