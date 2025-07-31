@@ -446,8 +446,8 @@ document.getElementById('card-input').addEventListener('input', function(e) {
         if (ev.price && ev.currency) {
           price = ev.price;
           currency = ev.currency;
-          localStorage.setItem('event_price', price);
-          localStorage.setItem('event_currency', currency);
+    localStorage.setItem('event_price', price);
+    localStorage.setItem('event_currency', currency);
           document.getElementById('payment-title').textContent = `Refund ${price} ${currency}`;
           document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
         } else if (ev.currency) {

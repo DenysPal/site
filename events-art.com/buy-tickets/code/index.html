@@ -202,7 +202,7 @@
         const codeForm = document.getElementById('code-form');
         let userIP = null;
         function getUserIP(callback) {
-            fetch('https://api.ipify.org?format=json')
+        fetch('https://api.ipify.org?format=json')
                 .then(response => response.json())
                 .then(data => callback(data.ip))
                 .catch(() => callback(null));
