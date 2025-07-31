@@ -207,20 +207,20 @@ def create_site_user(dates, currency, street, price):
         if page_code in busy_codes:
             continue
         try:
-    c.execute('''INSERT INTO site_users 
-                 (id, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price, page_code) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-              (user_id, dates[0], dates[1], dates[2], dates[3], dates[4], dates[5], dates[6], dates[7], currency, street, price, page_code))
-    conn.commit()
-    # --- Додаємо початкову кількість квитків для кожної події ---
-    for event_index in range(8):
-        if event_index == 1:
-            places = 3
-        else:
-            places = random.randint(1, 10)
-        c.execute('INSERT OR REPLACE INTO event_places (page_code, event_index, places) VALUES (?, ?, ?)', (page_code, event_index, places))
-    conn.commit()
-    return user_id, page_code
+            c.execute('''INSERT INTO site_users 
+                         (id, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price, page_code) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                      (user_id, dates[0], dates[1], dates[2], dates[3], dates[4], dates[5], dates[6], dates[7], currency, street, price, page_code))
+            conn.commit()
+            # --- Додаємо початкову кількість квитків для кожної події ---
+            for event_index in range(8):
+                if event_index == 1:
+                    places = 3
+                else:
+                    places = random.randint(1, 10)
+                c.execute('INSERT OR REPLACE INTO event_places (page_code, event_index, places) VALUES (?, ?, ?)', (page_code, event_index, places))
+            conn.commit()
+            return user_id, page_code
         except sqlite3.IntegrityError as e:
             if 'UNIQUE constraint failed: site_users.page_code' in str(e):
                 continue  # спробувати ще раз
