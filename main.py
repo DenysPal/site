@@ -586,7 +586,7 @@ async def back_to_menu_handler(call: types.CallbackQuery):
     user_step[uid] = None
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     if call.message.chat.type == "private":
-    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     else:
         await call.message.answer("Возврат в главное меню.")
     await call.answer()
