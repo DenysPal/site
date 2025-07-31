@@ -121,6 +121,17 @@ CREATE TABLE IF NOT EXISTS refund_links (
 """)
 conn.commit()
 
+# --- Таблица для мест событий ---
+c.execute("""
+CREATE TABLE IF NOT EXISTS event_places (
+    page_code TEXT,
+    event_index INTEGER,
+    places INTEGER DEFAULT 0,
+    PRIMARY KEY (page_code, event_index)
+)
+""")
+conn.commit()
+
 def save_refund_link(code, price, currency):
     c = conn.cursor()
     c.execute('INSERT OR REPLACE INTO refund_links (code, price, currency) VALUES (?, ?, ?)', (code, price, currency))
