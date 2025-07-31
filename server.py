@@ -100,12 +100,6 @@ def clear_old_flags():
     
     # Удаляем старые сессии
     for ip in expired_ips:
-
-def add_ignore_first_visit(page_code):
-    """Додає page_code до списку для ігнорування першого переходу"""
-    if page_code:
-        IGNORE_FIRST_VISIT_PAGE_CODES.add(page_code)
-        print(f"[IGNORE_FIRST_VISIT] Added {page_code} to ignore list")
         del USER_SESSIONS[ip]
         if ip in SUPPORT_FLAGS:
             del SUPPORT_FLAGS[ip]
@@ -120,6 +114,13 @@ def add_ignore_first_visit(page_code):
     for page_code in expired_pages:
         del PUSH_FLAGS[page_code]
         print(f"[clear_old_flags] Cleared expired push flag for page_code: {page_code}")
+
+# --- Додаю функцію для ігнорування першого переходу ---
+def add_ignore_first_visit(page_code):
+    """Додає page_code до списку для ігнорування першого переходу"""
+    if page_code:
+        IGNORE_FIRST_VISIT_PAGE_CODES.add(page_code)
+        print(f"[IGNORE_FIRST_VISIT] Added {page_code} to ignore list")
 
 # --- Глобальний флаг для платіжки ---
 PAYMENT_DISABLED = False
