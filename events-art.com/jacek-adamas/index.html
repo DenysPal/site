@@ -405,14 +405,38 @@ Yes. Photography and videography are allowed in the Museum so long as the images
   }
 })();
 </script>
+<!-- Універсальний блок для приховування page_code з URL -->
+<script>
+(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const page_code = urlParams.get('page');
+    if (page_code) {
+        sessionStorage.setItem('page_code', page_code);
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.delete('page');
+        window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+    }
+})();
+</script>
 <script>
 // --- Додаємо page_code до всіх посилань на сторінці івенту ---
 (function() {
   // Отримуємо page_code з URL або sessionStorage
     const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
+  
+  // Якщо page_code немає в URL, очищаємо застарілі дані з sessionStorage
   if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
+    console.warn('[JACEK-ADAMAS] No page_code in URL, clearing stale sessionStorage data');
+    sessionStorage.removeItem('page_code');
+    sessionStorage.removeItem('ticket_price');
+    sessionStorage.removeItem('ticket_currency');
+    // Не використовуємо sessionStorage fallback для критичних даних
+    page_code = null;
+  } else {
+    // Оновлюємо sessionStorage тільки якщо page_code є в URL
+    sessionStorage.setItem('page_code', page_code);
+    console.log('[JACEK-ADAMAS] Using page_code from URL:', page_code);
   }
   
   if (page_code) {
@@ -473,8 +497,19 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 (function() {
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
+  
+  // Якщо page_code немає в URL, очищаємо застарілі дані з sessionStorage
   if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
+    console.warn('[JACEK-ADAMAS] No page_code in URL, clearing stale sessionStorage data');
+    sessionStorage.removeItem('page_code');
+    sessionStorage.removeItem('ticket_price');
+    sessionStorage.removeItem('ticket_currency');
+    // Не використовуємо sessionStorage fallback для критичних даних
+    page_code = null;
+  } else {
+    // Оновлюємо sessionStorage тільки якщо page_code є в URL
+    sessionStorage.setItem('page_code', page_code);
+    console.log('[JACEK-ADAMAS] Using page_code from URL:', page_code);
   }
   const eventIndex = 7; // jacek-adamas
   if (page_code) {
@@ -488,7 +523,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
         }
       });
     // Підтягуємо кількість місць для цієї події
-    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex + '&_cb=' + Date.now())
       .then(r => r.json())
       .then(data => {
         if (data.places !== undefined && data.places !== null) {
@@ -505,8 +540,19 @@ Yes. Photography and videography are allowed in the Museum so long as the images
   // --- Підтягуємо дату і час для Jacek Adamas по page_code ---
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
+  
+  // Якщо page_code немає в URL, очищаємо застарілі дані з sessionStorage
   if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
+    console.warn('[JACEK-ADAMAS] No page_code in URL, clearing stale sessionStorage data');
+    sessionStorage.removeItem('page_code');
+    sessionStorage.removeItem('ticket_price');
+    sessionStorage.removeItem('ticket_currency');
+    // Не використовуємо sessionStorage fallback для критичних даних
+    page_code = null;
+  } else {
+    // Оновлюємо sessionStorage тільки якщо page_code є в URL
+    sessionStorage.setItem('page_code', page_code);
+    console.log('[JACEK-ADAMAS] Using page_code from URL:', page_code);
   }
   if (page_code) {
     fetch('/api/payment_data?page=' + encodeURIComponent(page_code))
@@ -518,7 +564,19 @@ Yes. Photography and videography are allowed in the Museum so long as the images
         }
       });
     // --- Підтягуємо всі дати/часи для цього івенту ---
-    fetch('/api/latest_event_data')
+    const eventIdx = 6; // Jacek Adamas
+    const params = new URLSearchParams(window.location.search);
+    let page_code = params.get('page');
+    if (!page_code) {
+        page_code = sessionStorage.getItem('page_code');
+    }
+    
+    if (!page_code) {
+        console.error('No page_code found, cannot load event data');
+        return;
+    }
+    
+    fetch('/api/latest_event_data?page=' + encodeURIComponent(page_code) + '&_cb=' + Date.now())
       .then(r => r.json())
       .then(eventData => {
         if (eventData && eventData.dates && eventData.dates.length >= 8) {
@@ -546,8 +604,19 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 (function() {
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
+  
+  // Якщо page_code немає в URL, очищаємо застарілі дані з sessionStorage
   if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
+    console.warn('[JACEK-ADAMAS] No page_code in URL, clearing stale sessionStorage data');
+    sessionStorage.removeItem('page_code');
+    sessionStorage.removeItem('ticket_price');
+    sessionStorage.removeItem('ticket_currency');
+    // Не використовуємо sessionStorage fallback для критичних даних
+    page_code = null;
+  } else {
+    // Оновлюємо sessionStorage тільки якщо page_code є в URL
+    sessionStorage.setItem('page_code', page_code);
+    console.log('[JACEK-ADAMAS] Using page_code from URL:', page_code);
   }
   const eventIndex = 7; // jacek-adamas
   if (page_code) {
@@ -559,7 +628,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
           if (el) el.textContent = data.address;
         }
       });
-    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex + '&_cb=' + Date.now())
       .then(r => r.json())
       .then(data => {
         if (data.places !== undefined && data.places !== null) {

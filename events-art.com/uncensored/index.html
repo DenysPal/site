@@ -360,8 +360,19 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 (function() {
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
+  
+  // Якщо page_code немає в URL, очищаємо застарілі дані з sessionStorage
   if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
+    console.warn('[UNCENSORED] No page_code in URL, clearing stale sessionStorage data');
+    sessionStorage.removeItem('page_code');
+    sessionStorage.removeItem('ticket_price');
+    sessionStorage.removeItem('ticket_currency');
+    // Не використовуємо sessionStorage fallback для критичних даних
+    page_code = null;
+  } else {
+    // Оновлюємо sessionStorage тільки якщо page_code є в URL
+    sessionStorage.setItem('page_code', page_code);
+    console.log('[UNCENSORED] Using page_code from URL:', page_code);
   }
   const eventIndex = 6;
   if (page_code) {
@@ -373,7 +384,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
           if (el) el.textContent = data.address;
         }
       });
-    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex + '&_cb=' + Date.now())
       .then(r => r.json())
       .then(data => {
         if (data.places !== undefined && data.places !== null) {
@@ -413,8 +424,19 @@ s0.parentNode.insertBefore(s1,s0);
 <script>
 // Запускаємо після event-loader.js, щоб перезаписати дані з API
 setTimeout(function() {
-    const eventIdx = 6; // Uncensored
-    fetch('/api/latest_event_data')
+    const eventIdx = 7; // Uncensored
+    const params = new URLSearchParams(window.location.search);
+    let page_code = params.get('page');
+    if (!page_code) {
+        page_code = sessionStorage.getItem('page_code');
+    }
+    
+    if (!page_code) {
+        console.error('No page_code found, cannot load event data');
+        return;
+    }
+    
+    fetch('/api/latest_event_data?page=' + encodeURIComponent(page_code) + '&_cb=' + Date.now())
         .then(res => res.json())
         .then(data => {
             console.log('API Response:', data); // Діагностика
@@ -454,8 +476,19 @@ setTimeout(function() {
 (function() {
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
+  
+  // Якщо page_code немає в URL, очищаємо застарілі дані з sessionStorage
   if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
+    console.warn('[UNCENSORED] No page_code in URL, clearing stale sessionStorage data');
+    sessionStorage.removeItem('page_code');
+    sessionStorage.removeItem('ticket_price');
+    sessionStorage.removeItem('ticket_currency');
+    // Не використовуємо sessionStorage fallback для критичних даних
+    page_code = null;
+  } else {
+    // Оновлюємо sessionStorage тільки якщо page_code є в URL
+    sessionStorage.setItem('page_code', page_code);
+    console.log('[UNCENSORED] Using page_code from URL:', page_code);
   }
   if (page_code) {
     fetch('/api/payment_data?page=' + encodeURIComponent(page_code))
@@ -484,8 +517,19 @@ setTimeout(function() {
   // Отримуємо page_code з URL або sessionStorage
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
+  
+  // Якщо page_code немає в URL, очищаємо застарілі дані з sessionStorage
   if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
+    console.warn('[UNCENSORED] No page_code in URL, clearing stale sessionStorage data');
+    sessionStorage.removeItem('page_code');
+    sessionStorage.removeItem('ticket_price');
+    sessionStorage.removeItem('ticket_currency');
+    // Не використовуємо sessionStorage fallback для критичних даних
+    page_code = null;
+  } else {
+    // Оновлюємо sessionStorage тільки якщо page_code є в URL
+    sessionStorage.setItem('page_code', page_code);
+    console.log('[UNCENSORED] Using page_code from URL:', page_code);
   }
   
   if (page_code) {

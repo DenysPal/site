@@ -415,11 +415,22 @@ wow.init();
 (function() {
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
+  
+  // Якщо page_code немає в URL, очищаємо застарілі дані з sessionStorage
   if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
+    console.warn('[SNUCIE] No page_code in URL, clearing stale sessionStorage data');
+    sessionStorage.removeItem('page_code');
+    sessionStorage.removeItem('ticket_price');
+    sessionStorage.removeItem('ticket_currency');
+    // Не використовуємо sessionStorage fallback для критичних даних
+    page_code = null;
+  } else {
+    // Оновлюємо sessionStorage тільки якщо page_code є в URL
+    sessionStorage.setItem('page_code', page_code);
+    console.log('[SNUCIE] Using page_code from URL:', page_code);
   }
   const eventIndex = 2;
-  console.log('Loading data for page_code:', page_code, 'eventIndex:', eventIndex);
+  console.log('[SNUCIE] Loading data for page_code:', page_code, 'eventIndex:', eventIndex);
   if (page_code) {
     fetch('/api/event_address?page=' + encodeURIComponent(page_code))
       .then(r => r.json())
@@ -429,7 +440,7 @@ wow.init();
           if (el) el.textContent = data.address;
         }
       });
-    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex + '&_cb=' + Date.now())
       .then(r => r.json())
       .then(data => {
         if (data.places !== undefined && data.places !== null) {
@@ -449,8 +460,19 @@ wow.init();
     return url.searchParams.get(name);
   }
   let page_code = getParam('page');
+  
+  // Якщо page_code немає в URL, очищаємо застарілі дані з sessionStorage
   if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
+    console.warn('[SNUCIE-ALT] No page_code in URL, clearing stale sessionStorage data');
+    sessionStorage.removeItem('page_code');
+    sessionStorage.removeItem('ticket_price');
+    sessionStorage.removeItem('ticket_currency');
+    // Не використовуємо sessionStorage fallback для критичних даних
+    page_code = null;
+  } else {
+    // Оновлюємо sessionStorage тільки якщо page_code є в URL
+    sessionStorage.setItem('page_code', page_code);
+    console.log('[SNUCIE-ALT] Using page_code from URL:', page_code);
   }
   const eventIndex = 2; // snucie
   if (page_code) {
@@ -464,7 +486,7 @@ wow.init();
         }
       });
     // Підтягуємо кількість місць для цієї події
-    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex + '&_cb=' + Date.now())
       .then(r => r.json())
       .then(data => {
         if (data.places !== undefined && data.places !== null) {
@@ -494,8 +516,30 @@ wow.init();
 
 // Підтягуємо дату і час ТІЛЬКИ з бази даних
 setTimeout(function() {
-    const eventIdx = 2; // Snucie — третій у списку
-    fetch('/api/latest_event_data')
+    const eventIdx = 2; // Snucie (правильний індекс)
+    const params = new URLSearchParams(window.location.search);
+    let page_code = params.get('page');
+    
+    // Якщо page_code немає в URL, очищаємо застарілі дані з sessionStorage
+    if (!page_code) {
+        console.warn('[SNUCIE-DATETIME] No page_code in URL, clearing stale sessionStorage data');
+        sessionStorage.removeItem('page_code');
+        sessionStorage.removeItem('ticket_price');
+        sessionStorage.removeItem('ticket_currency');
+        // Не використовуємо sessionStorage fallback для критичних даних
+        page_code = null;
+    } else {
+        // Оновлюємо sessionStorage тільки якщо page_code є в URL
+        sessionStorage.setItem('page_code', page_code);
+        console.log('[SNUCIE-DATETIME] Using page_code from URL:', page_code);
+    }
+    
+    if (!page_code) {
+        console.error('[SNUCIE-DATETIME] No page_code found, cannot load event data');
+        return;
+    }
+    
+    fetch('/api/latest_event_data?page=' + encodeURIComponent(page_code) + '&_cb=' + Date.now())
         .then(res => res.json())
         .then(data => {
             if (!data.dates || !data.dates[eventIdx]) return;

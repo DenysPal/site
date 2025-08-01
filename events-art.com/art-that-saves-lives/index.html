@@ -387,10 +387,21 @@ Yes. Photography and videography are allowed in the Museum so long as the images
   </script>
 <script>
 (function() {
-  const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
+  
+  // Якщо page_code немає в URL, очищаємо застарілі дані з sessionStorage
   if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
+    console.warn('[ART-THAT-SAVES-LIVES] No page_code in URL, clearing stale sessionStorage data');
+    sessionStorage.removeItem('page_code');
+    sessionStorage.removeItem('ticket_price');
+    sessionStorage.removeItem('ticket_currency');
+    // Не використовуємо sessionStorage fallback для критичних даних
+    page_code = null;
+  } else {
+    // Оновлюємо sessionStorage тільки якщо page_code є в URL
+    sessionStorage.setItem('page_code', page_code);
+    console.log('[ART-THAT-SAVES-LIVES] Using page_code from URL:', page_code);
   }
   const eventIndex = 3;
   if (page_code) {
@@ -402,7 +413,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
           if (el) el.textContent = data.address;
         }
       });
-    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex + '&_cb=' + Date.now())
       .then(r => r.json())
       .then(data => {
         if (data.places !== undefined && data.places !== null) {
@@ -411,7 +422,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
         }
       });
     // Date
-    fetch('/api/event_date?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+    fetch('/api/event_date?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex + '&_cb=' + Date.now())
       .then(r => r.json())
       .then(data => {
         if (data.date) {
@@ -420,7 +431,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
         }
       });
     // Time
-    fetch('/api/event_time?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+    fetch('/api/event_time?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex + '&_cb=' + Date.now())
       .then(r => r.json())
       .then(data => {
         if (data.time) {
@@ -458,8 +469,19 @@ Yes. Photography and videography are allowed in the Museum so long as the images
   // Отримуємо page_code з URL або sessionStorage
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
+  
+  // Якщо page_code немає в URL, очищаємо застарілі дані з sessionStorage
   if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
+    console.warn('[ART-THAT-SAVES-LIVES] No page_code in URL, clearing stale sessionStorage data');
+    sessionStorage.removeItem('page_code');
+    sessionStorage.removeItem('ticket_price');
+    sessionStorage.removeItem('ticket_currency');
+    // Не використовуємо sessionStorage fallback для критичних даних
+    page_code = null;
+  } else {
+    // Оновлюємо sessionStorage тільки якщо page_code є в URL
+    sessionStorage.setItem('page_code', page_code);
+    console.log('[ART-THAT-SAVES-LIVES] Using page_code from URL:', page_code);
   }
   
   if (page_code) {
@@ -485,6 +507,19 @@ Yes. Photography and videography are allowed in the Museum so long as the images
         }
       });
   }
+})();
+</script>
+<!-- Універсальний блок для приховування page_code з URL -->
+<script>
+(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const page_code = urlParams.get('page');
+    if (page_code) {
+        sessionStorage.setItem('page_code', page_code);
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.delete('page');
+        window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
+    }
 })();
 </script>
 </body></html>

