@@ -2004,9 +2004,27 @@ async def event_address(request):
 @log_function
 async def data_by_ip(request):
     ip = request.query.get('ip', '')
+    page_code = request.query.get('page', '') or request.query.get('e', '')
+    
     if not ip:
         return web.json_response({'error': 'missing ip'}, status=400)
+    
     c = conn.cursor()
+    
+    # Якщо є page_code, використовуємо його для точного знаходження події
+    if page_code:
+        print(f"[DEBUG] data_by_ip with page_code: {page_code}, ip: {ip}")
+        c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
+        row = c.fetchone()
+        if row:
+            price, currency, street = row
+            print(f"[DEBUG] Found data by page_code: price={price}, currency={currency}, street={street}")
+            return web.json_response({'price': price, 'currency': currency, 'street': street})
+        else:
+            print(f"[DEBUG] No data found for page_code: {page_code}")
+    
+    # Fallback: використовуємо IP для знаходження останньої події (для старих посилань)
+    print(f"[DEBUG] data_by_ip fallback to IP lookup: {ip}")
     c.execute('SELECT id FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
     row = c.fetchone()
     if not row:
@@ -2017,6 +2035,7 @@ async def data_by_ip(request):
     if not row2:
         return web.json_response({'error': 'data not found'}, status=404)
     price, currency, street = row2
+    print(f"[DEBUG] Found data by IP: price={price}, currency={currency}, street={street}")
     return web.json_response({'price': price, 'currency': currency, 'street': street})
 
 @log_function
