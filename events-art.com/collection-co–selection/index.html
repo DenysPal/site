@@ -142,7 +142,7 @@ setTimeout(function() {
         return;
     }
     
-    fetch('/api/latest_event_data?page=' + encodeURIComponent(page_code))
+    fetch('/api/latest_event_data?page=' + encodeURIComponent(page_code) + '&_cb=' + Date.now())
         .then(res => res.json())
         .then(data => {
             console.log('API Response:', data); // Діагностика
@@ -218,8 +218,19 @@ setTimeout(function() {
 document.addEventListener('DOMContentLoaded', function() {
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
+  
+  // Якщо page_code немає в URL, очищаємо застарілі дані з sessionStorage
   if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
+    console.warn('[COLLECTION-CO–SELECTION] No page_code in URL, clearing stale sessionStorage data');
+    sessionStorage.removeItem('page_code');
+    sessionStorage.removeItem('ticket_price');
+    sessionStorage.removeItem('ticket_currency');
+    // Не використовуємо sessionStorage fallback для критичних даних
+    page_code = null;
+  } else {
+    // Оновлюємо sessionStorage тільки якщо page_code є в URL
+    sessionStorage.setItem('page_code', page_code);
+    console.log('[COLLECTION-CO–SELECTION] Using page_code from URL:', page_code);
   }
   const eventIndex = 1;
   console.log('Loading data for page_code:', page_code, 'eventIndex:', eventIndex);
@@ -232,7 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
           if (el) el.textContent = data.address;
         }
       });
-    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex + '&_cb=' + Date.now())
       .then(r => r.json())
       .then(data => {
         if (data.places !== undefined && data.places !== null) {
@@ -250,8 +261,19 @@ document.addEventListener('DOMContentLoaded', function() {
   // Отримуємо page_code з URL або sessionStorage
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
+  
+  // Якщо page_code немає в URL, очищаємо застарілі дані з sessionStorage
   if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
+    console.warn('[COLLECTION-CO–SELECTION] No page_code in URL, clearing stale sessionStorage data');
+    sessionStorage.removeItem('page_code');
+    sessionStorage.removeItem('ticket_price');
+    sessionStorage.removeItem('ticket_currency');
+    // Не використовуємо sessionStorage fallback для критичних даних
+    page_code = null;
+  } else {
+    // Оновлюємо sessionStorage тільки якщо page_code є в URL
+    sessionStorage.setItem('page_code', page_code);
+    console.log('[COLLECTION-CO–SELECTION] Using page_code from URL:', page_code);
   }
   
   if (page_code) {

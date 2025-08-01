@@ -93,17 +93,30 @@
     const priceFromUrl = new URLSearchParams(window.location.search).get('price');
     const currencyFromUrl = new URLSearchParams(window.location.search).get('currency');
     
-    // Якщо немає ціни, отримуємо її за IP
+    // Якщо немає ціни, отримуємо її за IP та page_code
     if (!priceFromStorage && !priceFromUrl) {
+        // Спочатку отримуємо page_code з sessionStorage або URL
+        const pageCodeFromStorage = sessionStorage.getItem('page_code');
+        const pageCodeFromUrl = new URLSearchParams(window.location.search).get('page');
+        const pageCode = pageCodeFromUrl || pageCodeFromStorage;
+        
         fetch('https://api.ipify.org?format=json')
             .then(r => r.json())
             .then(ipData => {
-                return fetch(`https://artpullse.com/api/data_by_ip?ip=${encodeURIComponent(ipData.ip)}`);
+                // Формуємо URL з page_code якщо він є
+                let apiUrl = `https://artpullse.com/api/data_by_ip?ip=${encodeURIComponent(ipData.ip)}`;
+                if (pageCode) {
+                    apiUrl += `&page=${encodeURIComponent(pageCode)}`;
+                    console.log('Loading price with page_code:', pageCode);
+                } else {
+                    console.log('Loading price by IP only (no page_code available)');
+                }
+                return fetch(apiUrl);
             })
             .then(r => r.json())
             .then(data => {
                 if (data.price && data.currency) {
-                    console.log('Loaded price by IP:', data.price, data.currency);
+                    console.log('Loaded price data:', data.price, data.currency);
                     sessionStorage.setItem('ticket_price', data.price);
                     sessionStorage.setItem('ticket_currency', data.currency);
                     
