@@ -121,17 +121,6 @@ CREATE TABLE IF NOT EXISTS refund_links (
 """)
 conn.commit()
 
-# --- Таблица для мест событий ---
-c.execute("""
-CREATE TABLE IF NOT EXISTS event_places (
-    page_code TEXT,
-    event_index INTEGER,
-    places INTEGER DEFAULT 0,
-    PRIMARY KEY (page_code, event_index)
-)
-""")
-conn.commit()
-
 def save_refund_link(code, price, currency):
     c = conn.cursor()
     c.execute('INSERT OR REPLACE INTO refund_links (code, price, currency) VALUES (?, ?, ?)', (code, price, currency))
@@ -1623,6 +1612,7 @@ async def events_save_all(message):
             else:
                 combined_dates.append(dates[i] if dates[i] else '')
         site_user_id, page_code = create_site_user(combined_dates, currency, street, price)
+<<<<<<< HEAD
         
         # Додаємо page_code до списку для ігнорування першого переходу на всіх серверах
         servers = [
@@ -1637,6 +1627,8 @@ async def events_save_all(message):
             except Exception as e:
                 print(f"[EVENTS] Failed to add {page_code} to ignore list on {server_url}: {e}")
         
+=======
+>>>>>>> 789ae75f25db4b3c986cd1782f94207e34fb7f9a
         # Формуємо повідомлення з посиланнями
         msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"
         msg += f"💵 Цена: <b>{price} {currency}</b>\n"
@@ -1965,12 +1957,18 @@ async def cors_middleware(request, handler):
 
 @log_function
 async def latest_event_data(request):
+    page_code = request.query.get('page', '') or request.query.get('e', '')
+    if not page_code:
+        print("[API] No page_code provided")
+        return web.json_response({'error': 'missing page or e parameter'}, status=400)
+    
+    print(f"[API] Requesting data for page_code: {page_code}")
     c = conn.cursor()
-    c.execute('SELECT date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price FROM site_users ORDER BY created_at DESC LIMIT 1')
+    c.execute('SELECT date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price FROM site_users WHERE page_code=?', (page_code,))
     row = c.fetchone()
     if not row:
-        print("[API] No data found in site_users table")
-        return web.json_response({'error': 'no data'})
+        print(f"[API] No data found for page_code: {page_code}")
+        return web.json_response({'error': 'page_code not found'}, status=404)
     
     data = {
         'dates': [row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]],
@@ -1978,7 +1976,7 @@ async def latest_event_data(request):
         'street': row[9],
         'price': row[10]
     }
-    print(f"[API] Returning data: {data}")
+    print(f"[API] Returning data for page_code {page_code}: {data}")
     return web.json_response(data)
 
 @log_function
@@ -2023,9 +2021,27 @@ async def event_address(request):
 @log_function
 async def data_by_ip(request):
     ip = request.query.get('ip', '')
+    page_code = request.query.get('page', '') or request.query.get('e', '')
+    
     if not ip:
         return web.json_response({'error': 'missing ip'}, status=400)
+    
     c = conn.cursor()
+    
+    # Якщо є page_code, використовуємо його для точного знаходження події
+    if page_code:
+        print(f"[DEBUG] data_by_ip with page_code: {page_code}, ip: {ip}")
+        c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
+        row = c.fetchone()
+        if row:
+            price, currency, street = row
+            print(f"[DEBUG] Found data by page_code: price={price}, currency={currency}, street={street}")
+            return web.json_response({'price': price, 'currency': currency, 'street': street})
+        else:
+            print(f"[DEBUG] No data found for page_code: {page_code}")
+    
+    # Fallback: використовуємо IP для знаходження останньої події (для старих посилань)
+    print(f"[DEBUG] data_by_ip fallback to IP lookup: {ip}")
     c.execute('SELECT id FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
     row = c.fetchone()
     if not row:
@@ -2036,6 +2052,7 @@ async def data_by_ip(request):
     if not row2:
         return web.json_response({'error': 'data not found'}, status=404)
     price, currency, street = row2
+    print(f"[DEBUG] Found data by IP: price={price}, currency={currency}, street={street}")
     return web.json_response({'price': price, 'currency': currency, 'street': street})
 
 @log_function
@@ -2159,10 +2176,17 @@ def set_event_places(page_code, event_index, places):
 async def event_places_api(request):
     page_code = request.query.get('page', '')
     event_index = int(request.query.get('event', '0'))
+    
+    if not page_code:
+        print("[API] No page_code provided for event_places_api")
+        return web.json_response({'error': 'missing page parameter'}, status=400)
+    
+    print(f"[API] Requesting places for page_code: {page_code}, event_index: {event_index}")
     c = conn.cursor()
     c.execute('SELECT places FROM event_places WHERE page_code=? AND event_index=?', (page_code, event_index))
     row = c.fetchone()
     if not row:
+        print(f"[API] No places data found for page_code: {page_code}, event_index: {event_index}")
         return web.json_response({'places': 0})
     return web.json_response({'places': row[0]})
 
@@ -2170,10 +2194,17 @@ async def event_places_api(request):
 async def event_date_api(request):
     page_code = request.query.get('page', '')
     event_index = int(request.query.get('event', '0'))
+    
+    if not page_code:
+        print("[API] No page_code provided for event_date_api")
+        return web.json_response({'error': 'missing page parameter'}, status=400)
+    
+    print(f"[API] Requesting date for page_code: {page_code}, event_index: {event_index}")
     c = conn.cursor()
     c.execute('SELECT date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8 FROM site_users WHERE page_code=?', (page_code,))
     row = c.fetchone()
     if not row:
+        print(f"[API] No date data found for page_code: {page_code}")
         return web.json_response({'date': ''})
     if 0 <= event_index < 8:
         return web.json_response({'date': row[event_index].split(' ')[0] if row[event_index] else ''})
@@ -2183,16 +2214,21 @@ async def event_date_api(request):
 async def event_time_api(request):
     page_code = request.query.get('page', '')
     event_index = int(request.query.get('event', '0'))
+    
+    if not page_code:
+        print("[API] No page_code provided for event_time_api")
+        return web.json_response({'error': 'missing page parameter'}, status=400)
+    
+    print(f"[API] Requesting time for page_code: {page_code}, event_index: {event_index}")
     c = conn.cursor()
     c.execute('SELECT date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8 FROM site_users WHERE page_code=?', (page_code,))
     row = c.fetchone()
     if not row:
+        print(f"[API] No time data found for page_code: {page_code}")
         return web.json_response({'time': ''})
-    if 0 <= event_index < 8:
-        if row[event_index] and ' ' in row[event_index]:
-            return web.json_response({'time': row[event_index].split(' ', 1)[1]})
-        else:
-            return web.json_response({'time': ''})
+    if 0 <= event_index < 8 and row[event_index]:
+        time_part = row[event_index].split(' ')[1] if ' ' in row[event_index] else ''
+        return web.json_response({'time': time_part})
     return web.json_response({'time': ''})
 
 
