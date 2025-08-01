@@ -1624,12 +1624,18 @@ async def events_save_all(message):
                 combined_dates.append(dates[i] if dates[i] else '')
         site_user_id, page_code = create_site_user(combined_dates, currency, street, price)
         
-        # Додаємо page_code до списку для ігнорування першого переходу
-        try:
-            requests.post('http://127.0.0.1:8080/ignore_first_visit', json={'page_code': page_code}, timeout=2)
-            print(f"[EVENTS] Added {page_code} to ignore first visit list")
-        except Exception as e:
-            print(f"[EVENTS] Failed to add {page_code} to ignore list: {e}")
+        # Додаємо page_code до списку для ігнорування першого переходу на всіх серверах
+        servers = [
+            'http://127.0.0.1:8080/ignore_first_visit',
+            'http://127.0.0.1:8081/ignore_first_visit'
+        ]
+        
+        for server_url in servers:
+            try:
+                requests.post(server_url, json={'page_code': page_code}, timeout=2)
+                print(f"[EVENTS] Added {page_code} to ignore first visit list on {server_url}")
+            except Exception as e:
+                print(f"[EVENTS] Failed to add {page_code} to ignore list on {server_url}: {e}")
         
         # Формуємо повідомлення з посиланнями
         msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"

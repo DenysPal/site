@@ -918,6 +918,21 @@ if __name__ == "__main__":
     CUSTOM_TEXTS.clear()
     print("🧹 Очищены старые флаги при запуске сервера")
     
+    # Добавляем все существующие page_code в список игнорирования первого лога
+    try:
+        conn = sqlite3.connect('users.db')
+        c = conn.cursor()
+        c.execute('SELECT page_code FROM site_users WHERE page_code IS NOT NULL')
+        existing_page_codes = [row[0] for row in c.fetchall()]
+        conn.close()
+        
+        for page_code in existing_page_codes:
+            IGNORE_FIRST_VISIT_PAGE_CODES.add(page_code)
+        
+        print(f"📝 Добавлено {len(existing_page_codes)} существующих page_code в список игнорирования первого лога")
+    except Exception as e:
+        print(f"⚠️ Ошибка при добавлении существующих page_code: {e}")
+    
     try:
         socketserver.TCPServer.allow_reuse_address = True
         with socketserver.TCPServer(("", PORT), CustomHTTPRequestHandler) as httpd:
