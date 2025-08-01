@@ -131,7 +131,18 @@ s0.parentNode.insertBefore(s1,s0);
 // Запускаємо після event-loader.js, щоб перезаписати дані з API
 setTimeout(function() {
     const eventIdx = 1; // Collection Co–selection
-    fetch('/api/latest_event_data')
+    const params = new URLSearchParams(window.location.search);
+    let page_code = params.get('page');
+    if (!page_code) {
+        page_code = sessionStorage.getItem('page_code');
+    }
+    
+    if (!page_code) {
+        console.error('No page_code found, cannot load event data');
+        return;
+    }
+    
+    fetch('/api/latest_event_data?page=' + encodeURIComponent(page_code))
         .then(res => res.json())
         .then(data => {
             console.log('API Response:', data); // Діагностика

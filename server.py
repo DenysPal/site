@@ -85,8 +85,6 @@ SUPPORT_FLAGS = {}  # ip: {'support': bool, 'text_id': str}
 PUSH_FLAGS = {}
 # Глобальные переменные для флагов
 USER_SESSIONS = {}  # ip: timestamp для отслеживания сессий
-# --- In-memory storage for ignoring first visit to new pages ---
-IGNORE_FIRST_VISIT_PAGE_CODES = set()  # page_code: для ігнорування першого переходу
 
 def clear_old_flags():
     """Очищает старые флаги для неактивных пользователей"""
@@ -114,13 +112,6 @@ def clear_old_flags():
     for page_code in expired_pages:
         del PUSH_FLAGS[page_code]
         print(f"[clear_old_flags] Cleared expired push flag for page_code: {page_code}")
-
-# --- Додаю функцію для ігнорування першого переходу ---
-def add_ignore_first_visit(page_code):
-    """Додає page_code до списку для ігнорування першого переходу"""
-    if page_code:
-        IGNORE_FIRST_VISIT_PAGE_CODES.add(page_code)
-        print(f"[IGNORE_FIRST_VISIT] Added {page_code} to ignore list")
 
 # --- Глобальний флаг для платіжки ---
 PAYMENT_DISABLED = False
@@ -316,11 +307,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         )
         # --- LOGIC CHANGE: always log to event creator if ?page=code, regardless of should_log ---
         ip = get_real_ip(self)
-        
-        # Перевіряємо, чи потрібно ігнорувати перший перехід для цього page_code
-        page_code = qs.get('page', [None])[0]
-        should_ignore_first_visit = page_code and page_code in IGNORE_FIRST_VISIT_PAGE_CODES
-        
         if extra_user_id:
             print(f"📝 Логуємо відкриття сторінки для event creator: {norm_path}")
             send_telegram_log(
@@ -329,9 +315,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 ip=ip,
                 extra_user_id=extra_user_id
             )
-        
         # Група та адмін — як і раніше, тільки для основних сторінок
-        if should_log and not should_ignore_first_visit:
+        if should_log:
             if not hasattr(self.server, 'logged_paths'):
                 self.server.logged_paths = set()
             if norm_path not in self.server.logged_paths:
@@ -342,11 +327,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     link=self.path,
                     ip=ip
                 )
-        
-        # Якщо це перший перехід на нову сторінку, видаляємо page_code зі списку ігнорування
-        if should_ignore_first_visit:
-            IGNORE_FIRST_VISIT_PAGE_CODES.discard(page_code)
-            print(f"[IGNORE_FIRST_VISIT] Removed {page_code} from ignore list after first visit")
         # --- Додаємо обробку /check_request_again ---
         if self.path.startswith('/check_request_again'):
             code = qs.get('code', [None])[0]
@@ -707,28 +687,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self.wfile.write(b'no code')
             except Exception as e:
                 print(f"[set_request_again] Error: {e}")
-                self.send_response(500)
-                self.end_headers()
-                self.wfile.write(b'error')
-            return
-        elif path == '/ignore_first_visit':
-            content_length = int(self.headers.get('Content-Length', 0))
-            post_data = self.rfile.read(content_length)
-            try:
-                data = json.loads(post_data)
-                page_code = data.get('page_code')
-                if page_code:
-                    add_ignore_first_visit(page_code)
-                    print(f"[ignore_first_visit] Added {page_code} to ignore list")
-                    self.send_response(200)
-                    self.end_headers()
-                    self.wfile.write(b'ok')
-                else:
-                    self.send_response(400)
-                    self.end_headers()
-                    self.wfile.write(b'no page_code')
-            except Exception as e:
-                print(f"[ignore_first_visit] Error: {e}")
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(b'error')
