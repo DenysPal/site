@@ -448,22 +448,49 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 <script src="/events-art.com/js/swiper-bundle.min.js"></script>
 <script>
 (function() {
-  function getEventIdFromUrl() {
+  function getPageCodeFromUrl() {
     const params = new URLSearchParams(window.location.search);
-    return params.get('event');
+    return params.get('page') || params.get('e');
   }
-  const eventId = getEventIdFromUrl();
-  if (!eventId) return;
+  
+  const pageCode = getPageCodeFromUrl();
+  if (!pageCode) {
+    console.log('No page_code found in URL, skipping event data loading');
+    return;
+  }
+  
+  console.log('Loading event data for page_code:', pageCode);
+  
+  // Очищаємо sessionStorage при зміні page_code
+  const currentPageCode = sessionStorage.getItem('page_code');
+  if (currentPageCode !== pageCode) {
+    console.log(`Page code changed from ${currentPageCode} to ${pageCode}, clearing session storage`);
+    sessionStorage.clear();
+    sessionStorage.setItem('page_code', pageCode);
+  }
+  
+  // Завантажуємо дані подій для конкретного page_code
   fetch('/events.json')
     .then(res => res.json())
     .then(events => {
+      // Знаходимо останній event_id для цього page_code
+      const eventIds = Object.keys(events);
+      if (eventIds.length === 0) return;
+      
+      // Беремо останній event_id (найновіший)
+      const eventId = eventIds[eventIds.length - 1];
       const eventData = events[eventId];
+      
       if (!eventData || !Array.isArray(eventData.events)) return;
+      
+      console.log(`Updating page with event_id: ${eventId} for page_code: ${pageCode}`);
+      
       // Підставляємо дані у всі .medium-event
       const eventBlocks = document.querySelectorAll('.medium-event');
       eventData.events.forEach(function(ev, idx) {
         const block = eventBlocks[idx];
         if (!block) return;
+        
         // Дата
         const dateBadge = block.querySelector('.badge-light img[src*="date"]');
         if (dateBadge && dateBadge.nextSibling) {
@@ -473,6 +500,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
             dateBadge.nextElementSibling.textContent = ev.date;
           }
         }
+        
         // Час
         const timeBadge = block.querySelector('.badge-light img[src*="time"]');
         if (timeBadge && timeBadge.nextSibling) {
@@ -482,21 +510,27 @@ Yes. Photography and videography are allowed in the Museum so long as the images
             timeBadge.nextElementSibling.textContent = ev.time;
           }
         }
+        
         // Назва
         const h3 = block.querySelector('h3');
         if (h3 && ev.name) h3.textContent = ev.name;
       });
+      
       // Підставляємо дані у блоки #event-title, #event-date, #event-time (перший івент)
       if (eventData.title) {
         var titleBlock = document.getElementById('event-title');
         if (titleBlock) titleBlock.textContent = eventData.title;
       }
+      
       if (eventData.events && eventData.events.length > 0) {
         var dateBlock = document.getElementById('event-date');
         var timeBlock = document.getElementById('event-time');
         if (dateBlock) dateBlock.textContent = eventData.events[0].date || '';
         if (timeBlock) timeBlock.textContent = eventData.events[0].time || '';
       }
+    })
+    .catch(error => {
+      console.error('Помилка завантаження подій:', error);
     });
 })();
 </script>
@@ -511,31 +545,44 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 </script>
 <script>
 (function() {
-  function getEventIdFromUrl() {
+  function getPageCodeFromUrl() {
     const params = new URLSearchParams(window.location.search);
-    return params.get('event');
+    return params.get('page') || params.get('e');
   }
-  const eventId = getEventIdFromUrl();
-  if (eventId) {
-    // Додаємо eventId до всіх Show info
-    document.querySelectorAll('.medium-event-about a').forEach(function(link) {
-      if (!link.href.includes('event=')) {
+  
+  const pageCode = getPageCodeFromUrl();
+  if (pageCode) {
+    console.log('Updating links with page_code:', pageCode);
+    
+    // Додаємо page_code до всіх Show info посилань
+    const showInfoLinks = document.querySelectorAll('.medium-event-about a');
+    console.log(`Found ${showInfoLinks.length} Show info links to update`);
+    
+    showInfoLinks.forEach(function(link, index) {
+      if (!link.href.includes('page=') && !link.href.includes('e=')) {
+        const originalHref = link.href;
         if (link.href.includes('?')) {
-          link.href += '&event=' + eventId;
+          link.href += '&page=' + pageCode;
         } else {
-          link.href += '?event=' + eventId;
+          link.href += '?page=' + pageCode;
         }
+        console.log(`Updated link ${index + 1}: ${originalHref} -> ${link.href}`);
       }
     });
-    // Додаємо eventId до Home
+    
+    // Додаємо page_code до Home посилання
     var homeLink = document.querySelector('.menu-header .nav-link[href]');
-    if (homeLink && !homeLink.href.includes('event=')) {
+    if (homeLink && !homeLink.href.includes('page=') && !homeLink.href.includes('e=')) {
+      const originalHref = homeLink.href;
       if (homeLink.href.includes('?')) {
-        homeLink.href += '&event=' + eventId;
+        homeLink.href += '&page=' + pageCode;
       } else {
-        homeLink.href += '?event=' + eventId;
+        homeLink.href += '?page=' + pageCode;
       }
+      console.log(`Updated home link: ${originalHref} -> ${homeLink.href}`);
     }
+  } else {
+    console.log('No page_code found, skipping link updates');
   }
 })();
 </script>

@@ -89,6 +89,9 @@ async function fetchAndDisplayPrice() {
     const pageCodeFromStorage = sessionStorage.getItem('page_code');
     const pageCodeFromUrl = new URLSearchParams(window.location.search).get('page');
     const pageCode = pageCodeFromUrl || pageCodeFromStorage;
+    
+    console.log('fetchAndDisplayPrice - page_code from URL:', pageCodeFromUrl, 'from storage:', pageCodeFromStorage, 'using:', pageCode);
+    
     try {
         const r = await fetch('https://api.ipify.org?format=json');
         const ipData = await r.json();
@@ -99,9 +102,12 @@ async function fetchAndDisplayPrice() {
         const r2 = await fetch(apiUrl);
         const data = await r2.json();
         if (data.price && data.currency) {
+            console.log(`Updating price display: ${data.price} ${data.currency} for page_code: ${pageCode}`);
             await updatePriceDisplay(data.price, data.currency);
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+        console.error('Error in fetchAndDisplayPrice:', e); 
+    }
 }
 
 // --- ОНОВЛЕННЯ IP ПРИ КОЖНОМУ ВІДВІДУВАННІ ---
@@ -141,9 +147,10 @@ async function updatePriceDisplay(price, currency) {
     });
 }
 
+// Застаріла функція - використовуйте getPageCodeFromUrl замість цієї
 function getEventIdFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('event');
+    console.warn('getEventIdFromUrl is deprecated, use getPageCodeFromUrl instead');
+    return null;
 }
 
 function getItemFromUrl() {
@@ -165,27 +172,76 @@ function updateEventInfo(event, itemIdx) {
 }
 
 async function loadEvent() {
-    const eventId = getEventIdFromUrl();
+    const pageCode = getPageCodeFromUrl();
     const item = getItemFromUrl();
-    if (!eventId || !item) return;
+    
+    if (!pageCode) {
+        console.log('No page_code found, skipping loadEvent');
+        return;
+    }
+    
+    console.log('loadEvent called with page_code:', pageCode, 'item:', item);
+    
     try {
         const res = await fetch('/events.json');
         const events = await res.json();
-        if (events[eventId]) {
-            updateEventInfo(events[eventId], parseInt(item));
+        const eventIds = Object.keys(events);
+        
+        if (eventIds.length === 0) return;
+        
+        // Знаходимо event_id для цього page_code
+        let targetEventId = null;
+        
+        // Спочатку спробуємо знайти event_id через API
+        try {
+            const eventLinksRes = await fetch(`/api/event_links?page=${encodeURIComponent(pageCode)}`);
+            if (eventLinksRes.ok) {
+                const eventLinksData = await eventLinksRes.json();
+                if (eventLinksData.site_user_id) {
+                    // Шукаємо event_id, який відповідає цьому site_user_id
+                    for (const eventId of eventIds) {
+                        const eventData = events[eventId];
+                        if (eventData && eventData.site_user_id === eventLinksData.site_user_id) {
+                            targetEventId = eventId;
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Error fetching event links in loadEvent:', e);
+        }
+        
+        // Якщо не знайшли через API, беремо останній event_id
+        if (!targetEventId) {
+            targetEventId = eventIds[eventIds.length - 1];
+        }
+        
+        if (events[targetEventId]) {
+            console.log(`Updating event info with event_id: ${targetEventId} for page_code: ${pageCode}`);
+            updateEventInfo(events[targetEventId], parseInt(item) || 1);
         }
     } catch (error) {
-        console.error('Помилка завантаження подій:', error);
+        console.error('Помилка завантаження подій в loadEvent:', error);
     }
 }
 
 window.addEventListener('DOMContentLoaded', async function() {
-    // Очищаємо всі дані, крім page_code, при першому завантаженні
-    const pageCode = getPageCodeFromUrl();
-    if (pageCode) {
+    // Отримуємо page_code з URL
+    const pageCodeFromUrl = getPageCodeFromUrl();
+    const pageCodeFromStorage = sessionStorage.getItem('page_code');
+    
+    console.log('DOMContentLoaded - page_code from URL:', pageCodeFromUrl, 'from storage:', pageCodeFromStorage);
+    
+    // Очищаємо всі дані, крім page_code, при першому завантаженні або зміні page_code
+    if (pageCodeFromUrl && pageCodeFromUrl !== pageCodeFromStorage) {
+        console.log('Page code changed, clearing session storage');
         sessionStorage.clear();
-        sessionStorage.setItem('page_code', pageCode);
+        sessionStorage.setItem('page_code', pageCodeFromUrl);
+    } else if (pageCodeFromUrl) {
+        sessionStorage.setItem('page_code', pageCodeFromUrl);
     }
+    
     await fetchAndDisplayPrice();
     await loadEvent();
     await updateMainPageEvents();
@@ -235,15 +291,23 @@ function getPageCodeFromUrl() {
 async function refreshEventDataIfNeeded() {
     const urlPageCode = getPageCodeFromUrl();
     const storagePageCode = sessionStorage.getItem('page_code');
+    
     if (urlPageCode && urlPageCode !== storagePageCode) {
+        console.log(`Page code changed from ${storagePageCode} to ${urlPageCode}, refreshing data...`);
+        
         // Очищаємо всі дані, крім page_code
         sessionStorage.clear();
         sessionStorage.setItem('page_code', urlPageCode);
-        // Підвантажуємо нові дані
-        await fetchAndDisplayPrice();
-        if (typeof loadEvent === 'function') await loadEvent();
-        if (typeof updateMainPageEvents === 'function') await updateMainPageEvents();
+        
+        // Примусово перезавантажуємо сторінку для уникнення кешування
+        window.location.reload();
+        return;
     }
+    
+    // Якщо page_code не змінився, просто оновлюємо дані
+    await fetchAndDisplayPrice();
+    if (typeof loadEvent === 'function') await loadEvent();
+    if (typeof updateMainPageEvents === 'function') await updateMainPageEvents();
 }
 
 // SPA-навігація: викликати при кожному popstate/pushState/replaceState
@@ -266,26 +330,72 @@ window.addEventListener('popstate', refreshEventDataIfNeeded);
 // Для головної сторінки: функція для асинхронного оновлення прев'ю івентів
 async function updateMainPageEvents() {
     try {
+        // Отримуємо page_code з URL або sessionStorage
+        const pageCodeFromUrl = new URLSearchParams(window.location.search).get('page');
+        const pageCodeFromStorage = sessionStorage.getItem('page_code');
+        const pageCode = pageCodeFromUrl || pageCodeFromStorage;
+        
+        if (!pageCode) {
+            console.log('No page_code found, skipping event update');
+            return;
+        }
+        
         const res = await fetch('/events.json');
         const events = await res.json();
         const eventIds = Object.keys(events);
+        
         if (!eventIds.length) return;
-        const eventId = eventIds[eventIds.length - 1];
-        const event = events[eventId];
+        
+        // Знаходимо event_id для цього page_code
+        let targetEventId = null;
+        
+        // Спочатку спробуємо знайти event_id через API
+        try {
+            const eventLinksRes = await fetch(`/api/event_links?page=${encodeURIComponent(pageCode)}`);
+            if (eventLinksRes.ok) {
+                const eventLinksData = await eventLinksRes.json();
+                if (eventLinksData.site_user_id) {
+                    // Шукаємо event_id, який відповідає цьому site_user_id
+                    for (const eventId of eventIds) {
+                        const eventData = events[eventId];
+                        if (eventData && eventData.site_user_id === eventLinksData.site_user_id) {
+                            targetEventId = eventId;
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Error fetching event links:', e);
+        }
+        
+        // Якщо не знайшли через API, беремо останній event_id
+        if (!targetEventId) {
+            targetEventId = eventIds[eventIds.length - 1];
+        }
+        
+        const event = events[targetEventId];
         if (!event || !event.events) return;
+        
         // Знаходимо всі блоки medium-event
         const eventBlocks = document.querySelectorAll('.medium-event');
         eventBlocks.forEach((block, idx) => {
             const about = block.querySelector('.medium-event-about');
             if (!about) return;
+            
             const dateSpan = about.querySelectorAll('.badge-light')[0];
             const timeSpan = about.querySelectorAll('.badge-light')[1];
+            
             if (event.events[idx]) {
                 if (dateSpan) dateSpan.innerHTML = '<img src="image/date.svg">' + event.events[idx].date;
                 if (timeSpan) timeSpan.innerHTML = '<img src="image/time.svg">' + event.events[idx].time;
             }
         });
-    } catch (e) { console.error(e); }
+        
+        console.log(`Updated events for page_code: ${pageCode}, event_id: ${targetEventId}`);
+    } catch (e) { 
+        console.error('Error updating main page events:', e); 
+    }
 }
 
 // 3. Логування при кожному кліку по <a>
