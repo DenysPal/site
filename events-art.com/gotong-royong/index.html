@@ -402,8 +402,19 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 (function() {
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
+  
+  // Якщо page_code немає в URL, очищаємо застарілі дані з sessionStorage
   if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
+    console.warn('[GOTONG-ROYONG] No page_code in URL, clearing stale sessionStorage data');
+    sessionStorage.removeItem('page_code');
+    sessionStorage.removeItem('ticket_price');
+    sessionStorage.removeItem('ticket_currency');
+    // Не використовуємо sessionStorage fallback для критичних даних
+    page_code = null;
+  } else {
+    // Оновлюємо sessionStorage тільки якщо page_code є в URL
+    sessionStorage.setItem('page_code', page_code);
+    console.log('[GOTONG-ROYONG] Using page_code from URL:', page_code);
   }
   const eventIndex = 4;
   if (page_code) {
@@ -417,7 +428,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
         }
       });
     // Date
-    fetch('/api/event_date?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+    fetch('/api/event_date?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex + '&_cb=' + Date.now())
       .then(r => r.json())
       .then(data => {
         if (data.date) {
@@ -426,7 +437,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
         }
       });
     // Time
-    fetch('/api/event_time?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+    fetch('/api/event_time?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex + '&_cb=' + Date.now())
       .then(r => r.json())
       .then(data => {
         if (data.time) {
@@ -435,7 +446,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
         }
       });
     // Tickets
-    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
+    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex + '&_cb=' + Date.now())
       .then(r => r.json())
       .then(data => {
         if (data.places !== undefined && data.places !== null) {
@@ -476,8 +487,19 @@ Yes. Photography and videography are allowed in the Museum so long as the images
   // Отримуємо page_code з URL або sessionStorage
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
+  
+  // Якщо page_code немає в URL, очищаємо застарілі дані з sessionStorage
   if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
+    console.warn('[GOTONG-ROYONG] No page_code in URL, clearing stale sessionStorage data');
+    sessionStorage.removeItem('page_code');
+    sessionStorage.removeItem('ticket_price');
+    sessionStorage.removeItem('ticket_currency');
+    // Не використовуємо sessionStorage fallback для критичних даних
+    page_code = null;
+  } else {
+    // Оновлюємо sessionStorage тільки якщо page_code є в URL
+    sessionStorage.setItem('page_code', page_code);
+    console.log('[GOTONG-ROYONG] Using page_code from URL:', page_code);
   }
   
   if (page_code) {
