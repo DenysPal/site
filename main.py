@@ -1975,7 +1975,13 @@ async def latest_event_data(request):
         'price': row[10]
     }
     print(f"[API] Returning data for page_code {page_code}: {data}")
-    return web.json_response(data)
+    
+    # Додаємо заголовки для уникнення кешування
+    response = web.json_response(data)
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @log_function
 async def event_address(request):
@@ -2000,7 +2006,11 @@ async def event_address(request):
             return web.json_response({'error': 'address not found'}, status=404)
         address = row2[0]
         print(f"[event_address] Found address (via event_links): {address}")
-        return web.json_response({'address': address})
+        response = web.json_response({'address': address})
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
     else:
         # Якщо не знайдено в event_links, шукаємо в site_users
         c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
@@ -2014,7 +2024,11 @@ async def event_address(request):
     if not row2:
         return web.json_response({'error': 'address not found'}, status=404)
     address, places = row2
-    return web.json_response({'address': address, 'places': places})
+    response = web.json_response({'address': address, 'places': places})
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @log_function
 async def data_by_ip(request):
@@ -2034,7 +2048,11 @@ async def data_by_ip(request):
         if row:
             price, currency, street = row
             print(f"[DEBUG] Found data by page_code: price={price}, currency={currency}, street={street}")
-            return web.json_response({'price': price, 'currency': currency, 'street': street})
+            response = web.json_response({'price': price, 'currency': currency, 'street': street})
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response
         else:
             print(f"[DEBUG] No data found for page_code: {page_code}")
     
@@ -2051,7 +2069,11 @@ async def data_by_ip(request):
         return web.json_response({'error': 'data not found'}, status=404)
     price, currency, street = row2
     print(f"[DEBUG] Found data by IP: price={price}, currency={currency}, street={street}")
-    return web.json_response({'price': price, 'currency': currency, 'street': street})
+    response = web.json_response({'price': price, 'currency': currency, 'street': street})
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @log_function
 async def event_links(request):

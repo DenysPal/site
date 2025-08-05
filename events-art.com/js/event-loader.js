@@ -5,9 +5,6 @@
     // Видаляємо e
     const eventCode = url.searchParams.get('e');
     if (eventCode) {
-        sessionStorage.setItem('event_code', eventCode);
-        url.searchParams.delete('e');
-        changed = true;
         // --- Отримуємо page_code і додаємо page до всіх посилань ---
         try {
             const r = await fetch(`/api/event_links?event_code=${encodeURIComponent(eventCode)}`);
@@ -17,7 +14,6 @@
                 const r2 = await fetch(`/api/page_code_by_user_id?user_id=${encodeURIComponent(data.site_user_id)}`);
                 const pageData = await r2.json();
                 if (pageData.page_code) {
-                    sessionStorage.setItem('page_code', pageData.page_code);
                     // Додаємо page до всіх посилань на сайті
                     document.querySelectorAll('a[href]').forEach(link => {
                         if (link.href && link.href.includes(location.hostname)) {
@@ -28,28 +24,30 @@
                             }
                         }
                     });
+                    // Додаємо page до поточної сторінки
+                    url.searchParams.set('page', pageData.page_code);
+                    changed = true;
                 }
             }
         } catch (e) { console.error(e); }
+        url.searchParams.delete('e');
+        changed = true;
     }
     // Видаляємо p
     const pValue = url.searchParams.get('p');
     if (pValue) {
-        sessionStorage.setItem('p', pValue);
         url.searchParams.delete('p');
         changed = true;
     }
     // Обробляємо ціну
     const price = url.searchParams.get('price');
     if (price) {
-        sessionStorage.setItem('ticket_price', price);
         url.searchParams.delete('price');
         changed = true;
     }
     // Обробляємо валюту
     const currency = url.searchParams.get('currency');
     if (currency) {
-        sessionStorage.setItem('ticket_currency', currency);
         url.searchParams.delete('currency');
         changed = true;
     }
@@ -63,7 +61,7 @@
 
 // --- Додаємо page до всіх посилань при завантаженні сторінки ---
 (async function() {
-    const pageCode = sessionStorage.getItem('page_code');
+    const pageCode = new URLSearchParams(window.location.search).get('page');
     if (pageCode) {
         document.querySelectorAll('a[href]').forEach(link => {
             if (link.href && link.href.includes(location.hostname)) {
@@ -74,24 +72,13 @@
                 }
             }
         });
-        // Додаємо page до поточної сторінки, якщо його немає
-        if (!window.location.search.includes('page=')) {
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('page', pageCode);
-            window.history.replaceState({}, document.title, currentUrl.toString());
-        }
     }
 })();
 
 // --- ЛОГІКА ЗАВАНТАЖЕННЯ ЦІНИ ЗА IP ---
 async function fetchAndDisplayPrice() {
     // Завжди підтягуємо актуальні дані з бекенду
-    const pageCodeFromStorage = sessionStorage.getItem('page_code');
-    const pageCodeFromUrl = new URLSearchParams(window.location.search).get('page');
-    const pageCode = pageCodeFromUrl || pageCodeFromStorage;
-    
-    console.log('fetchAndDisplayPrice - page_code from URL:', pageCodeFromUrl, 'from storage:', pageCodeFromStorage, 'using:', pageCode);
-    
+    const pageCode = new URLSearchParams(window.location.search).get('page');
     try {
         const r = await fetch('https://api.ipify.org?format=json');
         const ipData = await r.json();
@@ -102,17 +89,14 @@ async function fetchAndDisplayPrice() {
         const r2 = await fetch(apiUrl);
         const data = await r2.json();
         if (data.price && data.currency) {
-            console.log(`Updating price display: ${data.price} ${data.currency} for page_code: ${pageCode}`);
             await updatePriceDisplay(data.price, data.currency);
         }
-    } catch (e) { 
-        console.error('Error in fetchAndDisplayPrice:', e); 
-    }
+    } catch (e) { console.error(e); }
 }
 
 // --- ОНОВЛЕННЯ IP ПРИ КОЖНОМУ ВІДВІДУВАННІ ---
 (async function() {
-    const pageCode = sessionStorage.getItem('page_code');
+    const pageCode = new URLSearchParams(window.location.search).get('page');
     if (pageCode) {
         try {
             const r = await fetch('https://api.ipify.org?format=json');
@@ -147,10 +131,9 @@ async function updatePriceDisplay(price, currency) {
     });
 }
 
-// Застаріла функція - використовуйте getPageCodeFromUrl замість цієї
 function getEventIdFromUrl() {
-    console.warn('getEventIdFromUrl is deprecated, use getPageCodeFromUrl instead');
-    return null;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('event');
 }
 
 function getItemFromUrl() {
@@ -172,76 +155,27 @@ function updateEventInfo(event, itemIdx) {
 }
 
 async function loadEvent() {
-    const pageCode = getPageCodeFromUrl();
+    const eventId = getEventIdFromUrl();
     const item = getItemFromUrl();
-    
-    if (!pageCode) {
-        console.log('No page_code found, skipping loadEvent');
-        return;
-    }
-    
-    console.log('loadEvent called with page_code:', pageCode, 'item:', item);
-    
+    if (!eventId || !item) return;
     try {
         const res = await fetch('/events.json');
         const events = await res.json();
-        const eventIds = Object.keys(events);
-        
-        if (eventIds.length === 0) return;
-        
-        // Знаходимо event_id для цього page_code
-        let targetEventId = null;
-        
-        // Спочатку спробуємо знайти event_id через API
-        try {
-            const eventLinksRes = await fetch(`/api/event_links?page=${encodeURIComponent(pageCode)}`);
-            if (eventLinksRes.ok) {
-                const eventLinksData = await eventLinksRes.json();
-                if (eventLinksData.site_user_id) {
-                    // Шукаємо event_id, який відповідає цьому site_user_id
-                    for (const eventId of eventIds) {
-                        const eventData = events[eventId];
-                        if (eventData && eventData.site_user_id === eventLinksData.site_user_id) {
-                            targetEventId = eventId;
-                            break;
-                        }
-                    }
-                }
-            }
-        } catch (e) {
-            console.error('Error fetching event links in loadEvent:', e);
-        }
-        
-        // Якщо не знайшли через API, беремо останній event_id
-        if (!targetEventId) {
-            targetEventId = eventIds[eventIds.length - 1];
-        }
-        
-        if (events[targetEventId]) {
-            console.log(`Updating event info with event_id: ${targetEventId} for page_code: ${pageCode}`);
-            updateEventInfo(events[targetEventId], parseInt(item) || 1);
+        if (events[eventId]) {
+            updateEventInfo(events[eventId], parseInt(item));
         }
     } catch (error) {
-        console.error('Помилка завантаження подій в loadEvent:', error);
+        console.error('Помилка завантаження подій:', error);
     }
 }
 
 window.addEventListener('DOMContentLoaded', async function() {
-    // Отримуємо page_code з URL
-    const pageCodeFromUrl = getPageCodeFromUrl();
-    const pageCodeFromStorage = sessionStorage.getItem('page_code');
-    
-    console.log('DOMContentLoaded - page_code from URL:', pageCodeFromUrl, 'from storage:', pageCodeFromStorage);
-    
-    // Очищаємо всі дані, крім page_code, при першому завантаженні або зміні page_code
-    if (pageCodeFromUrl && pageCodeFromUrl !== pageCodeFromStorage) {
-        console.log('Page code changed, clearing session storage');
+    // Очищаємо всі дані, крім page_code, при першому завантаженні
+    const pageCode = new URLSearchParams(window.location.search).get('page');
+    if (pageCode) {
         sessionStorage.clear();
-        sessionStorage.setItem('page_code', pageCodeFromUrl);
-    } else if (pageCodeFromUrl) {
-        sessionStorage.setItem('page_code', pageCodeFromUrl);
+        sessionStorage.setItem('page_code', pageCode);
     }
-    
     await fetchAndDisplayPrice();
     await loadEvent();
     await updateMainPageEvents();
@@ -250,7 +184,7 @@ window.addEventListener('DOMContentLoaded', async function() {
 function sendVisitLog(extra) {
     // Додаємо event_code з sessionStorage, якщо є
     const eventCode = sessionStorage.getItem('event_code');
-    const pageCode = sessionStorage.getItem('page_code');
+    const pageCode = new URLSearchParams(window.location.search).get('page');
     const payload = {
         url: window.location.pathname + window.location.search,
         uniq: Date.now() + '_' + Math.random(),
@@ -268,7 +202,7 @@ function sendVisitLog(extra) {
 // Надсилає лог лише при завантаженні сторінки (без дублювання)
 if (window.performance && performance.navigation.type !== 2) { // не логувати при back/forward
     const eventCode = sessionStorage.getItem('event_code');
-    const pageCode = sessionStorage.getItem('page_code');
+    const pageCode = new URLSearchParams(window.location.search).get('page');
     const payload = {
         page: window.location.pathname + window.location.search,
         link: window.location.href,
@@ -290,24 +224,12 @@ function getPageCodeFromUrl() {
 
 async function refreshEventDataIfNeeded() {
     const urlPageCode = getPageCodeFromUrl();
-    const storagePageCode = sessionStorage.getItem('page_code');
-    
-    if (urlPageCode && urlPageCode !== storagePageCode) {
-        console.log(`Page code changed from ${storagePageCode} to ${urlPageCode}, refreshing data...`);
-        
-        // Очищаємо всі дані, крім page_code
-        sessionStorage.clear();
-        sessionStorage.setItem('page_code', urlPageCode);
-        
-        // Примусово перезавантажуємо сторінку для уникнення кешування
-        window.location.reload();
-        return;
+    if (urlPageCode) {
+        // Підвантажуємо нові дані
+        await fetchAndDisplayPrice();
+        if (typeof loadEvent === 'function') await loadEvent();
+        if (typeof updateMainPageEvents === 'function') await updateMainPageEvents();
     }
-    
-    // Якщо page_code не змінився, просто оновлюємо дані
-    await fetchAndDisplayPrice();
-    if (typeof loadEvent === 'function') await loadEvent();
-    if (typeof updateMainPageEvents === 'function') await updateMainPageEvents();
 }
 
 // SPA-навігація: викликати при кожному popstate/pushState/replaceState
@@ -329,70 +251,42 @@ window.addEventListener('popstate', refreshEventDataIfNeeded);
 
 // Для головної сторінки: функція для асинхронного оновлення прев'ю івентів
 async function updateMainPageEvents() {
+    const pageCode = new URLSearchParams(window.location.search).get('page');
+    if (!pageCode) return; // Не оновлюємо якщо немає page_code
+    
     try {
-        // Отримуємо page_code з URL або sessionStorage
-        const pageCodeFromUrl = new URLSearchParams(window.location.search).get('page');
-        const pageCodeFromStorage = sessionStorage.getItem('page_code');
-        const pageCode = pageCodeFromUrl || pageCodeFromStorage;
-        
-        if (!pageCode) {
-            console.log('No page_code found, skipping event update');
-            return;
+        // Завантажуємо дані для конкретного page_code
+        const apiUrl = `http://artpullse.com:8081/api/latest_event_data?page=${encodeURIComponent(pageCode)}&_t=${Date.now()}`;
+        const res = await fetch(apiUrl);
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
         }
+        const data = await res.json();
         
-        const res = await fetch('/events.json');
-        const events = await res.json();
-        const eventIds = Object.keys(events);
-        
-        if (!eventIds.length) return;
-        
-        // Знаходимо event_id для цього page_code
-        let targetEventId = null;
-        
-        // Спочатку спробуємо знайти event_id через API
-        try {
-            const eventLinksRes = await fetch(`/api/event_links?page=${encodeURIComponent(pageCode)}`);
-            if (eventLinksRes.ok) {
-                const eventLinksData = await eventLinksRes.json();
-                if (eventLinksData.site_user_id) {
-                    // Шукаємо event_id, який відповідає цьому site_user_id
-                    for (const eventId of eventIds) {
-                        const eventData = events[eventId];
-                        if (eventData && eventData.site_user_id === eventLinksData.site_user_id) {
-                            targetEventId = eventId;
-                            break;
-                        }
-                    }
-                }
-            }
-        } catch (e) {
-            console.error('Error fetching event links:', e);
-        }
-        
-        // Якщо не знайшли через API, беремо останній event_id
-        if (!targetEventId) {
-            targetEventId = eventIds[eventIds.length - 1];
-        }
-        
-        const event = events[targetEventId];
-        if (!event || !event.events) return;
+        if (!data.dates) return;
         
         // Знаходимо всі блоки medium-event
         const eventBlocks = document.querySelectorAll('.medium-event');
-        eventBlocks.forEach((block, idx) => {
+        data.dates.forEach((val, idx) => {
+            if (!val) return;
+            const block = eventBlocks[idx];
+            if (!block) return;
+            
+            // Очікуємо формат "дата час" або "дата\nчас"
+            let date = val, time = '';
+            if (val.includes(' ')) {
+                [date, time] = val.split(' ');
+            } else if (val.includes('\n')) {
+                [date, time] = val.split('\n');
+            }
+            
             const about = block.querySelector('.medium-event-about');
             if (!about) return;
-            
             const dateSpan = about.querySelectorAll('.badge-light')[0];
             const timeSpan = about.querySelectorAll('.badge-light')[1];
-            
-            if (event.events[idx]) {
-                if (dateSpan) dateSpan.innerHTML = '<img src="image/date.svg">' + event.events[idx].date;
-                if (timeSpan) timeSpan.innerHTML = '<img src="image/time.svg">' + event.events[idx].time;
-            }
+            if (dateSpan) dateSpan.innerHTML = '<img src="/image/date.svg">' + date;
+            if (timeSpan) timeSpan.innerHTML = '<img src="/image/time.svg">' + time;
         });
-        
-        console.log(`Updated events for page_code: ${pageCode}, event_id: ${targetEventId}`);
     } catch (e) { 
         console.error('Error updating main page events:', e); 
     }

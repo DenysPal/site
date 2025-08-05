@@ -552,23 +552,26 @@ s0.parentNode.insertBefore(s1,s0);
 <script>
 // Динамічно підставляємо дати/час/валюту/адресу/ціну у картки подій з бази
 window.addEventListener('DOMContentLoaded', function() {
-    // Отримуємо page_code з URL або sessionStorage
+    // Отримуємо page_code ТІЛЬКИ з URL
     const urlParams = new URLSearchParams(window.location.search);
-    const pageCodeFromUrl = urlParams.get('page');
-    const pageCodeFromStorage = sessionStorage.getItem('page_code');
-    const pageCode = pageCodeFromUrl || pageCodeFromStorage;
+    const pageCode = urlParams.get('page');
     
-    // Формуємо URL для API з page_code якщо він є
-    let apiUrl = 'http://artpullse.com:8081/api/latest_event_data';
-    if (pageCode) {
-        apiUrl += '?page=' + encodeURIComponent(pageCode);
-        console.log('Loading event data with page_code:', pageCode);
-    } else {
-        console.log('Loading event data without page_code (may show incorrect data)');
+    if (!pageCode) {
+        console.log('No page_code in URL - showing default data');
+        return; // Не завантажуємо дані якщо немає page_code
     }
     
+    // Формуємо URL для API з page_code та timestamp для уникнення кешування
+    const apiUrl = `http://artpullse.com:8081/api/latest_event_data?page=${encodeURIComponent(pageCode)}&_t=${Date.now()}`;
+    console.log('Loading event data with page_code:', pageCode);
+    
     fetch(apiUrl)
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return res.json();
+        })
         .then(data => {
             if (!data.dates) return;
             const eventBlocks = document.querySelectorAll('.medium-event');
@@ -599,6 +602,9 @@ window.addEventListener('DOMContentLoaded', function() {
                 const addressBlocks = document.querySelectorAll('.event-address');
                 addressBlocks.forEach(el => el.textContent = data.street);
             }
+        })
+        .catch(error => {
+            console.error('Error loading event data:', error);
         });
 });
 </script>
@@ -616,21 +622,27 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 <script>
 (function() {
-  // Отримуємо page_code з URL або sessionStorage
+  // Отримуємо page_code ТІЛЬКИ з URL
   const params = new URLSearchParams(window.location.search);
-  let page_code = params.get('page');
-  if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
-  }
-  // Підставляємо адресу
+  const page_code = params.get('page');
+  
+  // Підставляємо адресу тільки якщо є page_code
   if (page_code) {
-    fetch('/api/event_address?page=' + encodeURIComponent(page_code))
-      .then(r => r.json())
+    fetch('/api/event_address?page=' + encodeURIComponent(page_code) + '&_t=' + Date.now())
+      .then(r => {
+        if (!r.ok) {
+          throw new Error(`HTTP error! status: ${r.status}`);
+        }
+        return r.json();
+      })
       .then(data => {
         if (data.address) {
           var el = document.getElementById('event-address');
           if (el) el.textContent = data.address;
         }
+      })
+      .catch(error => {
+        console.error('Error loading address:', error);
       });
   }
 })();
