@@ -272,20 +272,24 @@ async function updateMainPageEvents() {
             const block = eventBlocks[idx];
             if (!block) return;
             
-            // Очікуємо формат "дата час" або "дата\nчас"
+            // Розділяємо дату та час (формат: "28.06.2025 10:00-22:20")
             let date = val, time = '';
             if (val.includes(' ')) {
-                [date, time] = val.split(' ');
-            } else if (val.includes('\n')) {
-                [date, time] = val.split('\n');
+                const parts = val.split(' ');
+                date = parts[0]; // "28.06.2025"
+                time = parts.slice(1).join(' '); // "10:00-22:20"
             }
             
-            const about = block.querySelector('.medium-event-about');
-            if (!about) return;
-            const dateSpan = about.querySelectorAll('.badge-light')[0];
-            const timeSpan = about.querySelectorAll('.badge-light')[1];
-            if (dateSpan) dateSpan.innerHTML = '<img src="/image/date.svg">' + date;
-            if (timeSpan) timeSpan.innerHTML = '<img src="/image/time.svg">' + time;
+            // Оновлюємо елементи з класами event-date та event-time
+            const dateElements = block.querySelectorAll('.event-date');
+            const timeElements = block.querySelectorAll('.event-time');
+            
+            dateElements.forEach(el => {
+                el.textContent = date;
+            });
+            timeElements.forEach(el => {
+                el.textContent = time;
+            });
         });
     } catch (e) { 
         console.error('Error updating main page events:', e); 
