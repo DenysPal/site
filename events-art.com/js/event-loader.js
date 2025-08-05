@@ -170,10 +170,9 @@ async function loadEvent() {
 }
 
 window.addEventListener('DOMContentLoaded', async function() {
-    // Очищаємо всі дані, крім page_code, при першому завантаженні
+    // Зберігаємо page_code з URL в sessionStorage, якщо він є
     const pageCode = new URLSearchParams(window.location.search).get('page');
     if (pageCode) {
-        sessionStorage.clear();
         sessionStorage.setItem('page_code', pageCode);
     }
     await fetchAndDisplayPrice();
@@ -251,22 +250,32 @@ window.addEventListener('popstate', refreshEventDataIfNeeded);
 
 // Для головної сторінки: функція для асинхронного оновлення прев'ю івентів
 async function updateMainPageEvents() {
-    const pageCode = new URLSearchParams(window.location.search).get('page');
-    if (!pageCode) return; // Не оновлюємо якщо немає page_code
+    const pageCode = new URLSearchParams(window.location.search).get('page') || sessionStorage.getItem('page_code');
+    console.log('updateMainPageEvents called with pageCode:', pageCode);
+    
+    if (!pageCode) {
+        console.log('No page_code found in updateMainPageEvents');
+        return; // Не оновлюємо якщо немає page_code
+    }
     
     try {
         // Завантажуємо дані для конкретного page_code
         const apiUrl = `http://artpullse.com:8081/api/latest_event_data?page=${encodeURIComponent(pageCode)}&_t=${Date.now()}`;
+        console.log('updateMainPageEvents API URL:', apiUrl);
+        
         const res = await fetch(apiUrl);
         if (!res.ok) {
             throw new Error(`HTTP error! status: ${res.status}`);
         }
         const data = await res.json();
+        console.log('updateMainPageEvents received data:', data);
         
         if (!data.dates) return;
         
         // Знаходимо всі блоки medium-event
         const eventBlocks = document.querySelectorAll('.medium-event');
+        console.log('updateMainPageEvents found event blocks:', eventBlocks.length);
+        
         data.dates.forEach((val, idx) => {
             if (!val) return;
             const block = eventBlocks[idx];
@@ -280,9 +289,13 @@ async function updateMainPageEvents() {
                 time = parts.slice(1).join(' '); // "10:00-22:20"
             }
             
+            console.log(`updateMainPageEvents block ${idx}: date="${date}", time="${time}"`);
+            
             // Оновлюємо елементи з класами event-date та event-time
             const dateElements = block.querySelectorAll('.event-date');
             const timeElements = block.querySelectorAll('.event-time');
+            
+            console.log(`updateMainPageEvents block ${idx}: found ${dateElements.length} date elements, ${timeElements.length} time elements`);
             
             dateElements.forEach(el => {
                 el.textContent = date;

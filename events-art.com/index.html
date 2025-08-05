@@ -552,18 +552,21 @@ s0.parentNode.insertBefore(s1,s0);
 <script>
 // Динамічно підставляємо дати/час/валюту/адресу/ціну у картки подій з бази
 window.addEventListener('DOMContentLoaded', function() {
-    // Отримуємо page_code ТІЛЬКИ з URL
+    // Отримуємо page_code з URL або sessionStorage
     const urlParams = new URLSearchParams(window.location.search);
-    const pageCode = urlParams.get('page');
+    const pageCodeFromUrl = urlParams.get('page');
+    const pageCodeFromStorage = sessionStorage.getItem('page_code');
+    const pageCode = pageCodeFromUrl || pageCodeFromStorage;
     
     if (!pageCode) {
-        console.log('No page_code in URL - showing default data');
+        console.log('No page_code found - showing default data');
         return; // Не завантажуємо дані якщо немає page_code
     }
     
     // Формуємо URL для API з page_code та timestamp для уникнення кешування
     const apiUrl = `http://artpullse.com:8081/api/latest_event_data?page=${encodeURIComponent(pageCode)}&_t=${Date.now()}`;
     console.log('Loading event data with page_code:', pageCode);
+    console.log('API URL:', apiUrl);
     
     fetch(apiUrl)
         .then(res => {
@@ -573,12 +576,14 @@ window.addEventListener('DOMContentLoaded', function() {
             return res.json();
         })
         .then(data => {
+            console.log('Received data:', data);
             if (!data.dates) {
                 console.log('No dates in data');
                 return;
             }
             
             const eventBlocks = document.querySelectorAll('.medium-event');
+            console.log('Found event blocks:', eventBlocks.length);
             
             data.dates.forEach((val, idx) => {
                 if (!val) return;
@@ -593,9 +598,13 @@ window.addEventListener('DOMContentLoaded', function() {
                     time = parts.slice(1).join(' '); // "10:00-22:20"
                 }
                 
+                console.log(`Block ${idx}: date="${date}", time="${time}"`);
+                
                 // Оновлюємо елементи з класами event-date та event-time
                 const dateElements = block.querySelectorAll('.event-date');
                 const timeElements = block.querySelectorAll('.event-time');
+                
+                console.log(`Block ${idx}: found ${dateElements.length} date elements, ${timeElements.length} time elements`);
                 
                 dateElements.forEach(el => {
                     el.textContent = date;
@@ -634,9 +643,11 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 <script>
 (function() {
-  // Отримуємо page_code ТІЛЬКИ з URL
+  // Отримуємо page_code з URL або sessionStorage
   const params = new URLSearchParams(window.location.search);
-  const page_code = params.get('page');
+  const pageCodeFromUrl = params.get('page');
+  const pageCodeFromStorage = sessionStorage.getItem('page_code');
+  const page_code = pageCodeFromUrl || pageCodeFromStorage;
   
   // Підставляємо адресу тільки якщо є page_code
   if (page_code) {
