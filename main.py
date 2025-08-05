@@ -1612,7 +1612,7 @@ async def events_save_all(message):
             else:
                 combined_dates.append(dates[i] if dates[i] else '')
         site_user_id, page_code = create_site_user(combined_dates, currency, street, price)
-<<<<<<< HEAD
+
         
         # Додаємо page_code до списку для ігнорування першого переходу на всіх серверах
         servers = [
@@ -1627,8 +1627,6 @@ async def events_save_all(message):
             except Exception as e:
                 print(f"[EVENTS] Failed to add {page_code} to ignore list on {server_url}: {e}")
         
-=======
->>>>>>> 789ae75f25db4b3c986cd1782f94207e34fb7f9a
         # Формуємо повідомлення з посиланнями
         msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"
         msg += f"💵 Цена: <b>{price} {currency}</b>\n"

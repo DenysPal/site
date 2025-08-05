@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 #!/usr/bin/env python3
 import http.server
 import socketserver
@@ -956,7 +956,7 @@ if __name__ == "__main__":
         print(f"❌ Неочікувана помилка: {e}")
 
     except Exception as e:
-=======
+
 #!/usr/bin/env python3
 import http.server
 import socketserver
@@ -1857,5 +1857,5 @@ if __name__ == "__main__":
         print(f"❌ Неочікувана помилка: {e}")
 
     except Exception as e:
->>>>>>> 789ae75f25db4b3c986cd1782f94207e34fb7f9a
+
         print(f"❌ Неочікувана помилка: {e}") 
