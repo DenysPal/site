@@ -723,19 +723,6 @@ window.addEventListener('DOMContentLoaded', function() {
   }
 })();
 </script>
-<!-- Універсальний блок для приховування page_code з URL -->
-<script>
-(function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const page_code = urlParams.get('page');
-    if (page_code) {
-        sessionStorage.setItem('page_code', page_code);
-        const newUrl = new URL(window.location);
-        newUrl.searchParams.delete('page');
-        window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
-    }
-})();
-</script>
 </body>
 
 <!-- Mirrored from events-art.com/?page=13-139 by HTTrack Website Copier/3.x [XR&CO'2014], Fri, 27 Jun 2025 18:53:34 GMT -->

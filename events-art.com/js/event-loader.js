@@ -177,7 +177,11 @@ window.addEventListener('DOMContentLoaded', async function() {
     }
     await fetchAndDisplayPrice();
     await loadEvent();
-    await updateMainPageEvents();
+    // Викликаємо updateMainPageEvents тільки якщо це головна сторінка і немає event в URL
+    const eventId = getEventIdFromUrl();
+    if (!eventId) {
+        await updateMainPageEvents();
+    }
 });
 
 function sendVisitLog(extra) {
