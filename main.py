@@ -1634,7 +1634,7 @@ async def events_save_all(message):
         msg += f"🆔 Site User ID: <code>{site_user_id}</code>\n"
         msg += f"🔖 Page Code: <code>{page_code}</code>\n\n"
         msg += f"<b>Афиша:</b>\n"
-        msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?page={page_code}\n"
+        msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?event={site_user_id}\n"
         for idx, ev in enumerate(events[event_id]['events'], 1):
             path = ev['path']
             if path.endswith('/index.html'):
