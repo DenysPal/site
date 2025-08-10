@@ -450,11 +450,23 @@ Yes. Photography and videography are allowed in the Museum so long as the images
   }
   const eventId = getEventIdFromUrl();
   if (!eventId) return;
-  fetch('/events.json')
-    .then(res => res.json())
-    .then(events => {
-      const eventData = events[eventId];
-      if (!eventData || !Array.isArray(eventData.events)) return;
+  
+  console.log('Loading main page data for event_id:', eventId);
+  fetch('/api/events_data_for_main_page?event=' + encodeURIComponent(eventId))
+    .then(res => {
+      console.log('API response status:', res.status);
+      if (!res.ok) {
+        throw new Error('API request failed: ' + res.status);
+      }
+      return res.json();
+    })
+    .then(eventData => {
+      console.log('Received event data:', eventData);
+      if (!eventData || !Array.isArray(eventData.events)) {
+        console.log('No valid event data found');
+        return;
+      }
+      
       // Підставляємо дані у всі .medium-event
       const eventBlocks = document.querySelectorAll('.medium-event');
       eventData.events.forEach(function(ev, idx) {
@@ -482,6 +494,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
         const h3 = block.querySelector('h3');
         if (h3 && ev.name) h3.textContent = ev.name;
       });
+      
       // Підставляємо дані у блоки #event-title, #event-date, #event-time (перший івент)
       if (eventData.title) {
         var titleBlock = document.getElementById('event-title');
@@ -493,6 +506,9 @@ Yes. Photography and videography are allowed in the Museum so long as the images
         if (dateBlock) dateBlock.textContent = eventData.events[0].date || '';
         if (timeBlock) timeBlock.textContent = eventData.events[0].time || '';
       }
+    })
+    .catch(error => {
+      console.error('Error loading event data:', error);
     });
 })();
 </script>

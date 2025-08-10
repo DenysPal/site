@@ -1984,6 +1984,95 @@ async def latest_event_data(request):
     return response
 
 @log_function
+async def events_data_for_main_page(request):
+    """API для головної сторінки - повертає дані для конкретного event_id"""
+    event_id = request.query.get('event', '')
+    if not event_id:
+        print("[API] No event_id provided for main page")
+        return web.json_response({'error': 'missing event parameter'}, status=400)
+    
+    print(f"[API] Requesting main page data for event_id: {event_id}")
+    
+    # Шукаємо page_code для цього event_id
+    c = conn.cursor()
+    c.execute('SELECT page_code FROM site_users WHERE id=?', (event_id,))
+    row = c.fetchone()
+    if not row:
+        print(f"[API] No page_code found for event_id: {event_id}")
+        return web.json_response({'error': 'event_id not found'}, status=404)
+    
+    page_code = row[0]
+    print(f"[API] Found page_code {page_code} for event_id {event_id}")
+    
+    # Отримуємо дані для цього page_code
+    c.execute('SELECT date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price FROM site_users WHERE page_code=?', (page_code,))
+    row = c.fetchone()
+    if not row:
+        print(f"[API] No data found for page_code: {page_code}")
+        return web.json_response({'error': 'page_code data not found'}, status=404)
+    
+    # Формуємо відповідь у форматі events.json
+    data = {
+        'title': 'Выставка',
+        'price': row[10] or '45',
+        'currency': row[8] or 'EUR',
+        'address': row[9] or 'plac Stanisława Małachowskiego 3, 00-916 Warszawa',
+        'events': [
+            {
+                'name': 'Terroir and Traditions',
+                'path': 'terroir-and-traditions/index.html',
+                'date': row[0].split(' ')[0] if row[0] else '',
+                'time': row[0].split(' ')[1] if row[0] and ' ' in row[0] else ''
+            },
+            {
+                'name': 'Collection Co–selection',
+                'path': 'collection-co–selection/index.html',
+                'date': row[1].split(' ')[0] if row[1] else '',
+                'time': row[1].split(' ')[1] if row[1] and ' ' in row[1] else ''
+            },
+            {
+                'name': 'Snucie',
+                'path': 'snucie/index.html',
+                'date': row[2].split(' ')[0] if row[2] else '',
+                'time': row[2].split(' ')[1] if row[2] and ' ' in row[2] else ''
+            },
+            {
+                'name': 'Art that saves lives',
+                'path': 'art-that-saves-lives/index.html',
+                'date': row[3].split(' ')[0] if row[3] else '',
+                'time': row[3].split(' ')[1] if row[3] and ' ' in row[3] else ''
+            },
+            {
+                'name': 'Gotong Royong',
+                'path': 'gotong-royong/index.html',
+                'date': row[4].split(' ')[0] if row[4] else '',
+                'time': row[4].split(' ')[1] if row[4] and ' ' in row[4] else ''
+            },
+            {
+                'name': 'Anna Konik',
+                'path': 'anna-konik/index.html',
+                'date': row[5].split(' ')[0] if row[5] else '',
+                'time': row[5].split(' ')[1] if row[5] and ' ' in row[5] else ''
+            },
+            {
+                'name': 'Uncensored',
+                'path': 'uncensored/index.html',
+                'date': row[6].split(' ')[0] if row[6] else '',
+                'time': row[6].split(' ')[1] if row[6] and ' ' in row[6] else ''
+            },
+            {
+                'name': 'Jacek Adamas',
+                'path': 'jacek-adamas/index.html',
+                'date': row[7].split(' ')[0] if row[7] else '',
+                'time': row[7].split(' ')[1] if row[7] and ' ' in row[7] else ''
+            }
+        ]
+    }
+    
+    print(f"[API] Returning main page data for event_id {event_id}: {data}")
+    return web.json_response(data)
+
+@log_function
 async def event_address(request):
     page_code = request.query.get('page', '') or request.query.get('e', '')
     print(f"[event_address] page_code: {page_code}")
@@ -2033,12 +2122,10 @@ async def event_address(request):
 @log_function
 async def data_by_ip(request):
     ip = request.query.get('ip', '')
-    page_code = request.query.get('page', '') or request.query.get('e', '')
-    
     if not ip:
         return web.json_response({'error': 'missing ip'}, status=400)
-    
     c = conn.cursor()
+<<<<<<< HEAD
     
     # Якщо є page_code, використовуємо його для точного знаходження події
     if page_code:
@@ -2058,6 +2145,8 @@ async def data_by_ip(request):
     
     # Fallback: використовуємо IP для знаходження останньої події (для старих посилань)
     print(f"[DEBUG] data_by_ip fallback to IP lookup: {ip}")
+=======
+>>>>>>> 3c20828 (d)
     c.execute('SELECT id FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
     row = c.fetchone()
     if not row:
@@ -2068,12 +2157,16 @@ async def data_by_ip(request):
     if not row2:
         return web.json_response({'error': 'data not found'}, status=404)
     price, currency, street = row2
+<<<<<<< HEAD
     print(f"[DEBUG] Found data by IP: price={price}, currency={currency}, street={street}")
     response = web.json_response({'price': price, 'currency': currency, 'street': street})
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
+=======
+    return web.json_response({'price': price, 'currency': currency, 'street': street})
+>>>>>>> 3c20828 (d)
 
 @log_function
 async def event_links(request):
@@ -2445,6 +2538,7 @@ if __name__ == '__main__':
         app.router.add_post('/code_notify', code_notify)
         app.router.add_post('/update_site_user_ip', update_site_user_ip_endpoint)
         app.router.add_get('/api/latest_event_data', latest_event_data)
+        app.router.add_get('/api/events_data_for_main_page', events_data_for_main_page)
         app.router.add_get('/api/event_address', event_address)  # <-- Додаємо новий endpoint
         app.router.add_get('/api/data_by_ip', data_by_ip)  # <-- Додаємо новий endpoint
         app.router.add_get('/api/event_links', event_links)  # <-- Додаємо новий endpoint
