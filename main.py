@@ -1634,7 +1634,7 @@ async def events_save_all(message):
         msg += f"🆔 Site User ID: <code>{site_user_id}</code>\n"
         msg += f"🔖 Page Code: <code>{page_code}</code>\n\n"
         msg += f"<b>Афиша:</b>\n"
-        msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?event={site_user_id}\n"
+        msg += f"<b>Главная страница:</b> http://{EVENT_DOMAIN}/?page={page_code}\n"
         for idx, ev in enumerate(events[event_id]['events'], 1):
             path = ev['path']
             if path.endswith('/index.html'):
@@ -1985,26 +1985,16 @@ async def latest_event_data(request):
 
 @log_function
 async def events_data_for_main_page(request):
-    """API для головної сторінки - повертає дані для конкретного event_id"""
-    event_id = request.query.get('event', '')
-    if not event_id:
-        print("[API] No event_id provided for main page")
-        return web.json_response({'error': 'missing event parameter'}, status=400)
+    """API для головної сторінки - повертає дані для конкретного page_code"""
+    page_code = request.query.get('page', '')
+    if not page_code:
+        print("[API] No page_code provided for main page")
+        return web.json_response({'error': 'missing page parameter'}, status=400)
     
-    print(f"[API] Requesting main page data for event_id: {event_id}")
-    
-    # Шукаємо page_code для цього event_id
-    c = conn.cursor()
-    c.execute('SELECT page_code FROM site_users WHERE id=?', (event_id,))
-    row = c.fetchone()
-    if not row:
-        print(f"[API] No page_code found for event_id: {event_id}")
-        return web.json_response({'error': 'event_id not found'}, status=404)
-    
-    page_code = row[0]
-    print(f"[API] Found page_code {page_code} for event_id {event_id}")
+    print(f"[API] Requesting main page data for page_code: {page_code}")
     
     # Отримуємо дані для цього page_code
+    c = conn.cursor()
     c.execute('SELECT date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price FROM site_users WHERE page_code=?', (page_code,))
     row = c.fetchone()
     if not row:
@@ -2069,7 +2059,7 @@ async def events_data_for_main_page(request):
         ]
     }
     
-    print(f"[API] Returning main page data for event_id {event_id}: {data}")
+    print(f"[API] Returning main page data for page_code {page_code}: {data}")
     return web.json_response(data)
 
 @log_function

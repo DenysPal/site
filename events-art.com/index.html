@@ -448,11 +448,11 @@ Yes. Photography and videography are allowed in the Museum so long as the images
     const params = new URLSearchParams(window.location.search);
     return params.get('event');
   }
-  const eventId = getEventIdFromUrl();
-  if (!eventId) return;
-  
-  console.log('Loading main page data for event_id:', eventId);
-  fetch('/api/events_data_for_main_page?event=' + encodeURIComponent(eventId))
+          const pageCode = getPageCodeFromUrl();
+        if (!pageCode) return;
+        
+        console.log('Loading main page data for page_code:', pageCode);
+        fetch('/api/events_data_for_main_page?page=' + encodeURIComponent(pageCode))
     .then(res => {
       console.log('API response status:', res.status);
       if (!res.ok) {
@@ -523,29 +523,29 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 </script>
 <script>
 (function() {
-  function getEventIdFromUrl() {
+  function getPageCodeFromUrl() {
     const params = new URLSearchParams(window.location.search);
-    return params.get('event');
+    return params.get('page');
   }
-  const eventId = getEventIdFromUrl();
-  if (eventId) {
-    // Додаємо eventId до всіх Show info
+  const pageCode = getPageCodeFromUrl();
+  if (pageCode) {
+    // Додаємо pageCode до всіх Show info
     document.querySelectorAll('.medium-event-about a').forEach(function(link) {
-      if (!link.href.includes('event=')) {
+      if (!link.href.includes('page=')) {
         if (link.href.includes('?')) {
-          link.href += '&event=' + eventId;
+          link.href += '&page=' + pageCode;
         } else {
-          link.href += '?event=' + eventId;
+          link.href += '?page=' + pageCode;
         }
       }
     });
-    // Додаємо eventId до Home
+    // Додаємо pageCode до Home
     var homeLink = document.querySelector('.menu-header .nav-link[href]');
-    if (homeLink && !homeLink.href.includes('event=')) {
+    if (homeLink && !homeLink.href.includes('page=')) {
       if (homeLink.href.includes('?')) {
-        homeLink.href += '&event=' + eventId;
+        homeLink.href += '&page=' + pageCode;
       } else {
-        homeLink.href += '?event=' + eventId;
+        homeLink.href += '?page=' + pageCode;
       }
     }
   }
