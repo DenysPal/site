@@ -2125,7 +2125,7 @@ async def data_by_ip(request):
     if not ip:
         return web.json_response({'error': 'missing ip'}, status=400)
     c = conn.cursor()
-<<<<<<< HEAD
+
     
     # Якщо є page_code, використовуємо його для точного знаходження події
     if page_code:
@@ -2145,8 +2145,7 @@ async def data_by_ip(request):
     
     # Fallback: використовуємо IP для знаходження останньої події (для старих посилань)
     print(f"[DEBUG] data_by_ip fallback to IP lookup: {ip}")
-=======
->>>>>>> 3c20828 (d)
+
     c.execute('SELECT id FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
     row = c.fetchone()
     if not row:
@@ -2157,16 +2156,16 @@ async def data_by_ip(request):
     if not row2:
         return web.json_response({'error': 'data not found'}, status=404)
     price, currency, street = row2
-<<<<<<< HEAD
+
     print(f"[DEBUG] Found data by IP: price={price}, currency={currency}, street={street}")
     response = web.json_response({'price': price, 'currency': currency, 'street': street})
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
-=======
+
     return web.json_response({'price': price, 'currency': currency, 'street': street})
->>>>>>> 3c20828 (d)
+
 
 @log_function
 async def event_links(request):
