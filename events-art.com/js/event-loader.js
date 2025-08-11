@@ -299,6 +299,12 @@ async function updateMainPageEvents() {
             const timeElements = block.querySelectorAll('.event-time');
             dateElements.forEach(el => { el.textContent = date; });
             timeElements.forEach(el => { el.textContent = time; });
+
+            // Also update the event title if the API provides it
+            const titleEl = block.querySelector('h3');
+            if (titleEl && Array.isArray(data.events) && data.events[idx] && data.events[idx].name) {
+                titleEl.textContent = data.events[idx].name;
+            }
         }
     } catch (e) { 
         console.error('Error updating main page events:', e); 

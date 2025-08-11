@@ -442,76 +442,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
     });
 });
   </script>
-<script>
-(function() {
-  function getEventIdFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('event');
-  }
-          const pageCode = getPageCodeFromUrl();
-        if (!pageCode) return;
-        
-        console.log('Loading main page data for page_code:', pageCode);
-        fetch('/api/events_data_for_main_page?page=' + encodeURIComponent(pageCode))
-    .then(res => {
-      console.log('API response status:', res.status);
-      if (!res.ok) {
-        throw new Error('API request failed: ' + res.status);
-      }
-      return res.json();
-    })
-    .then(eventData => {
-      console.log('Received event data:', eventData);
-      if (!eventData || !Array.isArray(eventData.events)) {
-        console.log('No valid event data found');
-        return;
-      }
-      
-      // Підставляємо дані у всі .medium-event
-      const eventBlocks = document.querySelectorAll('.medium-event');
-      eventData.events.forEach(function(ev, idx) {
-        const block = eventBlocks[idx];
-        if (!block) return;
-        // Дата
-        const dateBadge = block.querySelector('.badge-light img[src*="date"]');
-        if (dateBadge && dateBadge.nextSibling) {
-          if (dateBadge.nextSibling.nodeType === Node.TEXT_NODE) {
-            dateBadge.nextSibling.textContent = ev.date;
-          } else if (dateBadge.nextElementSibling) {
-            dateBadge.nextElementSibling.textContent = ev.date;
-          }
-        }
-        // Час
-        const timeBadge = block.querySelector('.badge-light img[src*="time"]');
-        if (timeBadge && timeBadge.nextSibling) {
-          if (timeBadge.nextSibling.nodeType === Node.TEXT_NODE) {
-            timeBadge.nextSibling.textContent = ev.time;
-          } else if (timeBadge.nextElementSibling) {
-            timeBadge.nextElementSibling.textContent = ev.time;
-          }
-        }
-        // Назва
-        const h3 = block.querySelector('h3');
-        if (h3 && ev.name) h3.textContent = ev.name;
-      });
-      
-      // Підставляємо дані у блоки #event-title, #event-date, #event-time (перший івент)
-      if (eventData.title) {
-        var titleBlock = document.getElementById('event-title');
-        if (titleBlock) titleBlock.textContent = eventData.title;
-      }
-      if (eventData.events && eventData.events.length > 0) {
-        var dateBlock = document.getElementById('event-date');
-        var timeBlock = document.getElementById('event-time');
-        if (dateBlock) dateBlock.textContent = eventData.events[0].date || '';
-        if (timeBlock) timeBlock.textContent = eventData.events[0].time || '';
-      }
-    })
-    .catch(error => {
-      console.error('Error loading event data:', error);
-    });
-})();
-</script>
+<!-- Data population is handled centrally by events-art.com/js/event-loader.js (updateMainPageEvents) -->
 <script>
 (function() {
   var allowed = ["artpullse.com", "events-art.com", "localhost"];
