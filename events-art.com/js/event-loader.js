@@ -71,15 +71,14 @@
 
 // --- ЛОГІКА ЗАВАНТАЖЕННЯ ЦІНИ ЗА IP ---
 async function fetchAndDisplayPrice() {
-    // Завжди підтягуємо актуальні дані з бекенду
+    // Підтягуємо дані тільки якщо є page_code
     const pageCode = new URLSearchParams(window.location.search).get('page');
+    if (!pageCode) return; // Не завантажуємо ціну без page_code
+    
     try {
         const r = await fetch('https://api.ipify.org?format=json');
         const ipData = await r.json();
-        let apiUrl = `/api/data_by_ip?ip=${encodeURIComponent(ipData.ip)}`;
-        if (pageCode) {
-            apiUrl += `&page=${encodeURIComponent(pageCode)}`;
-        }
+        const apiUrl = `/api/data_by_ip?ip=${encodeURIComponent(ipData.ip)}&page=${encodeURIComponent(pageCode)}`;
         const r2 = await fetch(apiUrl);
         const data = await r2.json();
         if (data.price && data.currency) {
@@ -95,13 +94,11 @@ async function fetchAndDisplayPrice() {
         try {
             const r = await fetch('https://api.ipify.org?format=json');
             const ipData = await r.json();
-            const resp = await fetch('/update_site_user_ip', {
+            fetch('/update_site_user_ip', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ page_code: pageCode, ip: ipData.ip })
-            });
-            const txt = await resp.text();
-            console.log('IP update on page visit:', txt);
+            }).catch(e => console.error('IP update error:', e)); // Не блокуємо завантаження
         } catch (e) { console.error(e); }
     }
 })();
@@ -257,8 +254,8 @@ async function updateMainPageEvents() {
     }
     
     try {
-        // Завантажуємо дані для конкретного page_code
-        const apiUrl = `/api/events_data_for_main_page?page=${encodeURIComponent(pageCode)}&_t=${Date.now()}`;
+        // Завантажуємо дані для конкретного page_code (без зайвих параметрів для швидкості)
+        const apiUrl = `/api/events_data_for_main_page?page=${encodeURIComponent(pageCode)}`;
         console.log('updateMainPageEvents API URL:', apiUrl);
         
         const res = await fetch(apiUrl);

@@ -224,23 +224,34 @@ document.addEventListener('DOMContentLoaded', function() {
   const eventIndex = 1;
   console.log('Loading data for page_code:', page_code, 'eventIndex:', eventIndex);
   if (page_code) {
-    fetch('/api/event_address?page=' + encodeURIComponent(page_code))
+    // Оптимізований запит - отримуємо всі дані за один раз
+    fetch('/api/event_data?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex + '&_cb=' + Date.now())
       .then(r => r.json())
       .then(data => {
+        // Оновлюємо адресу
         if (data.address) {
           var el = document.getElementById('event-address');
           if (el) el.textContent = data.address;
         }
-      });
-    fetch('/api/event_places?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex)
-      .then(r => r.json())
-      .then(data => {
+        // Оновлюємо дату
+        if (data.date) {
+          var el = document.getElementById('event-date');
+          if (el) el.textContent = data.date;
+        }
+        // Оновлюємо час
+        if (data.time) {
+          var el = document.getElementById('event-time');
+          if (el) el.textContent = data.time;
+        }
+        // Оновлюємо кількість місць
         if (data.places !== undefined && data.places !== null) {
           var el = document.getElementById('event-places');
           if (el) el.textContent = data.places + ' ticket left';
         }
+      })
+      .catch(error => {
+        console.error('Error loading event data:', error);
       });
-
   }
 });
 </script>
