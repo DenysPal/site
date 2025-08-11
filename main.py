@@ -732,7 +732,7 @@ async def payuser_back_handler(call: types.CallbackQuery):
 @router.message(lambda m: user_step.get(m.from_user.id) == 'payout_worker')
 @ban_guard
 async def payout_worker_step(message: types.Message):
-        uid = message.from_user.id
+    uid = message.from_user.id
     user_data[uid]['payout']['worker'] = message.text.strip().lstrip('@')
     if user_data[uid].get('edit_mode'):
         user_step[uid] = 'payout_confirm'
@@ -765,7 +765,7 @@ async def payout_amount_step(message: types.Message):
     uid = message.from_user.id
     try:
         amount = float(message.text.strip().replace(',', '.'))
-        except Exception:
+    except Exception:
         await message.answer("Введите сумму числом!")
         return
     user_data[uid]['payout']['amount'] = amount
