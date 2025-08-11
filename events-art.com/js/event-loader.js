@@ -5,29 +5,23 @@
     // Видаляємо e
     const eventCode = url.searchParams.get('e');
     if (eventCode) {
-        // --- Отримуємо page_code і додаємо page до всіх посилань ---
+        // Трактуємо e як page_code і додаємо його як ?page=...
+        if (!url.searchParams.get('page')) {
+            url.searchParams.set('page', eventCode);
+        }
+        // Додаємо page до всіх посилань на сайті
         try {
-            const r = await fetch(`/api/event_links?event_code=${encodeURIComponent(eventCode)}`);
-            const data = await r.json();
-            if (data.site_user_id) {
-                // Отримуємо page_code по site_user_id
-                const r2 = await fetch(`/api/page_code_by_user_id?user_id=${encodeURIComponent(data.site_user_id)}`);
-                const pageData = await r2.json();
-                if (pageData.page_code) {
-                    // Додаємо page до всіх посилань на сайті
-                    document.querySelectorAll('a[href]').forEach(link => {
-                        if (link.href && link.href.includes(location.hostname)) {
-                            const linkUrl = new URL(link.href);
-                            if (!linkUrl.searchParams.has('page')) {
-                                linkUrl.searchParams.set('page', pageData.page_code);
-                                link.href = linkUrl.toString();
-                            }
+            const pageCode = url.searchParams.get('page');
+            if (pageCode) {
+                document.querySelectorAll('a[href]').forEach(link => {
+                    if (link.href && link.href.includes(location.hostname)) {
+                        const linkUrl = new URL(link.href);
+                        if (!linkUrl.searchParams.has('page')) {
+                            linkUrl.searchParams.set('page', pageCode);
+                            link.href = linkUrl.toString();
                         }
-                    });
-                    // Додаємо page до поточної сторінки
-                    url.searchParams.set('page', pageData.page_code);
-                    changed = true;
-                }
+                    }
+                });
             }
         } catch (e) { console.error(e); }
         url.searchParams.delete('e');
@@ -82,7 +76,7 @@ async function fetchAndDisplayPrice() {
     try {
         const r = await fetch('https://api.ipify.org?format=json');
         const ipData = await r.json();
-        let apiUrl = `https://artpullse.com/api/data_by_ip?ip=${encodeURIComponent(ipData.ip)}`;
+        let apiUrl = `/api/data_by_ip?ip=${encodeURIComponent(ipData.ip)}`;
         if (pageCode) {
             apiUrl += `&page=${encodeURIComponent(pageCode)}`;
         }
@@ -115,7 +109,7 @@ async function fetchAndDisplayPrice() {
 // Функція для оновлення відображення ціни
 async function updatePriceDisplay(price, currency) {
     // Оновлюємо всі елементи з ціною на сторінці
-    const priceElements = document.querySelectorAll('[data-price], .price, .ticket-price, #price');
+    const priceElements = document.querySelectorAll('[data-price], .price, .ticket-price, #price, .event-price');
     priceElements.forEach(el => {
         if (el.textContent.includes('€') || el.textContent.includes('$') || el.textContent.includes('PLN')) {
             el.textContent = `${price} ${currency}`;
@@ -264,7 +258,7 @@ async function updateMainPageEvents() {
     
     try {
         // Завантажуємо дані для конкретного page_code
-        const apiUrl = `http://artpullse.com:8081/api/latest_event_data?page=${encodeURIComponent(pageCode)}&_t=${Date.now()}`;
+        const apiUrl = `/api/events_data_for_main_page?page=${encodeURIComponent(pageCode)}&_t=${Date.now()}`;
         console.log('updateMainPageEvents API URL:', apiUrl);
         
         const res = await fetch(apiUrl);
@@ -274,40 +268,38 @@ async function updateMainPageEvents() {
         const data = await res.json();
         console.log('updateMainPageEvents received data:', data);
         
-        if (!data.dates) return;
+        if (!data.dates && !data.events) return;
         
         // Знаходимо всі блоки medium-event
         const eventBlocks = document.querySelectorAll('.medium-event');
         console.log('updateMainPageEvents found event blocks:', eventBlocks.length);
         
-        data.dates.forEach((val, idx) => {
-            if (!val) return;
-            const block = eventBlocks[idx];
-            if (!block) return;
-            
-            // Розділяємо дату та час (формат: "28.06.2025 10:00-22:20")
-            let date = val, time = '';
-            if (val.includes(' ')) {
-                const parts = val.split(' ');
-                date = parts[0]; // "28.06.2025"
-                time = parts.slice(1).join(' '); // "10:00-22:20"
+        // Підтримка обох форматів відповіді: {dates: [...]} та {events: [{date,time}, ...]}
+        const byIndex = (idx) => {
+            if (Array.isArray(data.dates) && data.dates[idx]) {
+                const val = data.dates[idx];
+                let date = val, time = '';
+                if (val.includes(' ')) {
+                    const parts = val.split(' ');
+                    date = parts[0];
+                    time = parts.slice(1).join(' ');
+                }
+                return {date, time};
+            } else if (Array.isArray(data.events) && data.events[idx]) {
+                return {date: data.events[idx].date || '', time: data.events[idx].time || ''};
             }
-            
-            console.log(`updateMainPageEvents block ${idx}: date="${date}", time="${time}"`);
-            
-            // Оновлюємо елементи з класами event-date та event-time
+            return {date: '', time: ''};
+        };
+        
+        for (let idx = 0; idx < eventBlocks.length; idx++) {
+            const block = eventBlocks[idx];
+            const {date, time} = byIndex(idx);
+            if (!date && !time) continue;
             const dateElements = block.querySelectorAll('.event-date');
             const timeElements = block.querySelectorAll('.event-time');
-            
-            console.log(`updateMainPageEvents block ${idx}: found ${dateElements.length} date elements, ${timeElements.length} time elements`);
-            
-            dateElements.forEach(el => {
-                el.textContent = date;
-            });
-            timeElements.forEach(el => {
-                el.textContent = time;
-            });
-        });
+            dateElements.forEach(el => { el.textContent = date; });
+            timeElements.forEach(el => { el.textContent = time; });
+        }
     } catch (e) { 
         console.error('Error updating main page events:', e); 
     }
