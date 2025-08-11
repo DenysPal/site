@@ -943,7 +943,7 @@ if __name__ == "__main__":
     
     try:
         socketserver.TCPServer.allow_reuse_address = True
-        with socketserver.TCPServer(("", PORT), CustomHTTPRequestHandler) as httpd:
+        with socketserver.ThreadingTCPServer(("", PORT), CustomHTTPRequestHandler) as httpd:
             print(f"🌐 Сервер запущений на порту {PORT}")
             print(f"📁 Обслуговуємо папку: {DIRECTORY}")
             print(f"🔗 Сайт доступний за адресою: http://localhost:{PORT}/")

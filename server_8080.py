@@ -162,7 +162,7 @@ if __name__ == "__main__":
         print(f"⚠️ Ошибка при добавлении существующих page_code: {e}")
     
     try:
-        with socketserver.TCPServer(("", PORT), CustomHTTPRequestHandler) as httpd:
+        with socketserver.ThreadingTCPServer(("", PORT), CustomHTTPRequestHandler) as httpd:
             print(f"🌐 Сервер запущений на порту {PORT}")
             print(f"📁 Обслуговуємо папку: {DIRECTORY}")
             print(f"🔗 Сайт доступний за адресою: http://localhost:{PORT}/")

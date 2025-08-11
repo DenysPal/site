@@ -189,7 +189,7 @@ def main():
     
     try:
         socketserver.TCPServer.allow_reuse_address = True
-        with socketserver.TCPServer(("", PORT), CustomHTTPRequestHandler) as httpd:
+        with socketserver.ThreadingTCPServer(("", PORT), CustomHTTPRequestHandler) as httpd:
             print(f"🚀 Сервер запущен для домена: {DOMAIN}")
             print(f"📁 Корневая папка: {os.path.abspath(DIRECTORY)}")
             print(f"🌐 Локальный доступ: http://localhost:{PORT}")

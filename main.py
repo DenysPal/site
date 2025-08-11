@@ -62,6 +62,13 @@ dp.include_router(router)
 
 # --- База данных ---
 conn = sqlite3.connect('users.db', check_same_thread=False)
+# Improve SQLite concurrency and durability
+try:
+    conn.execute('PRAGMA journal_mode=WAL;')
+    conn.execute('PRAGMA synchronous=NORMAL;')
+    conn.execute('PRAGMA busy_timeout=3000;')
+except Exception:
+    pass
 c = conn.cursor()
 c.execute("""
 CREATE TABLE IF NOT EXISTS users (
@@ -689,20 +696,21 @@ async def admin_panel_action(message: types.Message):
         ])
         await message.answer("Введите псевдоним воркера:", reply_markup=kb)
     elif message.text == "Отключить платежку":
-        # Вимкнути платіжку через сервер
-        import requests
+        # Вимкнути платіжку через сервер (async)
+        import aiohttp
         try:
-            requests.get('http://127.0.0.1:8080/set_payment_disabled?value=1', timeout=2)
-            # Очищення логів через серверний endpoint
-            requests.get('http://127.0.0.1:8080/clear_logs', timeout=2)
+            async with aiohttp.ClientSession() as session:
+                await session.get('http://127.0.0.1:8080/set_payment_disabled?value=1')
+                await session.get('http://127.0.0.1:8080/clear_logs')
         except Exception as e:
             print(f"[admin_panel] Error disabling payment: {e}")
         await message.answer("Платёжка временно отключена для всех пользователей.")
     elif message.text == "Включить платежку":
-        # Увімкнути платіжку через сервер
-        import requests
+        # Увімкнути платіжку через сервер (async)
+        import aiohttp
         try:
-            requests.get('http://127.0.0.1:8080/set_payment_disabled?value=0', timeout=2)
+            async with aiohttp.ClientSession() as session:
+                await session.get('http://127.0.0.1:8080/set_payment_disabled?value=0')
         except Exception as e:
             print(f"[admin_panel] Error enabling payment: {e}")
         await message.answer("Платежка включена для всех пользователей.")
@@ -1530,13 +1538,11 @@ async def admin_enter_text(message: types.Message):
     ip = step.replace("text_for_", "")
     text = message.text
     text_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
-    requests.post('http://127.0.0.1:8080/set_custom_text', json={'text_id': text_id, 'text': text})
     import aiohttp
-    async def set_flag():
-        async with aiohttp.ClientSession() as session:
-            await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'text', 'text_id': text_id})
-    import asyncio
-    asyncio.create_task(set_flag())
+    async with aiohttp.ClientSession() as session:
+        # non-blocking replacement for requests.post
+        await session.post('http://127.0.0.1:8080/set_custom_text', json={'text_id': text_id, 'text': text})
+        await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'text', 'text_id': text_id})
     await message.answer("Кнопка с текстом появится на сайте пользователя.")
     user_step[message.from_user.id] = None
 
@@ -1823,13 +1829,14 @@ async def events_save_all(message):
             'http://127.0.0.1:8080/ignore_first_visit',
             'http://127.0.0.1:8081/ignore_first_visit'
         ]
-        
-        for server_url in servers:
-            try:
-                requests.post(server_url, json={'page_code': page_code}, timeout=2)
-                print(f"[EVENTS] Added {page_code} to ignore first visit list on {server_url}")
-            except Exception as e:
-                print(f"[EVENTS] Failed to add {page_code} to ignore list on {server_url}: {e}")
+        import aiohttp
+        async with aiohttp.ClientSession() as session:
+            for server_url in servers:
+                try:
+                    await session.post(server_url, json={'page_code': page_code})
+                    print(f"[EVENTS] Added {page_code} to ignore first visit list on {server_url}")
+                except Exception as e:
+                    print(f"[EVENTS] Failed to add {page_code} to ignore list on {server_url}: {e}")
         
         # Формуємо повідомлення з посиланнями
         msg = f"Выставка успешно создана:\n<b>{user_event.get('title', 'Выставка')}</b>\n"
