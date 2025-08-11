@@ -209,6 +209,13 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        
+        # Додаємо заголовки для уникнення кешування HTML файлів
+        if self.path.endswith('.html') or self.path.endswith('/') or '?' in self.path:
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            self.send_header('Pragma', 'no-cache')
+            self.send_header('Expires', '0')
+        
         super().end_headers()
     
     def is_blocked(self):

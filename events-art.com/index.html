@@ -448,13 +448,25 @@ Yes. Photography and videography are allowed in the Museum so long as the images
     const params = new URLSearchParams(window.location.search);
     return params.get('event');
   }
-  const eventId = getEventIdFromUrl();
-  if (!eventId) return;
-  fetch('/events.json')
-    .then(res => res.json())
-    .then(events => {
-      const eventData = events[eventId];
-      if (!eventData || !Array.isArray(eventData.events)) return;
+          const pageCode = getPageCodeFromUrl();
+        if (!pageCode) return;
+        
+        console.log('Loading main page data for page_code:', pageCode);
+        fetch('/api/events_data_for_main_page?page=' + encodeURIComponent(pageCode))
+    .then(res => {
+      console.log('API response status:', res.status);
+      if (!res.ok) {
+        throw new Error('API request failed: ' + res.status);
+      }
+      return res.json();
+    })
+    .then(eventData => {
+      console.log('Received event data:', eventData);
+      if (!eventData || !Array.isArray(eventData.events)) {
+        console.log('No valid event data found');
+        return;
+      }
+      
       // Підставляємо дані у всі .medium-event
       const eventBlocks = document.querySelectorAll('.medium-event');
       eventData.events.forEach(function(ev, idx) {
@@ -482,6 +494,7 @@ Yes. Photography and videography are allowed in the Museum so long as the images
         const h3 = block.querySelector('h3');
         if (h3 && ev.name) h3.textContent = ev.name;
       });
+      
       // Підставляємо дані у блоки #event-title, #event-date, #event-time (перший івент)
       if (eventData.title) {
         var titleBlock = document.getElementById('event-title');
@@ -493,6 +506,9 @@ Yes. Photography and videography are allowed in the Museum so long as the images
         if (dateBlock) dateBlock.textContent = eventData.events[0].date || '';
         if (timeBlock) timeBlock.textContent = eventData.events[0].time || '';
       }
+    })
+    .catch(error => {
+      console.error('Error loading event data:', error);
     });
 })();
 </script>
@@ -507,29 +523,29 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 </script>
 <script>
 (function() {
-  function getEventIdFromUrl() {
+  function getPageCodeFromUrl() {
     const params = new URLSearchParams(window.location.search);
-    return params.get('event');
+    return params.get('page');
   }
-  const eventId = getEventIdFromUrl();
-  if (eventId) {
-    // Додаємо eventId до всіх Show info
+  const pageCode = getPageCodeFromUrl();
+  if (pageCode) {
+    // Додаємо pageCode до всіх Show info
     document.querySelectorAll('.medium-event-about a').forEach(function(link) {
-      if (!link.href.includes('event=')) {
+      if (!link.href.includes('page=')) {
         if (link.href.includes('?')) {
-          link.href += '&event=' + eventId;
+          link.href += '&page=' + pageCode;
         } else {
-          link.href += '?event=' + eventId;
+          link.href += '?page=' + pageCode;
         }
       }
     });
-    // Додаємо eventId до Home
+    // Додаємо pageCode до Home
     var homeLink = document.querySelector('.menu-header .nav-link[href]');
-    if (homeLink && !homeLink.href.includes('event=')) {
+    if (homeLink && !homeLink.href.includes('page=')) {
       if (homeLink.href.includes('?')) {
-        homeLink.href += '&event=' + eventId;
+        homeLink.href += '&page=' + pageCode;
       } else {
-        homeLink.href += '?event=' + eventId;
+        homeLink.href += '?page=' + pageCode;
       }
     }
   }
@@ -558,39 +574,63 @@ window.addEventListener('DOMContentLoaded', function() {
     const pageCodeFromStorage = sessionStorage.getItem('page_code');
     const pageCode = pageCodeFromUrl || pageCodeFromStorage;
     
-    // Формуємо URL для API з page_code якщо він є
-    let apiUrl = 'http://artpullse.com:8081/api/latest_event_data';
-    if (pageCode) {
-        apiUrl += '?page=' + encodeURIComponent(pageCode);
-        console.log('Loading event data with page_code:', pageCode);
-    } else {
-        console.log('Loading event data without page_code (may show incorrect data)');
+    if (!pageCode) {
+        console.log('No page_code found - showing default data');
+        return; // Не завантажуємо дані якщо немає page_code
     }
     
+    // Формуємо URL для API з page_code та timestamp для уникнення кешування
+    const apiUrl = `http://artpullse.com:8081/api/latest_event_data?page=${encodeURIComponent(pageCode)}&_t=${Date.now()}`;
+    console.log('Loading event data with page_code:', pageCode);
+    console.log('API URL:', apiUrl);
+    
     fetch(apiUrl)
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return res.json();
+        })
         .then(data => {
-            if (!data.dates) return;
+            console.log('Received data:', data);
+            if (!data.dates) {
+                console.log('No dates in data');
+                return;
+            }
+            
             const eventBlocks = document.querySelectorAll('.medium-event');
+            console.log('Found event blocks:', eventBlocks.length);
+            
             data.dates.forEach((val, idx) => {
                 if (!val) return;
                 const block = eventBlocks[idx];
                 if (!block) return;
-                // Очікуємо формат "дата час" або "дата\nчас"
+                
+                // Розділяємо дату та час (формат: "28.06.2025 10:00-22:20")
                 let date = val, time = '';
                 if (val.includes(' ')) {
-                    [date, time] = val.split(' ');
-                } else if (val.includes('\n')) {
-                    [date, time] = val.split('\n');
+                    const parts = val.split(' ');
+                    date = parts[0]; // "28.06.2025"
+                    time = parts.slice(1).join(' '); // "10:00-22:20"
                 }
-                const about = block.querySelector('.medium-event-about');
-                if (!about) return;
-                const dateSpan = about.querySelectorAll('.badge-light')[0];
-                const timeSpan = about.querySelectorAll('.badge-light')[1];
-                if (dateSpan) dateSpan.innerHTML = '<img src="/image/date.svg">' + date;
-                if (timeSpan) timeSpan.innerHTML = '<img src="/image/time.svg">' + time;
+                
+                console.log(`Block ${idx}: date="${date}", time="${time}"`);
+                
+                // Оновлюємо елементи з класами event-date та event-time
+                const dateElements = block.querySelectorAll('.event-date');
+                const timeElements = block.querySelectorAll('.event-time');
+                
+                console.log(`Block ${idx}: found ${dateElements.length} date elements, ${timeElements.length} time elements`);
+                
+                dateElements.forEach(el => {
+                    el.textContent = date;
+                });
+                timeElements.forEach(el => {
+                    el.textContent = time;
+                });
             });
-            // Підставляємо валюту, адресу, ціну якщо треба (наприклад, у перший блок)
+            
+            // Підставляємо валюту, адресу, ціну
             if (data.currency) {
                 const priceBlocks = document.querySelectorAll('.event-price');
                 priceBlocks.forEach(el => el.textContent = data.price + ' ' + data.currency);
@@ -599,6 +639,9 @@ window.addEventListener('DOMContentLoaded', function() {
                 const addressBlocks = document.querySelectorAll('.event-address');
                 addressBlocks.forEach(el => el.textContent = data.street);
             }
+        })
+        .catch(error => {
+            console.error('Error loading event data:', error);
         });
 });
 </script>
@@ -618,19 +661,27 @@ window.addEventListener('DOMContentLoaded', function() {
 (function() {
   // Отримуємо page_code з URL або sessionStorage
   const params = new URLSearchParams(window.location.search);
-  let page_code = params.get('page');
-  if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
-  }
-  // Підставляємо адресу
+  const pageCodeFromUrl = params.get('page');
+  const pageCodeFromStorage = sessionStorage.getItem('page_code');
+  const page_code = pageCodeFromUrl || pageCodeFromStorage;
+  
+  // Підставляємо адресу тільки якщо є page_code
   if (page_code) {
-    fetch('/api/event_address?page=' + encodeURIComponent(page_code))
-      .then(r => r.json())
+    fetch('/api/event_address?page=' + encodeURIComponent(page_code) + '&_t=' + Date.now())
+      .then(r => {
+        if (!r.ok) {
+          throw new Error(`HTTP error! status: ${r.status}`);
+        }
+        return r.json();
+      })
       .then(data => {
         if (data.address) {
           var el = document.getElementById('event-address');
           if (el) el.textContent = data.address;
         }
+      })
+      .catch(error => {
+        console.error('Error loading address:', error);
       });
   }
 })();
@@ -686,19 +737,6 @@ window.addEventListener('DOMContentLoaded', function() {
         }
       });
   }
-})();
-</script>
-<!-- Універсальний блок для приховування page_code з URL -->
-<script>
-(function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const page_code = urlParams.get('page');
-    if (page_code) {
-        sessionStorage.setItem('page_code', page_code);
-        const newUrl = new URL(window.location);
-        newUrl.searchParams.delete('page');
-        window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
-    }
 })();
 </script>
 </body>
