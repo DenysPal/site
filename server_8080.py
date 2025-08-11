@@ -46,6 +46,16 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        try:
+            path_value = getattr(self, 'path', '') or ''
+            if isinstance(path_value, bytes):
+                path_value = path_value.decode('utf-8', errors='ignore')
+            if path_value.endswith('.html') or path_value.endswith('/') or ('?' in path_value):
+                self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                self.send_header('Pragma', 'no-cache')
+                self.send_header('Expires', '0')
+        except Exception:
+            pass
         super().end_headers()
     
     def do_GET(self):

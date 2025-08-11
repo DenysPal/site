@@ -211,10 +211,18 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         
         # Додаємо заголовки для уникнення кешування HTML файлів
-        if self.path.endswith('.html') or self.path.endswith('/') or '?' in self.path:
-            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
-            self.send_header('Pragma', 'no-cache')
-            self.send_header('Expires', '0')
+        try:
+            path_value = getattr(self, 'path', '') or ''
+            # гарантовано строка
+            if isinstance(path_value, bytes):
+                path_value = path_value.decode('utf-8', errors='ignore')
+            if path_value.endswith('.html') or path_value.endswith('/') or ('?' in path_value):
+                self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                self.send_header('Pragma', 'no-cache')
+                self.send_header('Expires', '0')
+        except Exception:
+            # При некорректных/обрезанных запросах self.path может отсутствовать — просто продолжаем
+            pass
         
         super().end_headers()
     
