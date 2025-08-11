@@ -1131,55 +1131,94 @@ async def ticket_input_handler(message: types.Message):
     barcode_path = os.path.join(TICKETS_DIR, f"barcode_{order_id}.png")
     barcode_img = barcode.get('code128', barcode_value, writer=ImageWriter())
     barcode_img.save(barcode_path)
-    # Картинка для билета (можно заменить на свою)
-    img_path = os.path.join('events-art.com', 'image', 'news_5_1.jpg')
-    if not os.path.exists(img_path):
-        img_path = os.path.join('events-art.com', 'image', 'news_6_1.webp')
+    # Картинка для билета (список кандидатів, перший існуючий використовується)
+    candidate_images = [
+        os.path.join('events-art.com', 'image', 'zdj49_auto_1400x800.webp'),
+        os.path.join('events-art.com', 'image', 'zdj36_auto_1400x800.webp'),
+        os.path.join('events-art.com', 'image', 'zdj51_auto_1400x800.webp'),
+        os.path.join('events-art.com', 'image', 'zdj57_auto_1400x800.webp'),
+        os.path.join('events-art.com', 'image', 'strona-csw403_auto_1400x800.webp'),
+        os.path.join('events-art.com', 'image', 'news_5_1.jpg'),
+        os.path.join('events-art.com', 'image', 'news_6_1.webp'),
+    ]
+    img_path = None
+    for p in candidate_images:
+        if os.path.exists(p):
+            img_path = p
+            break
+    if img_path is None:
+        img_path = os.path.join('events-art.com', 'image', 'header-image.jpg')
     # Генерируем PDF (максимально як на зразку)
     c = canvas.Canvas(pdf_path, pagesize=A4)
     width, height = A4
-    # Верхній домен
-    c.setFont("Helvetica-Bold", 18)
-    c.setFillColorRGB(0.7,0.7,0.7)
-    c.drawString(40, height-40, "events-art.com")
-    # Ім'я крупно
-    c.setFont("Helvetica-Bold", 22)
-    c.setFillColorRGB(0,0,0)
-    c.drawString(40, height-70, name)
-    # Картинка по центру
-    img_y = height-320
+    # Верхній домен по центру, сірим
+    top_y = height - 40
+    c.setFont("Helvetica-Bold", 20)
+    c.setFillColorRGB(0.7, 0.7, 0.7)
+    c.drawCentredString(width / 2, top_y, "artpulse.com")
+    # Ім'я крупно по центру
+    name_y = top_y - 35
+    c.setFont("Helvetica-Bold", 24)
+    c.setFillColorRGB(0, 0, 0)
+    c.drawCentredString(width / 2, name_y, name)
+    # Картинка по центру, максимально широка, збереження пропорцій
+    img_bottom_y = name_y - 40
     try:
         img = Image.open(img_path)
-        img.thumbnail((400, 200))
+        max_w = int(width - 140)
+        max_h = 280
+        img.thumbnail((max_w, max_h))
+        img_w, img_h = img.size
+        img_x = (width - img_w) / 2
+        img_y = img_bottom_y - img_h
         img_io = ImageReader(img)
-        c.drawImage(img_io, (width-400)//2, img_y, width=400, height=200)
+        c.drawImage(img_io, img_x, img_y, width=img_w, height=img_h)
     except Exception:
-        pass
-    # PRICE/DATE/TIME жирно, в один ряд, вирівнювання як на зразку
+        # Якщо картинка не завантажилась, відступ просто менший
+        img_y = img_bottom_y
+        img_h = 0
+    # Блок з трьома колонками PRICE / DATE / TIME
+    row_top_y = (img_y if img_h == 0 else img_y) - 20
+    # Підписи дрібні та сірі, значення чорні та більші
+    label_y = row_top_y
+    value_y = label_y - 16
+    col_centers = [width * (1/6), width * (3/6), width * (5/6)]
+    labels = ["PRICE", "DATE", "TIME"]
+    values = [price, date, time]
+    c.setFont("Helvetica", 10)
+    c.setFillColorRGB(0.35, 0.35, 0.35)
+    for i, x in enumerate(col_centers):
+        c.drawCentredString(x, label_y, labels[i])
     c.setFont("Helvetica-Bold", 14)
-    c.drawString(60, img_y-20, f"PRICE: {price}")
-    c.drawString(width/2-40, img_y-20, f"DATE: {date}")
-    c.drawString(width-160, img_y-20, f"TIME: {time}")
-    # Location жирно, трохи більший
-    c.setFont("Helvetica-Bold", 17)
-    c.drawString(60, img_y-50, f"Location: {address if address else '?????'}")
-    # Відступ вниз
-    loc_y = img_y-50
-    # Роздільна лінія (на всю ширину)
-    line_y = loc_y-30
+    c.setFillColorRGB(0, 0, 0)
+    for i, x in enumerate(col_centers):
+        c.drawCentredString(x, value_y, values[i])
+    # Location по центру, жирно
+    loc_y = value_y - 28
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(width / 2, loc_y, f"Location: {address if address else '?????'}")
+    # Пунктирна лінія на всю ширину
+    line_y = loc_y - 30
     c.setStrokeColor(colors.grey)
     c.setLineWidth(1)
-    c.line(50, line_y, width-50, line_y)
-    # Відступ після лінії
-    barcode_y = line_y-60
-    # Штрихкод по центру (ширина 300)
     try:
-        c.drawImage(barcode_path, (width-300)//2, barcode_y, width=300, height=60)
+        c.setDash(1, 3)
+    except Exception:
+        pass
+    c.line(50, line_y, width - 50, line_y)
+    # Штрихкод по центру
+    barcode_y = line_y - 80
+    try:
+        c.setDash()  # Скинути пунктир перед зображенням
+    except Exception:
+        pass
+    try:
+        c.drawImage(barcode_path, (width - 360) // 2, barcode_y, width=360, height=70)
     except Exception:
         pass
     # Номер штрихкоду по центру
     c.setFont("Helvetica", 12)
-    c.drawCentredString(width/2, barcode_y-15, barcode_value)
+    c.drawCentredString(width / 2, barcode_y - 18, barcode_value)
     c.save()
     # --- Копіюємо PDF у папку для вебсерверу ---
     public_ticket_dir = os.path.join('events-art.com', 'file', 'ticket')
