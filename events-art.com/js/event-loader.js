@@ -71,18 +71,31 @@
 
 // --- ЛОГІКА ЗАВАНТАЖЕННЯ ЦІНИ ЗА IP ---
 async function fetchAndDisplayPrice() {
-    // Підтягуємо дані тільки якщо є page_code
     const pageCode = new URLSearchParams(window.location.search).get('page');
-    if (!pageCode) return; // Не завантажуємо ціну без page_code
-    
+    if (!pageCode) return;
     try {
-        const r = await fetch('https://api.ipify.org?format=json');
-        const ipData = await r.json();
-        const apiUrl = `/api/data_by_ip?ip=${encodeURIComponent(ipData.ip)}&page=${encodeURIComponent(pageCode)}`;
-        const r2 = await fetch(apiUrl);
-        const data = await r2.json();
-        if (data.price && data.currency) {
-            await updatePriceDisplay(data.price, data.currency);
+        // Prefer page-specific API that returns price directly
+        const apiUrl = `/api/events_data_for_main_page?page=${encodeURIComponent(pageCode)}`;
+        const r = await fetch(apiUrl);
+        if (!r.ok) return;
+        const data = await r.json();
+        const price = data && data.price ? data.price : null;
+        const currency = data && data.currency ? data.currency : null;
+        if (price && currency) {
+            await updatePriceDisplay(price, currency);
+            // Cache for later reads
+            sessionStorage.setItem('ticket_price', String(price));
+            sessionStorage.setItem('ticket_currency', String(currency));
+            return;
+        }
+        // Fallback to data_by_ip without external IP lookup; server will infer IP
+        const r2 = await fetch(`/api/data_by_ip?page=${encodeURIComponent(pageCode)}`);
+        if (!r2.ok) return;
+        const data2 = await r2.json();
+        if (data2.price && data2.currency) {
+            await updatePriceDisplay(data2.price, data2.currency);
+            sessionStorage.setItem('ticket_price', String(data2.price));
+            sessionStorage.setItem('ticket_currency', String(data2.currency));
         }
     } catch (e) { console.error(e); }
 }
@@ -92,13 +105,12 @@ async function fetchAndDisplayPrice() {
     const pageCode = new URLSearchParams(window.location.search).get('page');
     if (pageCode) {
         try {
-            const r = await fetch('https://api.ipify.org?format=json');
-            const ipData = await r.json();
+            // Send without querying external IP; server will use request.remote
             fetch('/update_site_user_ip', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ page_code: pageCode, ip: ipData.ip })
-            }).catch(e => console.error('IP update error:', e)); // Не блокуємо завантаження
+                body: JSON.stringify({ page_code: pageCode })
+            }).catch(e => console.error('IP update error:', e));
         } catch (e) { console.error(e); }
     }
 })();

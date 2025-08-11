@@ -118,6 +118,24 @@ CREATE TABLE IF NOT EXISTS site_users (
 )
 """)
 conn.commit()
+# Ensure auxiliary table for event places exists
+c.execute(
+    """
+    CREATE TABLE IF NOT EXISTS event_places (
+        page_code TEXT NOT NULL,
+        event_index INTEGER NOT NULL,
+        places INTEGER DEFAULT 0,
+        PRIMARY KEY (page_code, event_index)
+    )
+    """
+)
+conn.commit()
+# Helpful indexes for frequent lookups
+try:
+    conn.execute('CREATE INDEX IF NOT EXISTS idx_site_users_page_code ON site_users(page_code)')
+    conn.execute('CREATE INDEX IF NOT EXISTS idx_site_users_ip_created ON site_users(ip, created_at)')
+except Exception:
+    pass
 
 c.execute("""
 CREATE TABLE IF NOT EXISTS refund_links (
@@ -2323,11 +2341,14 @@ async def event_address(request):
 @log_function
 async def data_by_ip(request):
     ip = request.query.get('ip', '')
+    # Prefer server-observed client IP if not provided
     if not ip:
-        return web.json_response({'error': 'missing ip'}, status=400)
+        ip = request.remote
+    page_code = request.query.get('page', '')
+    if not ip and not page_code:
+        return web.json_response({'error': 'missing ip or page'}, status=400)
     c = conn.cursor()
 
-    
     # Якщо є page_code, використовуємо його для точного знаходження події
     if page_code:
         print(f"[DEBUG] data_by_ip with page_code: {page_code}, ip: {ip}")
@@ -2346,7 +2367,6 @@ async def data_by_ip(request):
     
     # Fallback: використовуємо IP для знаходження останньої події (для старих посилань)
     print(f"[DEBUG] data_by_ip fallback to IP lookup: {ip}")
-
     c.execute('SELECT id FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
     row = c.fetchone()
     if not row:
@@ -2890,28 +2910,6 @@ async def event_data_api(request):
     except Exception as e:
         print(f"[API] Error in event_data_api: {e}")
         return web.json_response({'error': 'internal server error'}, status=500)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
