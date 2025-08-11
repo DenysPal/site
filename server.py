@@ -16,7 +16,7 @@ import logging
 from functools import wraps
 
 # Настройки сервера
-PORT = 80  # Стандартный HTTP порт
+PORT = 8080  # Стандартный HTTP порт
 DIRECTORY = "events-art.com"  # Папка з сайтом
 
 # --- Country code to full name mapping ---
