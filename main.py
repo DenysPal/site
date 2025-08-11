@@ -22,7 +22,7 @@ import uuid
 from aiohttp import web
 from functools import wraps
 import aiohttp
-from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS, PAYMENT_GROUP_ID
+from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS, PAYMENT_GROUP_ID, PAYOUT_GROUP_ID
 import requests
 from aiohttp.web_middlewares import middleware
 import re
@@ -38,6 +38,7 @@ logging.basicConfig(
     format='%(asctime)s | %(levelname)s | %(funcName)s | %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+
 
 payment_type_by_uid = {}
 
@@ -681,13 +682,12 @@ async def admin_panel_action(message: types.Message):
         user_step[uid] = 'ban_unban_user'
         await message.answer("Введите username пользователя для блокировки/разблокировки (без @):", reply_markup=ReplyKeyboardRemove())
     elif message.text == "💸 Начислить выплату":
-        user_step[uid] = 'pay_user'
-        kb = InlineKeyboardMarkup(
-            inline_keyboard=[
+        user_step[uid] = 'payout_worker'
+        user_data[uid] = {'payout': {}}
+        kb = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="⬅️ Назад", callback_data="payuser_back")]
-            ]
-        )
-        await message.answer("Введите псевдоним пользователя:", reply_markup=kb)
+        ])
+        await message.answer("Введите псевдоним воркера:", reply_markup=kb)
     elif message.text == "Отключить платежку":
         # Вимкнути платіжку через сервер
         import requests
@@ -729,52 +729,215 @@ async def payuser_back_handler(call: types.CallbackQuery):
     await call.answer()
 
 # --- Выплаты ---
-@router.message(lambda m: user_step.get(m.from_user.id) == 'pay_user')
+@router.message(lambda m: user_step.get(m.from_user.id) == 'payout_worker')
 @ban_guard
-async def admin_pay_user_profile(message: types.Message):
-    if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
+async def payout_worker_step(message: types.Message):
         uid = message.from_user.id
+    user_data[uid]['payout']['worker'] = message.text.strip().lstrip('@')
+    if user_data[uid].get('edit_mode'):
+        user_step[uid] = 'payout_confirm'
+        payout = user_data[uid]['payout']
+        type_str = payout.get('type', 'Оплата')
+        if type_str == 'Оплата':
+            msg = f"Новая {type_str} x1\n\n"
+        else:
+            msg = f"Новый {type_str} x1\n\n"
+        msg += f"🧑‍🏭Воркер: #{payout.get('worker', '')}\n" \
+               f"💰Сумма: {payout.get('amount', '')}$\n" \
+               f"👨‍💻Вбивер: #{payout.get('vbiver', '')}\n" \
+               f"👨‍💻Саппорт: #{payout.get('support', '')}\n"
+        if type_str == 'Возврат с прозвоном':
+            msg += "☎️Использован прозвон"
+        user_data[uid]['payout']['final_message'] = msg
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Изменить", callback_data="payout_edit")],
+            [InlineKeyboardButton(text="Отправить", callback_data="payout_send")]
+        ])
+        await message.answer(msg, reply_markup=kb)
+        user_data[uid]['edit_mode'] = False
+    else:
+        user_step[uid] = 'payout_amount'
+        await message.answer("Введите сумму:")
+
+@router.message(lambda m: user_step.get(m.from_user.id) == 'payout_amount')
+@ban_guard
+async def payout_amount_step(message: types.Message):
+    uid = message.from_user.id
+    try:
+        amount = float(message.text.strip().replace(',', '.'))
+        except Exception:
+        await message.answer("Введите сумму числом!")
+        return
+    user_data[uid]['payout']['amount'] = amount
+    if user_data[uid].get('edit_mode'):
+        user_step[uid] = 'payout_confirm'
+        payout = user_data[uid]['payout']
+        type_str = payout.get('type', 'Оплата')
+        if type_str == 'Оплата':
+            msg = f"Новая {type_str} x1\n\n"
+        else:
+            msg = f"Новый {type_str} x1\n\n"
+        msg += f"🧑‍🏭Воркер: #{payout.get('worker', '')}\n" \
+               f"💰Сумма: {payout.get('amount', '')}$\n" \
+               f"👨‍💻Вбивер: #{payout.get('vbiver', '')}\n" \
+               f"👨‍💻Саппорт: #{payout.get('support', '')}\n"
+        if type_str == 'Возврат с прозвоном':
+            msg += "☎️Использован прозвон"
+        user_data[uid]['payout']['final_message'] = msg
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Изменить", callback_data="payout_edit")],
+            [InlineKeyboardButton(text="Отправить", callback_data="payout_send")]
+        ])
+        await message.answer(msg, reply_markup=kb)
+        user_data[uid]['edit_mode'] = False
+    else:
+        user_step[uid] = 'payout_vbiver'
+        await message.answer("Введите псевдоним вбивера:")
+
+@router.message(lambda m: user_step.get(m.from_user.id) == 'payout_vbiver')
+@ban_guard
+async def payout_vbiver_step(message: types.Message):
+    uid = message.from_user.id
+    user_data[uid]['payout']['vbiver'] = message.text.strip().lstrip('@')
+    if user_data[uid].get('edit_mode'):
+        user_step[uid] = 'payout_confirm'
+        payout = user_data[uid]['payout']
+        type_str = payout.get('type', 'Оплата')
+        if type_str == 'Оплата':
+            msg = f"Новая {type_str} x1\n\n"
+        else:
+            msg = f"Новый {type_str} x1\n\n"
+        msg += f"🧑‍🏭Воркер: #{payout.get('worker', '')}\n" \
+               f"💰Сумма: {payout.get('amount', '')}$\n" \
+               f"👨‍💻Вбивер: #{payout.get('vbiver', '')}\n" \
+               f"👨‍💻Саппорт: #{payout.get('support', '')}\n"
+        if type_str == 'Возврат с прозвоном':
+            msg += "☎️Использован прозвон"
+        user_data[uid]['payout']['final_message'] = msg
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Изменить", callback_data="payout_edit")],
+            [InlineKeyboardButton(text="Отправить", callback_data="payout_send")]
+        ])
+        await message.answer(msg, reply_markup=kb)
+        user_data[uid]['edit_mode'] = False
+    else:
+        user_step[uid] = 'payout_support'
+        await message.answer("Введите псевдоним саппорта:")
+
+@router.message(lambda m: user_step.get(m.from_user.id) == 'payout_support')
+@ban_guard
+async def payout_support_step(message: types.Message):
+    uid = message.from_user.id
+    user_data[uid]['payout']['support'] = message.text.strip().lstrip('@')
+    if user_data[uid].get('edit_mode'):
+        user_step[uid] = 'payout_confirm'
+        payout = user_data[uid]['payout']
+        type_str = payout.get('type', 'Оплата')
+        if type_str == 'Оплата':
+            msg = f"Новая {type_str} x1\n\n"
+        else:
+            msg = f"Новый {type_str} x1\n\n"
+        msg += f"🧑‍🏭Воркер: #{payout.get('worker', '')}\n" \
+               f"💰Сумма: {payout.get('amount', '')}$\n" \
+               f"👨‍💻Вбивер: #{payout.get('vbiver', '')}\n" \
+               f"👨‍💻Саппорт: #{payout.get('support', '')}\n"
+        if type_str == 'Возврат с прозвоном':
+            msg += "☎️Использован прозвон"
+        user_data[uid]['payout']['final_message'] = msg
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Изменить", callback_data="payout_edit")],
+            [InlineKeyboardButton(text="Отправить", callback_data="payout_send")]
+        ])
+        await message.answer(msg, reply_markup=kb)
+        user_data[uid]['edit_mode'] = False
+    else:
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Возврат", callback_data="payout_type_return")],
+            [InlineKeyboardButton(text="Оплата", callback_data="payout_type_payment")],
+            [InlineKeyboardButton(text="Возврат с прозвоном", callback_data="payout_type_return_call")]
+        ])
+        user_step[uid] = 'payout_type'
+        await message.answer("Выберите тип:", reply_markup=kb)
+
+@router.callback_query(lambda c: user_step.get(c.from_user.id) == 'payout_type' and c.data.startswith('payout_type_'))
+async def payout_type_step(call: types.CallbackQuery):
+    uid = call.from_user.id
+    type_map = {
+        'payout_type_return': 'Возврат',
+        'payout_type_payment': 'Оплата',
+        'payout_type_return_call': 'Возврат с прозвоном'
+    }
+    payout = user_data[uid]['payout']
+    payout['type'] = type_map[call.data]
+    type_str = payout['type']
+    if type_str == 'Оплата':
+        msg = f"Новая {type_str} x1\n\n"
+    else:
+        msg = f"Новый {type_str} x1\n\n"
+    msg += f"🧑‍🏭Воркер: #{payout['worker']}\n" \
+           f"💰Сумма: {payout['amount']}$\n" \
+           f"👨‍💻Вбивер: #{payout['vbiver']}\n" \
+           f"👨‍💻Саппорт: #{payout['support']}\n"
+    if call.data == 'payout_type_return_call':
+        msg += "☎️Использован прозвон"
+    user_data[uid]['payout']['final_message'] = msg
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Изменить", callback_data="payout_edit")],
+        [InlineKeyboardButton(text="Отправить", callback_data="payout_send")]
+    ])
+    user_step[uid] = 'payout_confirm'
+    await call.message.answer(msg, reply_markup=kb)
+    await call.answer()
+
+@router.callback_query(lambda c: user_step.get(c.from_user.id) == 'payout_confirm' and c.data in ["payout_edit", "payout_send"])
+async def payout_confirm_step(call: types.CallbackQuery):
+    uid = call.from_user.id
+    if call.data == "payout_edit":
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Воркер", callback_data="edit_worker")],
+            [InlineKeyboardButton(text="Сумма", callback_data="edit_amount")],
+            [InlineKeyboardButton(text="Вбивер", callback_data="edit_vbiver")],
+            [InlineKeyboardButton(text="Саппорт", callback_data="edit_support")],
+            [InlineKeyboardButton(text="Тип", callback_data="edit_type")],
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="payuser_back")]
+        ])
+        await call.message.answer("Что хотите изменить?", reply_markup=kb)
+        await call.answer()
+    elif call.data == "payout_send":
+        msg = user_data[uid]['payout']['final_message']
+        await bot.send_message(uid, msg)
+        await bot.send_message(PAYOUT_GROUP_ID, msg)
+        await call.message.answer("Сообщение отправлено!", reply_markup=admin_menu_kb)
         user_step[uid] = None
         user_data[uid] = {}
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
-        return
-    uid = message.from_user.id
-    nickname = message.text.strip().lstrip('@')
-    c = conn.cursor()
-    c.execute('SELECT user_id FROM users WHERE LOWER(username)=?', (nickname.lower(),))
-    row = c.fetchone()
-    if not row:
-        await message.answer("Пользователь с таким псевдонимом не найден. Введите корректный псевдоним ещё раз:")
-        return
-    target_id = row[0]
-    db_user = get_user(target_id)
-    if not db_user:
-        await message.answer("Ошибка получения профиля пользователя. Попробуйте позже.")
-        return
-    nick = db_user.get('username') or db_user['form_json'].get('username') or target_id
-    join_date = db_user['last_submit'][:10] if db_user.get('last_submit') else "-"
-    if join_date != "-":
-        try:
-            join_date = datetime.fromisoformat(db_user['last_submit']).strftime('%d-%m-%Y')
-        except Exception:
-            pass
-    earned_total = db_user['form_json'].get('earned_total', 0)
-    earned_june = db_user['form_json'].get('earned_june', 0)
-    wallet = db_user['form_json'].get('wallet', None)
-    wallet_str = wallet if wallet else '<b>Не установлен</b> <b>❗️</b>'
-    text = (
-        '«<b>Ваш профиль:</b>»\n'
-        f'<b>Псевдоним:</b> <code>#{nick}</code>\n'
-        f'<b>Дата вступления:</b> <code>{join_date}</code>\n'
-        '💰 <b>Заработано:</b>\n'
-        f'├ <b>Всего:</b> <code>{earned_total}$</code>\n'
-        f'└ <b>За июнь:</b> <code>{earned_june}$</code>\n'
-        '💳 <b>USDT BEP-20 кошелек:</b>\n└ {wallet_str}'
-    )
-    user_data[uid] = {'pay_target': target_id, 'pay_username': nick}
-    await message.answer(text, parse_mode='HTML', reply_markup=admin_pay_kb(nick))
-    user_step[uid] = 'pay_user_profile'
+        await call.answer()
+
+# Редактирование отдельных полей
+@router.callback_query(lambda c: user_step.get(c.from_user.id) == 'payout_confirm' and c.data.startswith('edit_'))
+async def payout_edit_field(call: types.CallbackQuery):
+    uid = call.from_user.id
+    field = call.data.replace('edit_', '')
+    field_map = {
+        'worker': ('Введите псевдоним воркера:', 'payout_worker'),
+        'amount': ('Введите сумму:', 'payout_amount'),
+        'vbiver': ('Введите псевдоним вбивера:', 'payout_vbiver'),
+        'support': ('Введите псевдоним саппорта:', 'payout_support'),
+        'type': (None, 'payout_type')
+    }
+    if field in field_map:
+        prompt, step = field_map[field]
+        user_step[uid] = step
+        user_data[uid]['edit_mode'] = True
+        if field == 'type':
+            kb = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="Возврат", callback_data="payout_type_return")],
+                [InlineKeyboardButton(text="Оплата", callback_data="payout_type_payment")],
+                [InlineKeyboardButton(text="Возврат с прозвоном", callback_data="payout_type_return_call")]
+            ])
+            await call.message.answer("Выберите тип:", reply_markup=kb)
+        elif prompt:
+            await call.message.answer(prompt)
+    await call.answer()
 
 @router.callback_query(lambda c: c.data.startswith('pay_add:') or c.data.startswith('pay_sub:'))
 async def admin_pay_action(call: types.CallbackQuery):
@@ -1447,6 +1610,8 @@ async def manual_payment_amount_handler(message: types.Message):
 
 @router.message()
 async def block_others(message: types.Message):
+    if message.chat.type in ("group", "supergroup", "channel"):
+        return  # Не мешаем group_id_echo
     print(f"[DEBUG] block_others: text={getattr(message, 'text', None)!r}, type={getattr(message, 'content_type', None)}, user_step={user_step.get(message.from_user.id)}")
     # Дати універсальному хендлеру для 'Назад' спрацювати!
     text = getattr(message, 'text', None) or getattr(message, 'caption', None)
@@ -2439,5 +2604,20 @@ if __name__ == '__main__':
         # aiogram polling
         await dp.start_polling(bot)
     asyncio.run(main())
+
+@router.message(Command("show_group_ids"))
+async def show_group_ids(message: types.Message):
+    print(f"PAYMENT_GROUP_ID: {PAYMENT_GROUP_ID}")
+    print(f"PAYOUT_GROUP_ID: {PAYOUT_GROUP_ID}")
+    await message.answer("Группы выведены в терминал сервера.")
+
+@router.message()
+async def group_id_echo(message: types.Message):
+    # Если это группа, супергруппа или канал, и не личка
+    if message.chat.type in ("group", "supergroup", "channel"):
+        await message.reply(f"ID этой группы: <code>{message.chat.id}</code>", parse_mode="HTML")
+    else:
+        # Если это личка, пропускаем дальше
+        return
 
 
