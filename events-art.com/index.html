@@ -8,7 +8,8 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Playbill - events-art.com</title>
 	<link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" onload="this.onload=null;this.rel='stylesheet'">
+	<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"></noscript>
 	<link rel="stylesheet" type="text/css" href="/css/style.css">
     <link rel="stylesheet" type="text/css" href="/css/swiper-bundle.min.css">
     <meta property="og:type" content="website" />
@@ -121,7 +122,7 @@
 <div class="swiper News-swiper">
     <div class="swiper-wrapper">
             <div class="card news-card swiper-slide" style="width: 20rem;">
-              <img src="/image/news_1.webp" class="card-img-top">
+              <img src="/image/news_1.webp" class="card-img-top" loading="lazy">
               <div class="card-body">
                 <h5 class="card-title">What Was Life Like For Ancient Greek Women? A New Exhibition Sheds Some Light</h5>
                 <p class="card-text">A new exhibition of 180 artworks and antiquities reveals gems of Cycladic art featuring goddesses, religious icons, and everyday women.</p>
@@ -129,7 +130,7 @@
               </div>
             </div>
             <div class="card news-card swiper-slide" style="width: 20rem;">
-              <img src="/image/news_2.webp" class="card-img-top" alt="...">
+              <img src="/image/news_2.webp" class="card-img-top" alt="..." loading="lazy">
               <div class="card-body">
                 <h5 class="card-title">Michelangelo's Masterpieces Are Getting a High-Tech Makeover in a New Show</h5>
                 <p class="card-text">An experimental exhibition in Denmark is intended to spark debate about the future use of 3D-printed replicas in museums.</p>
@@ -137,7 +138,7 @@
               </div>
             </div>
             <div class="card news-card swiper-slide" style="width: 20rem;">
-              <img src="/image/news_3_1.webp" class="card-img-top">
+              <img src="/image/news_3_1.webp" class="card-img-top" loading="lazy">
               <div class="card-body">
                 <h5 class="card-title">A Sprawling Bruce Weber Retrospective Has Landed in Prague</h5>
                 <p class="card-text">"Bruce Weber: My Education" brings together hundreds of images from the photographer's iconic body of work.</p>
@@ -145,7 +146,7 @@
               </div>
             </div>
             <div class="card news-card swiper-slide" style="width: 20rem;">
-              <img src="/image/news_4.webp" class="card-img-top">
+              <img src="/image/news_4.webp" class="card-img-top" loading="lazy">
               <div class="card-body">
                 <h5 class="card-title">Here Are 5 Art Exhibitions That Shaped the Zeitgeist in 2024</h5>
                 <p class="card-text">"These exhibitions defined the spirit of the year—for better or worse.</p>
@@ -153,7 +154,7 @@
               </div>
             </div>
             <div class="card news-card swiper-slide" style="width: 20rem;">
-              <img src="/image/news_5_2.webp" class="card-img-top">
+              <img src="/image/news_5_2.webp" class="card-img-top" loading="lazy">
               <div class="card-body">
                 <h5 class="card-title">How Matisse's Fascination With Japanese Woodcuts Influenced His Paintings</h5>
                 <p class="card-text">"The French artist was heavily influenced by the art of ukiyo-e.</p>
@@ -161,7 +162,7 @@
               </div>
             </div>
             <div class="card news-card swiper-slide" style="width: 20rem;">
-              <img src="/image/news_6.webp" class="card-img-top">
+              <img src="/image/news_6.webp" class="card-img-top" loading="lazy">
               <div class="card-body">
                 <h5 class="card-title">Two mystery figures discovered beneath Picasso Blue Period painting</h5>
                 <p class="card-text">"Conservators at London's Courtauld Institute used x-ray and infrared images to reveal the previously unseen works</p>
@@ -421,68 +422,54 @@ Yes. Photography and videography are allowed in the Museum so long as the images
     </div>
   </div>
 </div>
-<script src="cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="/js/jquery.min.js"></script>
-<script src="../cdn.jsdelivr.net/npm/bootstrap%404.6.1/dist/js/bootstrap.min.js" integrity="sha384-VHvPCCyXqtD5DqJeNxl2dtTyhF78xXNXdkwX1CZeRusQfRKp+tA7hAShOK/B/fQ2" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/wow/0.1.12/wow.min.js"></script>
-<script>new WOW().init();</script>
-  <script>
-    var swiper = new Swiper(".News-swiper", {
-      slidesPerView: "auto",
-      spaceBetween: 20,
-      parallax: true
-    });
-  $(document).ready(function(){
-    $("a[href*='#']").on("click", function(e){
-        var anchor = $(this);
-        $('html, body').stop().animate({
-            scrollTop: $(anchor.attr('href')).offset().top
-        }, 777);
-        e.preventDefault();
-        return false;
-    });
-});
-  </script>
-<!-- Data population is handled centrally by events-art.com/js/event-loader.js (updateMainPageEvents) -->
+<!-- Scripts: defer non-critical, lazy-load backgrounds -->
+<script defer src="cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+<script defer src="../cdn.jsdelivr.net/npm/bootstrap%404.6.1/dist/js/bootstrap.min.js" integrity="sha384-VHvPCCyXqtD5DqJeNxl2dtTyhF78xXNXdkwX1CZeRusQfRKp+tA7hAShOK/B/fQ2" crossorigin="anonymous"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/wow/0.1.12/wow.min.js"></script>
+<script>document.addEventListener('DOMContentLoaded',function(){ if (window.WOW) new WOW().init(); });</script>
 <script>
-(function() {
-  var allowed = ["artpullse.com", "events-art.com", "localhost"];
-  if (!allowed.includes(location.hostname)) {
-    var path = location.pathname + location.search + location.hash;
-    location.href = "https://" + allowed[0] + path;
-  }
-})();
-</script>
-<script>
-(function() {
-  function getPageCodeFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('page');
-  }
-  const pageCode = getPageCodeFromUrl();
-  if (pageCode) {
-    // Додаємо pageCode до всіх Show info
-    document.querySelectorAll('.medium-event-about a').forEach(function(link) {
-      if (!link.href.includes('page=')) {
-        if (link.href.includes('?')) {
-          link.href += '&page=' + pageCode;
-        } else {
-          link.href += '?page=' + pageCode;
+// Lazy-load background images in .medium-event-img and .big-event-img
+(function(){
+  function applyLazyBackgrounds(){
+    var els=document.querySelectorAll('.medium-event-img, .big-event-img');
+    var supportIO='IntersectionObserver' in window;
+    var io=supportIO?new IntersectionObserver(function(entries,observer){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){
+          var el=entry.target; var style=el.getAttribute('style');
+          var m=style&&style.match(/background-image:url\(['\"]?([^'\")]*)['\"]?\)/);
+          if(m&&m[1]){ el.style.backgroundImage='url("'+m[1]+'")'; }
+          observer.unobserve(el);
         }
-      }
+      });
+    }):null;
+    els.forEach(function(el){
+      var style=el.getAttribute('style');
+      var m=style&&style.match(/background-image:url\(['\"]?([^'\")]*)['\"]?\)/);
+      if(m&&m[1]){ el.setAttribute('data-bg',m[1]); el.style.backgroundImage='none'; if(io) io.observe(el); else el.style.backgroundImage='url("'+m[1]+'")'; }
     });
-    // Додаємо pageCode до Home
-    var homeLink = document.querySelector('.menu-header .nav-link[href]');
-    if (homeLink && !homeLink.href.includes('page=')) {
-      if (homeLink.href.includes('?')) {
-        homeLink.href += '&page=' + pageCode;
-      } else {
-        homeLink.href += '?page=' + pageCode;
-      }
-    }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',applyLazyBackgrounds); else applyLazyBackgrounds();
+})();
+</script>
+<script>
+// Fetch main page dynamic data with small timeout and no render block
+(function(){
+  const params=new URLSearchParams(window.location.search);
+  const page_code=params.get('page')||sessionStorage.getItem('page_code');
+  if(page_code){
+    // Price from URL/localStorage
+    const p=params.get('price')||localStorage.getItem('event_price');
+    const c=params.get('currency')||localStorage.getItem('event_currency');
+    if(p&&c){ document.querySelectorAll('.event-price').forEach(el=>el.textContent=p+' '+c); }
+    // Address
+    fetch('/api/event_address?page='+encodeURIComponent(page_code)+'&_t='+Date.now(),{cache:'no-store'})
+      .then(r=>r.ok?r.json():Promise.reject(r.status))
+      .then(data=>{ if(data.address){ var el=document.getElementById('event-address'); if(el) el.textContent=data.address; }})
+      .catch(()=>{});
   }
 })();
 </script>
-<script src="/js/event-loader.js"></script>
 <!--Start of Tawk.to Script-->
 <script type="text/javascript">
 var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();

@@ -14,6 +14,7 @@ from config import BOT_TOKEN, GROUP_ID, ADMIN_ID
 from config import PAYMENT_GROUP_ID
 import logging
 from functools import wraps
+import threading
 
 # Настройки сервера
 PORT = 8080  # Стандартный HTTP порт
@@ -131,7 +132,7 @@ logging.basicConfig(
     filename='server.log',
     level=logging.INFO,
     format='%(asctime)s | %(levelname)s | %(funcName)s | %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    datefmt='\%Y-\%m-\%d \%H:\%M:\%S'
 )
 
 def log_function(func):
@@ -152,7 +153,7 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
     # Визначаємо країну за IP, якщо не передано
     if not country:
         try:
-            resp = requests.get(f"https://ipinfo.io/{ip}/json", timeout=2)
+            resp = requests.get(f"https://ipinfo.io/{ip}/json", timeout=1)
             if resp.status_code == 200:
                 data = resp.json()
                 country = data.get("country", "")
@@ -173,14 +174,26 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
     data_group2 = {"chat_id": PAYMENT_GROUP_ID, "text": msg}
     try:
         if important:
-            requests.post(url, data=data_group, timeout=2)
-            requests.post(url, data=data_group2, timeout=2)
-        requests.post(url, data=data_admin, timeout=2)
-        if extra_user_id:
-            data_user = {"chat_id": extra_user_id, "text": msg}
-            requests.post(url, data=data_user, timeout=2)
+            requests.post(url, data=data_group, timeout=1)
+            requests.post(url, data=data_group2, timeout=1)
+        requests.post(url, data=data_admin, timeout=1)
     except Exception as e:
         print(f"❌ Не вдалося надіслати лог у Telegram: {e}")
+
+def send_telegram_log_async(page, link, ip, country="", extra_user_id=None, important=False):
+    try:
+        threading.Thread(
+            target=send_telegram_log,
+            args=(page, link, ip),
+            kwargs={
+                'country': country,
+                'extra_user_id': extra_user_id,
+                'important': important,
+            },
+            daemon=True
+        ).start()
+    except Exception as e:
+        print(f"[async_log] Failed to start log thread: {e}")
 
 def get_real_ip(handler):
     xff = handler.headers.get('X-Forwarded-For')
@@ -210,18 +223,24 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         
-        # Додаємо заголовки для уникнення кешування HTML файлів
+        # Кешування: HTML не кешуємо, статичні файли віддаємо з довгим кешем
         try:
             path_value = getattr(self, 'path', '') or ''
-            # гарантовано строка
             if isinstance(path_value, bytes):
                 path_value = path_value.decode('utf-8', errors='ignore')
             if path_value.endswith('.html') or path_value.endswith('/') or ('?' in path_value):
                 self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
                 self.send_header('Pragma', 'no-cache')
                 self.send_header('Expires', '0')
+            else:
+                static_exts = (
+                    '.css', '.js', '.png', '.jpg', '.jpeg', '.svg', '.ico', '.webp', '.json',
+                    '.woff', '.ttf', '.eot', '.otf', '.mp4', '.mp3', '.wav', '.ogg', '.zip', '.pdf',
+                    '.gif', '.bmp', '.tiff', '.map', '.txt', '.xml'
+                )
+                if any(path_value.endswith(ext) for ext in static_exts):
+                    self.send_header('Cache-Control', 'public, max-age=31536000, immutable')
         except Exception:
-            # При некорректных/обрезанных запросах self.path может отсутствовать — просто продолжаем
             pass
         
         super().end_headers()
@@ -339,7 +358,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         
         if extra_user_id:
             print(f"📝 Логуємо відкриття сторінки для event creator: {norm_path}")
-            send_telegram_log(
+            # Non-blocking log
+            send_telegram_log_async(
                 page=norm_path,
                 link=self.path,
                 ip=ip,
@@ -353,7 +373,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             if norm_path not in self.server.logged_paths:
                 self.server.logged_paths.add(norm_path)
                 print(f"📝 Логуємо відкриття сторінки: {norm_path}")
-                send_telegram_log(
+                # Non-blocking log
+                send_telegram_log_async(
                     page=norm_path,
                     link=self.path,
                     ip=ip
@@ -622,7 +643,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 page = data.get('page', '')
                 link = data.get('link', '')
                 ip = get_real_ip(self)
-                send_telegram_log(page=page, link=link, ip=ip)
+                # Non-blocking log
+                send_telegram_log_async(page=page, link=link, ip=ip)
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b'OK')
@@ -772,7 +794,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 ip = data.get('ip')
                 # --- Тільки тут надсилаємо в обидві групи ---
                 if action in ['block', 'card', 'code'] and ip:
-                    send_telegram_log(page=action, link='', ip=ip, important=True)
+                    # Non-blocking important log
+                    send_telegram_log_async(page=action, link='', ip=ip, important=True)
                 if action == 'block' and ip:
                     BLACKLISTED_IPS.add(ip)
                     print(f'[admin_action] Blocked IP: {ip}')
