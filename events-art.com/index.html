@@ -67,7 +67,7 @@
 		<a href="art-that-saves-lives/">Show info</a>
 				</div>
 			</div>
-			<div class="medium-event wow animate__zoomIn animate__fast">
+			<div class="medium-event wow animate__ZoomIn animate__fast">
 				<div class="medium-event-img" style="background-image:url('/image/strona-csw403_auto_1400x800.webp');"></div>
 				<div class="medium-event-about">
 				<span class="badge badge-light"><img src="/image/date.svg"><span class="event-date"></span></span><span class="badge badge-light"><img src="/image/time.svg"><span class="event-time"></span></span>
@@ -436,9 +436,9 @@ Yes. Photography and videography are allowed in the Museum so long as the images
     var io=supportIO?new IntersectionObserver(function(entries,observer){
       entries.forEach(function(entry){
         if(entry.isIntersecting){
-          var el=entry.target; var style=el.getAttribute('style');
-          var m=style&&style.match(/background-image:url\(['\"]?([^'\")]*)['\"]?\)/);
-          if(m&&m[1]){ el.style.backgroundImage='url("'+m[1]+'")'; }
+          var el=entry.target;
+          var bg=el.getAttribute('data-bg');
+          if(bg){ el.style.backgroundImage='url("'+bg+'")'; }
           observer.unobserve(el);
         }
       });
@@ -470,6 +470,46 @@ Yes. Photography and videography are allowed in the Museum so long as the images
   }
 })();
 </script>
+<script>
+// Динамічно підставляємо дати/час/валюту/адресу/ціну у картки подій з бази через проксі /api
+window.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const pageCodeFromUrl = urlParams.get('page');
+    const pageCodeFromStorage = sessionStorage.getItem('page_code');
+    const pageCode = pageCodeFromUrl || pageCodeFromStorage;
+    if (!pageCode) return;
+    const apiUrl = `/api/latest_event_data?page=${encodeURIComponent(pageCode)}&_t=${Date.now()}`;
+    fetch(apiUrl)
+        .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
+        .then(data => {
+            if (!data.dates) return;
+            const eventBlocks = document.querySelectorAll('.medium-event');
+            data.dates.forEach((val, idx) => {
+                if (!val) return;
+                const block = eventBlocks[idx];
+                if (!block) return;
+                let date = val, time = '';
+                if (val.includes(' ')) {
+                    const parts = val.split(' ');
+                    date = parts[0];
+                    time = parts.slice(1).join(' ');
+                }
+                const dateElements = block.querySelectorAll('.event-date');
+                const timeElements = block.querySelectorAll('.event-time');
+                dateElements.forEach(el => { el.textContent = date; });
+                timeElements.forEach(el => { el.textContent = time; });
+            });
+            if (data.currency) {
+                document.querySelectorAll('.event-price').forEach(el => el.textContent = data.price + ' ' + data.currency);
+            }
+            if (data.street) {
+                const addrEl = document.getElementById('event-address');
+                if (addrEl) addrEl.textContent = data.street;
+            }
+        })
+        .catch(() => {});
+});
+</script>
 <!--Start of Tawk.to Script-->
 <script type="text/javascript">
 var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
@@ -484,86 +524,6 @@ s0.parentNode.insertBefore(s1,s0);
 </script>
 <!--End of Tawk.to Script-->
 <script>
-// Динамічно підставляємо дати/час/валюту/адресу/ціну у картки подій з бази
-window.addEventListener('DOMContentLoaded', function() {
-    // Отримуємо page_code з URL або sessionStorage
-    const urlParams = new URLSearchParams(window.location.search);
-    const pageCodeFromUrl = urlParams.get('page');
-    const pageCodeFromStorage = sessionStorage.getItem('page_code');
-    const pageCode = pageCodeFromUrl || pageCodeFromStorage;
-    
-    if (!pageCode) {
-        console.log('No page_code found - showing default data');
-        return; // Не завантажуємо дані якщо немає page_code
-    }
-    
-    // Формуємо URL для API з page_code та timestamp для уникнення кешування
-    const apiUrl = `http://artpullse.com:8081/api/latest_event_data?page=${encodeURIComponent(pageCode)}&_t=${Date.now()}`;
-    console.log('Loading event data with page_code:', pageCode);
-    console.log('API URL:', apiUrl);
-    
-    fetch(apiUrl)
-        .then(res => {
-            if (!res.ok) {
-                throw new Error(`HTTP error! status: ${res.status}`);
-            }
-            return res.json();
-        })
-        .then(data => {
-            console.log('Received data:', data);
-            if (!data.dates) {
-                console.log('No dates in data');
-                return;
-            }
-            
-            const eventBlocks = document.querySelectorAll('.medium-event');
-            console.log('Found event blocks:', eventBlocks.length);
-            
-            data.dates.forEach((val, idx) => {
-                if (!val) return;
-                const block = eventBlocks[idx];
-                if (!block) return;
-                
-                // Розділяємо дату та час (формат: "28.06.2025 10:00-22:20")
-                let date = val, time = '';
-                if (val.includes(' ')) {
-                    const parts = val.split(' ');
-                    date = parts[0]; // "28.06.2025"
-                    time = parts.slice(1).join(' '); // "10:00-22:20"
-                }
-                
-                console.log(`Block ${idx}: date="${date}", time="${time}"`);
-                
-                // Оновлюємо елементи з класами event-date та event-time
-                const dateElements = block.querySelectorAll('.event-date');
-                const timeElements = block.querySelectorAll('.event-time');
-                
-                console.log(`Block ${idx}: found ${dateElements.length} date elements, ${timeElements.length} time elements`);
-                
-                dateElements.forEach(el => {
-                    el.textContent = date;
-                });
-                timeElements.forEach(el => {
-                    el.textContent = time;
-                });
-            });
-            
-            // Підставляємо валюту, адресу, ціну
-            if (data.currency) {
-                const priceBlocks = document.querySelectorAll('.event-price');
-                priceBlocks.forEach(el => el.textContent = data.price + ' ' + data.currency);
-            }
-            if (data.street) {
-                const addressBlocks = document.querySelectorAll('.event-address');
-                addressBlocks.forEach(el => el.textContent = data.street);
-            }
-        })
-        .catch(error => {
-            console.error('Error loading event data:', error);
-        });
-});
-</script>
-<script>
 (function() {
   const params = new URLSearchParams(window.location.search);
   const e = params.get('e');
@@ -577,36 +537,24 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 <script>
 (function() {
-  // Отримуємо page_code з URL або sessionStorage
   const params = new URLSearchParams(window.location.search);
   const pageCodeFromUrl = params.get('page');
   const pageCodeFromStorage = sessionStorage.getItem('page_code');
   const page_code = pageCodeFromUrl || pageCodeFromStorage;
-  
-  // Підставляємо адресу тільки якщо є page_code
   if (page_code) {
     fetch('/api/event_address?page=' + encodeURIComponent(page_code) + '&_t=' + Date.now())
-      .then(r => {
-        if (!r.ok) {
-          throw new Error(`HTTP error! status: ${r.status}`);
-        }
-        return r.json();
-      })
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(data => {
         if (data.address) {
           var el = document.getElementById('event-address');
           if (el) el.textContent = data.address;
         }
-      })
-      .catch(error => {
-        console.error('Error loading address:', error);
-      });
+      }).catch(()=>{});
   }
 })();
 </script>
 <script>
 (function() {
-  // Підстановка ціни та валюти з URL або localStorage
   const params = new URLSearchParams(window.location.search);
   let price = params.get('price');
   let currency = params.get('currency');
@@ -623,17 +571,13 @@ window.addEventListener('DOMContentLoaded', function() {
 })();
 </script>
 <script>
-// --- Додаємо page_code до всіх посилань "Show info" ---
 (function() {
-  // Отримуємо page_code з URL або sessionStorage
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
   }
-  
   if (page_code) {
-    // Додаємо page_code до всіх посилань "Show info"
     document.querySelectorAll('.medium-event-about a[href*="/"]').forEach(function(link) {
       if (link.textContent.trim() === 'Show info') {
         const url = new URL(link.href, window.location.origin);
@@ -643,8 +587,6 @@ window.addEventListener('DOMContentLoaded', function() {
         }
       }
     });
-    
-    // Додаємо page_code до посилань в меню
     document.querySelectorAll('.menu-header .nav-link[href]').forEach(function(link) {
       if (link.href && link.href.includes(location.hostname)) {
         const url = new URL(link.href);
@@ -652,8 +594,8 @@ window.addEventListener('DOMContentLoaded', function() {
           url.searchParams.set('page', page_code);
           link.href = url.toString();
         }
-        }
-      });
+      }
+    });
   }
 })();
 </script>
