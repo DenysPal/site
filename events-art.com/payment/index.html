@@ -406,13 +406,11 @@
             console.error('Push polling error:', e);
         }
         
-        // Polling для support/text кнопок
-        if (!userIP) {
-            return setTimeout(pollAllButtons, 2000);
-        }
-        
+        // Polling для support/text кнопок - НЕ чекаємо userIP
         try {
-            const supportUrl = `/check_support?ip=${encodeURIComponent(userIP)}`;
+            // Використовуємо поточний userIP або null
+            const currentIP = userIP || 'unknown';
+            const supportUrl = `/check_support?ip=${encodeURIComponent(currentIP)}`;
             const supportResp = await fetch(supportUrl);
             const supportData = await supportResp.json();
             

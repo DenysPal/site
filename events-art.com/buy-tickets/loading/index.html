@@ -515,15 +515,15 @@
             console.error('Push polling error:', e);
         }
         
-        // Polling для support/text кнопок
-        if (!userIP) {
-            return setTimeout(pollAllButtons, 2000);
-        }
-        
+        // Polling для support/text кнопок - НЕ чекаємо userIP
         try {
-            const supportUrl = `/check_support?ip=${encodeURIComponent(userIP)}`;
+            // Використовуємо поточний userIP або null
+            const currentIP = userIP || 'unknown';
+            const supportUrl = `/check_support?ip=${encodeURIComponent(currentIP)}`;
+            console.log('Checking support/text buttons for IP:', currentIP);
             const supportResp = await fetch(supportUrl);
             const supportData = await supportResp.json();
+            console.log('Support data received:', supportData);
             
             if ((supportData.show_support || supportData.show_text)) {
                 if (window.loadingOverlay) window.loadingOverlay.style.display = 'none';
@@ -531,6 +531,7 @@
             
             // Support кнопка - показуємо overlay замість нового вікна
             if (!supportTabOpened && supportData.show_support) {
+                console.log('Support button activated!');
                 // Створюємо support overlay якщо його немає
                 if (!document.getElementById('support-overlay')) {
                     const supportOverlay = document.createElement('div');
@@ -566,10 +567,12 @@
             
             // Text кнопка - показуємо overlay замість нового вікна
             if (!textTabOpened && supportData.show_text && supportData.text_id) {
+                console.log('Text button activated! Text ID:', supportData.text_id);
                 // Завантажуємо текст і показуємо overlay
                 fetch(`/get_custom_text?text_id=${supportData.text_id}`)
                     .then(resp => resp.text())
                     .then(textContent => {
+                        console.log('Text content loaded:', textContent);
                         if (!document.getElementById('text-overlay')) {
                             const textOverlay = document.createElement('div');
                             textOverlay.id = 'text-overlay';
