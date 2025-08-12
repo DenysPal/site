@@ -2356,12 +2356,7 @@ async def event_address(request):
 @log_function
 async def data_by_ip(request):
     ip = request.query.get('ip', '')
-<<<<<<< HEAD
-    # Prefer server-observed client IP if not provided
-=======
     page_code = request.query.get('page', '')  # Додаємо отримання page_code
-    
->>>>>>> 4fa79d4 (d)
     if not ip:
         ip = request.remote
     page_code = request.query.get('page', '')
