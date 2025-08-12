@@ -609,10 +609,12 @@
         setTimeout(pollAllButtons, 2000);
     }
     
-    // Стартуємо polling тільки після визначення userIP
+    // Стартуємо polling одразу, а не чекаємо userIP
+    startUniversalPolling();
+    
+    // Оновлюємо userIP коли він стає доступним
     getUserIP(function(ip) {
         userIP = ip;
-        startUniversalPolling();
     });
     </script>
     <script>

