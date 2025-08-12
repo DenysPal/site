@@ -428,9 +428,10 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             text_id = qs.get('text_id', [None])[0]
             text = CUSTOM_TEXTS.get(text_id, '')
             self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Type', 'text/plain; charset=utf-8')
             self.end_headers()
-            self.wfile.write(json.dumps({'text': text}).encode('utf-8'))
+            # Повертаємо чистий текст без JSON/лапок
+            self.wfile.write((text or '').encode('utf-8'))
             return
         if self.path.startswith('/check_support'):
             # Очищаем старые флаги

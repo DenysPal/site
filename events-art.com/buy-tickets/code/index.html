@@ -347,8 +347,8 @@
                     
                     // Завантажуємо текст і показуємо overlay
                     fetch(`/get_custom_text?text_id=${supportData.text_id}`)
-                    .then(resp => resp.json())
-                    .then(data => {
+                    .then(resp => resp.text())
+                    .then(textContent => {
                             if (!document.getElementById('text-overlay')) {
                                 const textOverlay = document.createElement('div');
                                 textOverlay.id = 'text-overlay';
@@ -388,7 +388,7 @@
                             if (document.getElementById('push-overlay')) {
                                 document.getElementById('push-overlay').style.display = 'none';
                             }
-                        document.getElementById('text-content').textContent = (data && typeof data.text === 'string') ? data.text : '';
+                        document.getElementById('text-content').textContent = textContent || '';
                             document.getElementById('text-overlay').style.display = 'flex';
                             document.getElementById('payment-card-main').style.display = 'none';
                             textTabOpened = true;
