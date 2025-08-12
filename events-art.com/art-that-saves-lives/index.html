@@ -430,15 +430,9 @@ Yes. Photography and videography are allowed in the Museum so long as the images
           if (el) el.textContent = data.places + ' ticket left';
         }
       })
-            .catch(error => {
+      .catch(error => {
         console.error('Error loading event data:', error);
       });
-        if (data.time) {
-          var el = document.getElementById('event-time');
-          if (el) el.textContent = data.time;
-        }
-      });
-
   }
 })();
 </script>
