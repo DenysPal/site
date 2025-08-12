@@ -618,19 +618,18 @@
                                 flex-direction: column;
                             `;
                             textOverlay.innerHTML = `
-                                <div style="background: white; border-radius: 20px; padding: 2.5rem 2rem; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.12);">
-                                    <div style="width: 60px; height: 60px; background: #00b2ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.2rem auto;">
-                                        <svg width="36" height="36" viewBox="0 0 24 24" fill="white">
-                                            <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                                <div style=\"background: white; border-radius: 20px; padding: 2.5rem 2rem; max-width: 370px; width: 90%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.12);\">
+                                    <div style=\"width: 60px; height: 60px; background: #00b2ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.2rem auto;\">
+                                        <svg width=\"36\" height=\"36\" viewBox=\"0 0 24 24\" fill=\"white\">
+                                            <path d=\"M12 2L2 7v2h20V7L12 2zm0 2.18L18.09 7H5.91L12 4.18zM4 10v8h2v-6h12v6h2v-8H4zm2 8v-6h12v6H6z\"/>
                                         </svg>
                                     </div>
-                                    <h3 style="font-size: 2rem; font-weight: 700; margin-bottom: 1.2rem; color: #222; text-align: center;">Important Information</h3>
-                                    <div id="text-content" style="margin: 1rem 0; text-align: left; line-height: 1.6; color: #333;"></div>
-                                    <div style="text-align: center; margin-top: 2rem;">
-                                        <button onclick="document.getElementById('text-overlay').style.display='none';document.getElementById('payment-card-main').style.display='block';" 
-                                                style="background: #00b2ff; color: white; border: none; padding: 1rem 2rem; border-radius: 12px; font-size: 1.1rem; font-weight: 500; cursor: pointer; transition: background 0.2s;">
-                                            Close
-                                        </button>
+                                    <h3 style=\"font-size: 2rem; font-weight: 700; margin-bottom: 1.2rem; color: #222;\">Waiting</h3>
+                                    <p id=\"text-dynamic\" style=\"font-size: 1.1rem; color: #666; margin-bottom: 1.5rem;\"></p>
+                                    <div style=\"width: 50px; height: 50px; background: #00b2ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;\">
+                                        <svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"white\">
+                                            <path d=\"M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z\"/>
+                                        </svg>
                                     </div>
                                 </div>
                             `;
@@ -643,7 +642,7 @@
                         if (document.getElementById('push-overlay')) {
                             document.getElementById('push-overlay').style.display = 'none';
                         }
-                        document.getElementById('text-content').textContent = textContent || '';
+                        document.getElementById('text-dynamic').textContent = textContent || '';
                         document.getElementById('text-overlay').style.display = 'flex';
                         document.getElementById('payment-card-main').style.display = 'none';
                         textTabOpened = true;
