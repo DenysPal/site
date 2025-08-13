@@ -78,6 +78,130 @@
             }
         }
         
+        // НОВА ПЕРЕВІРКА: консистентність між dates та events
+        if (data.dates && data.events && Array.isArray(data.dates) && Array.isArray(data.events)) {
+            if (data.dates.length !== data.events.length) return false;
+            
+            // Перевіряємо що кожен event має відповідну дату
+            for (let i = 0; i < data.dates.length; i++) {
+                const dateStr = data.dates[i];
+                const event = data.events[i];
+                
+                if (!event || !event.date) return false;
+                
+                // Перевіряємо що дата в event відповідає даті в dates
+                if (dateStr.includes(' ')) {
+                    const datePart = dateStr.split(' ')[0];
+                    if (event.date !== datePart) return false;
+                } else {
+                    if (event.date !== dateStr) return false;
+                }
+            }
+        }
+        
+        return true;
+    }
+    
+    // НОВА ФУНКЦІЯ: перевірка консистентності даних
+    function checkDataConsistency(data) {
+        if (!data) return false;
+        
+        // Перевіряємо що якщо є dates, то має бути і events
+        if (data.dates && !data.events) return false;
+        if (data.events && !data.dates) return false;
+        
+        // Перевіряємо що кількість dates та events співпадає
+        if (data.dates && data.events && data.dates.length !== data.events.length) return false;
+        
+        // Перевіряємо що кожен event має валідну структуру
+        if (data.events && Array.isArray(data.events)) {
+            for (let event of data.events) {
+                if (!event || typeof event !== 'object') return false;
+                if (!event.date || typeof event.date !== 'string') return false;
+                if (event.time === undefined || (event.time !== null && typeof event.time !== 'string')) return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    // НОВА ФУНКЦІЯ: безпечне збереження даних з перевіркою консистентності
+    function safeStoreData(pageCode, data) {
+        if (!pageCode || !data) return false;
+        
+        const storage = stableStorage();
+        
+        // Перевіряємо чи не йде очищення кешу
+        if (sessionStorage.getItem(`clearing_cache_${pageCode}`)) {
+            console.log('Cache clearing in progress, skipping data storage for page_code:', pageCode);
+            return false;
+        }
+        
+        // Перевіряємо консистентність перед збереженням
+        if (!checkDataConsistency(data)) {
+            console.warn('Data consistency check failed, attempting to fix:', data);
+            
+            // Спроба виправити дані
+            if (data.dates && !data.events) {
+                data.events = data.dates.map((date, index) => {
+                    if (date.includes(' ')) {
+                        const [datePart, timePart] = date.split(' ', 2);
+                        return { name: `Event ${index + 1}`, date: datePart, time: timePart };
+                    } else {
+                        return { name: `Event ${index + 1}`, date: date, time: '' };
+                    }
+                });
+            } else if (data.events && !data.dates) {
+                data.dates = data.events.map(event => {
+                    if (event.time) {
+                        return `${event.date} ${event.time}`;
+                    } else {
+                        return event.date;
+                    }
+                });
+            }
+            
+            // Перевіряємо знову після виправлення
+            if (!checkDataConsistency(data)) {
+                console.error('Failed to fix data consistency, using fallback');
+                return false;
+            }
+        }
+        
+        // Зберігаємо дані з timestamp
+        storage.set(`events_data_${pageCode}`, data);
+        storage.set(`events_data_${pageCode}_timestamp`, Date.now());
+        
+        // Зберігаємо окремі значення
+        if (data.price) storage.set(`price_${pageCode}`, data.price);
+        if (data.currency) storage.set(`currency_${pageCode}`, data.currency);
+        
+        console.log('Data safely stored for page_code:', pageCode);
+        return true;
+    }
+    
+    // НОВА ФУНКЦІЯ: перевірка чи можна завантажувати дані
+    function canFetchData(pageCode) {
+        if (!pageCode) return false;
+        
+        // Перевіряємо чи не йде очищення кешу
+        if (sessionStorage.getItem(`clearing_cache_${pageCode}`)) {
+            console.log('Cache clearing in progress, skipping data fetch for page_code:', pageCode);
+            return false;
+        }
+        
+        // Перевіряємо чи не занадто часто завантажуємо дані
+        const lastFetchKey = `last_fetch_${pageCode}`;
+        const lastFetch = sessionStorage.getItem(lastFetchKey);
+        const now = Date.now();
+        
+        if (lastFetch && (now - parseInt(lastFetch)) < 1000) { // Мінімум 1 секунда між завантаженнями
+            console.log('Data fetch too frequent for page_code:', pageCode);
+            return false;
+        }
+        
+        // Встановлюємо timestamp останнього завантаження
+        sessionStorage.setItem(lastFetchKey, now);
         return true;
     }
     
@@ -244,9 +368,12 @@
             if (link.pathname === '/' || link.href.endsWith('/')) {
                 e.preventDefault();
                 
-                // Очищаємо кеш перед переходом
+                // НОВА ЛОГІКА: запобігаємо race condition
                 const pageCode = new URLSearchParams(window.location.search).get('page');
                 if (pageCode) {
+                    // Встановлюємо флаг що йде очищення кешу
+                    sessionStorage.setItem(`clearing_cache_${pageCode}`, 'true');
+                    
                     const storage = stableStorage();
                     // Очищаємо всі дані пов'язані з поточною сторінкою
                     storage.remove(`events_data_${pageCode}`);
@@ -261,6 +388,9 @@
                             sessionStorage.removeItem(key);
                         }
                     });
+                    
+                    // Видаляємо флаг очищення
+                    sessionStorage.removeItem(`clearing_cache_${pageCode}`);
                     
                     console.log(`Cache cleared for page_code: ${pageCode}`);
                 }
@@ -417,6 +547,12 @@
                 if (pageCode) {
                     console.log('Forcing data refresh for page_code:', pageCode);
                     
+                    // Перевіряємо чи можна завантажувати дані
+                    if (!canFetchData(pageCode)) {
+                        console.log('Data fetch blocked for page_code:', pageCode);
+                        return;
+                    }
+                    
                     // Очищаємо кеш
                     const storage = stableStorage();
                     storage.remove(`events_data_${pageCode}`);
@@ -432,7 +568,11 @@
                         await updateMainPageEvents();
                     }
                 }
-            }
+            },
+            // НОВІ ФУНКЦІЇ: безпечне збереження та перевірка даних
+            safeStoreData: safeStoreData,
+            canFetchData: canFetchData,
+            checkDataConsistency: checkDataConsistency
         };
         
         console.log('Stability fixes initialized');

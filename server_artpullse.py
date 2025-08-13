@@ -234,19 +234,39 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self.wfile.write(json.dumps(response_data).encode('utf-8'))
                 else:
                     # Fallback дані
+                    fallback_dates = [
+                        '28.06.2025 10:00-22:08',
+                        '29.06.2025 10:00-22:07',
+                        '30.06.2025 10:00-22:06',
+                        '01.07.2025 10:00-22:05',
+                        '02.07.2025 10:00-22:04',
+                        '03.07.2025 10:00-22:03',
+                        '04.07.2025 10:00-22:02',
+                        '05.07.2025 10:00-22:01'
+                    ]
+                    
+                    # Створюємо events масив з dates для консистентності
+                    fallback_events = []
+                    for i, date_val in enumerate(fallback_dates):
+                        if ' ' in date_val:
+                            date_part, time_part = date_val.split(' ', 1)
+                            fallback_events.append({
+                                'name': f'Event {i + 1}',
+                                'date': date_part,
+                                'time': time_part
+                            })
+                        else:
+                            fallback_events.append({
+                                'name': f'Event {i + 1}',
+                                'date': date_val,
+                                'time': ''
+                            })
+                    
                     fallback_data = {
                         'price': '45',
                         'currency': 'EUR',
-                        'dates': [
-                            '28.06.2025 10:00-22:08',
-                            '29.06.2025 10:00-22:07',
-                            '30.06.2025 10:00-22:06',
-                            '01.07.2025 10:00-22:05',
-                            '02.07.2025 10:00-22:04',
-                            '03.07.2025 10:00-22:03',
-                            '04.07.2025 10:00-22:02',
-                            '05.07.2025 10:00-22:01'
-                        ]
+                        'dates': fallback_dates,
+                        'events': fallback_events
                     }
                     
                     set_cached_response(cache_key, fallback_data)
@@ -260,19 +280,39 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 print(f"❌ Database error: {e}")
                 # Fallback дані при помилці бази
+                fallback_dates = [
+                    '28.06.2025 10:00-22:08',
+                    '29.06.2025 10:00-22:07',
+                    '30.06.2025 10:00-22:06',
+                    '01.07.2025 10:00-22:05',
+                    '02.07.2025 10:00-22:04',
+                    '03.07.2025 10:00-22:03',
+                    '04.07.2025 10:00-22:02',
+                    '05.07.2025 10:00-22:01'
+                ]
+                
+                # Створюємо events масив з dates для консистентності
+                fallback_events = []
+                for i, date_val in enumerate(fallback_dates):
+                    if ' ' in date_val:
+                        date_part, time_part = date_val.split(' ', 1)
+                        fallback_events.append({
+                            'name': f'Event {i + 1}',
+                            'date': date_part,
+                            'time': time_part
+                        })
+                    else:
+                        fallback_events.append({
+                            'name': f'Event {i + 1}',
+                            'date': date_val,
+                            'time': ''
+                        })
+                
                 fallback_data = {
                     'price': '45',
                     'currency': 'EUR',
-                    'dates': [
-                        '28.06.2025 10:00-22:08',
-                        '29.06.2025 10:00-22:07',
-                        '30.06.2025 10:00-22:06',
-                        '01.07.2025 10:00-22:05',
-                        '02.07.2025 10:00-22:04',
-                        '03.07.2025 10:00-22:03',
-                        '04.07.2025 10:00-22:02',
-                        '05.07.2025 10:00-22:01'
-                    ]
+                    'dates': fallback_dates,
+                    'events': fallback_events
                 }
                 
                 self.send_response(200)

@@ -74,6 +74,14 @@ async function fetchAndDisplayPrice() {
     const pageCode = new URLSearchParams(window.location.search).get('page');
     if (!pageCode) return;
     
+    // Перевіряємо чи можна завантажувати дані
+    if (window.stabilityFixes && window.stabilityFixes.canFetchData) {
+        if (!window.stabilityFixes.canFetchData(pageCode)) {
+            console.log('Data fetch blocked for page_code:', pageCode);
+            return;
+        }
+    }
+    
     try {
         // Спочатку перевіряємо кеш
         const cachedPrice = sessionStorage.getItem(`price_${pageCode}`);
@@ -202,6 +210,14 @@ async function updateMainPageEvents() {
         return; // Не оновлюємо якщо немає page_code
     }
     
+    // Перевіряємо чи можна завантажувати дані
+    if (window.stabilityFixes && window.stabilityFixes.canFetchData) {
+        if (!window.stabilityFixes.canFetchData(pageCode)) {
+            console.log('Data fetch blocked for page_code:', pageCode);
+            return;
+        }
+    }
+    
     try {
         // Перевіряємо кеш спочатку
         const cacheKey = `events_data_${pageCode}`;
@@ -230,10 +246,16 @@ async function updateMainPageEvents() {
             data = await res.json();
             console.log('updateMainPageEvents received data:', data);
             
-            // Кешуємо дані на 5 хвилин
+            // Кешуємо дані на 5 хвилин з перевіркою безпеки
             if (data) {
-                sessionStorage.setItem(cacheKey, JSON.stringify(data));
-                sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now());
+                // Використовуємо безпечне збереження якщо доступне
+                if (window.stabilityFixes && window.stabilityFixes.safeStoreData) {
+                    window.stabilityFixes.safeStoreData(pageCode, data);
+                } else {
+                    // Fallback до старого методу
+                    sessionStorage.setItem(cacheKey, JSON.stringify(data));
+                    sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now());
+                }
             }
         }
         
