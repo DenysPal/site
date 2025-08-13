@@ -60,32 +60,97 @@
         if (data.price && typeof data.price !== 'string' && typeof data.price !== 'number') return false;
         if (data.currency && typeof data.currency !== 'string') return false;
         
+        // Додаткова перевірка: якщо є dates, вони повинні містити валідні дати
+        if (data.dates && Array.isArray(data.dates)) {
+            for (let date of data.dates) {
+                if (typeof date !== 'string' || date.trim().length === 0) {
+                    return false;
+                }
+            }
+        }
+        
+        // Додаткова перевірка: якщо є events, вони повинні мати правильну структуру
+        if (data.events && Array.isArray(data.events)) {
+            for (let event of data.events) {
+                if (!event || typeof event !== 'object') return false;
+                if (event.date && typeof event.date !== 'string') return false;
+                if (event.time && typeof event.time !== 'string') return false;
+            }
+        }
+        
         return true;
     }
     
     // Функція для відновлення даних при помилці
     function recoverData(pageCode) {
         const storage = stableStorage();
-        const fallbackData = {
-            dates: [
-                '28.06.2025 10:00-22:08',
-                '29.06.2025 10:00-22:07',
-                '30.06.2025 10:00-22:06',
-                '01.07.2025 10:00-22:05',
-                '02.07.2025 10:00-22:04',
-                '03.07.2025 10:00-22:03',
-                '04.07.2025 10:00-22:02',
-                '05.07.2025 10:00-22:01'
-            ],
-            price: '45',
-            currency: 'EUR'
+        
+        // Різні варіанти fallback даних для різних page_code
+        const fallbackOptions = [
+            {
+                dates: [
+                    '28.06.2025 10:00-22:08',
+                    '29.06.2025 10:00-22:07',
+                    '30.06.2025 10:00-22:06',
+                    '01.07.2025 10:00-22:05',
+                    '02.07.2025 10:00-22:04',
+                    '03.07.2025 10:00-22:03',
+                    '04.07.2025 10:00-22:02',
+                    '05.07.2025 10:00-22:01'
+                ],
+                price: '45',
+                currency: 'EUR'
+            },
+            {
+                dates: [
+                    '28.06.2025 10:00-22:20',
+                    '29.06.2025 10:00-22:30',
+                    '30.06.2025 10:00-22:40',
+                    '01.07.2025 10:00-22:00',
+                    '02.07.2025 10:00-22:00',
+                    '03.07.2025 10:00-22:00',
+                    '04.07.2025 10:00-22:00',
+                    '05.07.2025 10:00-22:01'
+                ],
+                price: '45',
+                currency: 'EUR'
+            }
+        ];
+        
+        // Вибираємо fallback дані на основі page_code для різноманітності
+        const fallbackIndex = pageCode ? (pageCode.charCodeAt(0) % fallbackOptions.length) : 0;
+        const fallbackData = fallbackOptions[fallbackIndex];
+        
+        // Створюємо events масив з dates
+        const events = fallbackData.dates.map((date, index) => {
+            if (date.includes(' ')) {
+                const [datePart, timePart] = date.split(' ', 1);
+                return {
+                    name: `Event ${index + 1}`,
+                    date: datePart,
+                    time: timePart
+                };
+            } else {
+                return {
+                    name: `Event ${index + 1}`,
+                    date: date,
+                    time: ''
+                };
+            }
+        });
+        
+        const completeData = {
+            ...fallbackData,
+            events: events
         };
         
-        storage.set(`events_data_${pageCode}`, fallbackData);
-        storage.set(`price_${pageCode}`, fallbackData.price);
-        storage.set(`currency_${pageCode}`, fallbackData.currency);
+        storage.set(`events_data_${pageCode}`, completeData);
+        storage.set(`price_${pageCode}`, completeData.price);
+        storage.set(`currency_${pageCode}`, completeData.currency);
         
-        return fallbackData;
+        console.log(`Recovered data for page_code: ${pageCode} using fallback option ${fallbackIndex}`);
+        
+        return completeData;
     }
     
     // Функція для стабільного оновлення UI
@@ -183,13 +248,24 @@
                 const pageCode = new URLSearchParams(window.location.search).get('page');
                 if (pageCode) {
                     const storage = stableStorage();
+                    // Очищаємо всі дані пов'язані з поточною сторінкою
                     storage.remove(`events_data_${pageCode}`);
                     storage.remove(`price_${pageCode}`);
                     storage.remove(`currency_${pageCode}`);
                     storage.remove(`events_data_${pageCode}_timestamp`);
+                    
+                    // Додатково очищаємо застарілі дані
+                    const keys = Object.keys(sessionStorage);
+                    keys.forEach(key => {
+                        if (key.includes(pageCode) || key.includes('_timestamp')) {
+                            sessionStorage.removeItem(key);
+                        }
+                    });
+                    
+                    console.log(`Cache cleared for page_code: ${pageCode}`);
                 }
                 
-                // Переходимо на головну сторінку
+                // Переходимо на головну сторінку з повним перезавантаженням
                 window.location.href = '/';
                 return;
             }
@@ -217,6 +293,29 @@
                 autoRecover();
             }
         }, 10000); // Перевіряємо кожні 10 секунд
+        
+        // Додатково очищаємо застарілий кеш кожні 2 хвилини
+        setInterval(() => {
+            const now = Date.now();
+            const keys = Object.keys(sessionStorage);
+            let cleanedCount = 0;
+            
+            keys.forEach(key => {
+                if (key.endsWith('_timestamp')) {
+                    const timestamp = parseInt(sessionStorage.getItem(key));
+                    if (now - timestamp > 5 * 60 * 1000) { // 5 хвилин
+                        const dataKey = key.replace('_timestamp', '');
+                        sessionStorage.removeItem(dataKey);
+                        sessionStorage.removeItem(key);
+                        cleanedCount++;
+                    }
+                }
+            });
+            
+            if (cleanedCount > 0) {
+                console.log(`Cleaned up ${cleanedCount} expired cache entries`);
+            }
+        }, 2 * 60 * 1000); // Кожні 2 хвилини
     }
     
     // Функція для стабільного завантаження сторінки
@@ -262,6 +361,25 @@
         } else {
             attemptLoad();
         }
+        
+        // Додатково: відстежуємо зміни в URL для автоматичного оновлення даних
+        let lastUrl = location.href;
+        new MutationObserver(() => {
+            const url = location.href;
+            if (url !== lastUrl) {
+                lastUrl = url;
+                const pageCode = new URLSearchParams(location.search).get('page');
+                if (pageCode) {
+                    console.log('URL changed, refreshing data for page_code:', pageCode);
+                    // Невелика затримка для забезпечення стабільності
+                    setTimeout(() => {
+                        if (typeof window.stabilityFixes !== 'undefined' && window.stabilityFixes.refreshData) {
+                            window.stabilityFixes.refreshData();
+                        }
+                    }, 500);
+                }
+            }
+        }).observe(document, {subtree: true, childList: true});
     }
     
     // Ініціалізація всіх функцій стабільності
@@ -291,6 +409,28 @@
                     storage.remove(`events_data_${pageCode}_timestamp`);
                     
                     location.reload();
+                }
+            },
+            // Додаткова функція для примусового оновлення даних без перезавантаження
+            refreshData: async function() {
+                const pageCode = new URLSearchParams(window.location.search).get('page');
+                if (pageCode) {
+                    console.log('Forcing data refresh for page_code:', pageCode);
+                    
+                    // Очищаємо кеш
+                    const storage = stableStorage();
+                    storage.remove(`events_data_${pageCode}`);
+                    storage.remove(`price_${pageCode}`);
+                    storage.remove(`currency_${pageCode}`);
+                    storage.remove(`events_data_${pageCode}_timestamp`);
+                    
+                    // Завантажуємо нові дані
+                    if (typeof fetchAndDisplayPrice === 'function') {
+                        await fetchAndDisplayPrice();
+                    }
+                    if (typeof updateMainPageEvents === 'function') {
+                        await updateMainPageEvents();
+                    }
                 }
             }
         };

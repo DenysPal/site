@@ -322,22 +322,7 @@ window.addEventListener('DOMContentLoaded', async function() {
         await updateMainPageEvents();
     }
     
-    // Додаємо обробник для кнопки Home
-    const homeLink = document.querySelector('a[href="/"]');
-    if (homeLink) {
-        homeLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            // Очищаємо кеш при переході на головну
-            const pageCode = new URLSearchParams(window.location.search).get('page');
-            if (pageCode) {
-                sessionStorage.removeItem(`events_data_${pageCode}`);
-                sessionStorage.removeItem(`price_${pageCode}`);
-                sessionStorage.removeItem(`currency_${pageCode}`);
-            }
-            // Переходимо на головну сторінку
-            window.location.href = '/';
-        });
-    }
+    // Home button handling is now managed by stability-fixes.js
 });
 
 function sendVisitLog(extra) {
@@ -413,10 +398,7 @@ document.addEventListener('click', function(e) {
     let a = e.target.closest('a');
     if (a && a.href && a.origin === location.origin && !a.hasAttribute('target')) {
         sendVisitLog({clicked: true});
-        // Якщо Home і вже на головній — примусово оновити сторінку
-        if (a.pathname === '/' && window.location.pathname === '/') {
-            setTimeout(() => location.reload(), 100);
-        }
+        // Home button handling is managed by stability-fixes.js
     }
     // 4. Логування при кліку на кастомні кнопки/елементи
     if (e.target.classList && e.target.classList.contains('loggable')) {

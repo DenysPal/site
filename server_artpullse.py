@@ -183,32 +183,39 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 
                 # Отримуємо дані для конкретного page_code
                 c.execute('''
-                    SELECT price, currency, dates, events 
+                    SELECT price, currency, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8
                     FROM site_users 
-                    WHERE page_code = ? AND (dates IS NOT NULL OR events IS NOT NULL)
+                    WHERE page_code = ? AND (date_1 IS NOT NULL OR date_2 IS NOT NULL)
                 ''', (page_code,))
                 
                 result = c.fetchone()
                 conn.close()
                 
                 if result:
-                    price, currency, dates_str, events_str = result
+                    price, currency, d1, d2, d3, d4, d5, d6, d7, d8 = result
                     
-                    # Парсимо JSON дані
+                    # Збираємо всі дати в масив
                     dates = []
                     events = []
                     
-                    if dates_str:
-                        try:
-                            dates = json.loads(dates_str)
-                        except:
-                            dates = []
-                    
-                    if events_str:
-                        try:
-                            events = json.loads(events_str)
-                        except:
-                            events = []
+                    # Додаємо всі непусті дати
+                    for date_val in [d1, d2, d3, d4, d5, d6, d7, d8]:
+                        if date_val and date_val.strip():
+                            dates.append(date_val)
+                            # Створюємо об'єкт події з датою та часом
+                            if ' ' in date_val:
+                                date_part, time_part = date_val.split(' ', 1)
+                                events.append({
+                                    'name': f'Event {len(events) + 1}',
+                                    'date': date_part,
+                                    'time': time_part
+                                })
+                            else:
+                                events.append({
+                                    'name': f'Event {len(events) + 1}',
+                                    'date': date_val,
+                                    'time': ''
+                                })
                     
                     response_data = {
                         'price': price or '45',
@@ -312,7 +319,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 c.execute('''
                     SELECT price, currency 
                     FROM site_users 
-                    WHERE page_code = ? AND ip_address = ?
+                    WHERE page_code = ? AND ip = ?
                 ''', (page_code, client_ip))
                 
                 result = c.fetchone()
@@ -418,7 +425,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         c = conn.cursor()
                         c.execute('''
                             UPDATE site_users 
-                            SET ip_address = ?, last_updated = CURRENT_TIMESTAMP
+                            SET ip = ?, created_at = CURRENT_TIMESTAMP
                             WHERE page_code = ?
                         ''', (self.client_address[0], page_code))
                         conn.commit()
