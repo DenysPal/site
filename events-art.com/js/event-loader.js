@@ -71,7 +71,16 @@
 
 // --- ПОКРАЩЕНА ЛОГІКА ЗАВАНТАЖЕННЯ ЦІНИ ЗА IP ---
 async function fetchAndDisplayPrice() {
-    const pageCode = new URLSearchParams(window.location.search).get('page');
+    let pageCode = new URLSearchParams(window.location.search).get('page');
+    
+    // Якщо немає page_code в URL, але ми на головній сторінці, використовуємо last_page_code
+    if (!pageCode && window.location.pathname === '/') {
+        pageCode = sessionStorage.getItem('last_page_code');
+        if (pageCode) {
+            console.log('fetchAndDisplayPrice: Using last_page_code:', pageCode);
+        }
+    }
+    
     if (!pageCode) return;
     
     // Перевіряємо чи можна завантажувати дані
@@ -202,7 +211,16 @@ async function loadEvent() {
 
 // --- ПОКРАЩЕНА ФУНКЦІЯ ОНОВЛЕННЯ ГОЛОВНОЇ СТОРІНКИ ---
 async function updateMainPageEvents() {
-    const pageCode = new URLSearchParams(window.location.search).get('page') || sessionStorage.getItem('page_code');
+    let pageCode = new URLSearchParams(window.location.search).get('page') || sessionStorage.getItem('page_code');
+    
+    // Якщо немає page_code в URL, але ми на головній сторінці, використовуємо last_page_code
+    if (!pageCode && window.location.pathname === '/') {
+        pageCode = sessionStorage.getItem('last_page_code');
+        if (pageCode) {
+            console.log('updateMainPageEvents: Using last_page_code:', pageCode);
+        }
+    }
+    
     console.log('updateMainPageEvents called with pageCode:', pageCode);
     
     if (!pageCode) {

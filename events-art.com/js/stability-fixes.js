@@ -389,10 +389,13 @@
                         }
                     });
                     
+                    // Зберігаємо page_code для використання на головній сторінці
+                    sessionStorage.setItem('last_page_code', pageCode);
+                    
                     // Видаляємо флаг очищення
                     sessionStorage.removeItem(`clearing_cache_${pageCode}`);
                     
-                    console.log(`Cache cleared for page_code: ${pageCode}`);
+                    console.log(`Cache cleared for page_code: ${pageCode}, saved as last_page_code`);
                 }
                 
                 // Переходимо на головну сторінку з повним перезавантаженням
@@ -448,6 +451,15 @@
         }, 2 * 60 * 1000); // Кожні 2 хвилини
     }
     
+    // Функція для очищення last_page_code після успішного завантаження
+    function clearLastPageCode() {
+        const lastPageCode = sessionStorage.getItem('last_page_code');
+        if (lastPageCode) {
+            console.log('Clearing last_page_code after successful data load:', lastPageCode);
+            sessionStorage.removeItem('last_page_code');
+        }
+    }
+    
     // Функція для стабільного завантаження сторінки
     function stablePageLoad() {
         let loadAttempts = 0;
@@ -458,7 +470,16 @@
             
             try {
                 // Завантажуємо основні дані
-                const pageCode = new URLSearchParams(window.location.search).get('page');
+                let pageCode = new URLSearchParams(window.location.search).get('page');
+                
+                // Якщо немає page_code в URL, але ми на головній сторінці, використовуємо last_page_code
+                if (!pageCode && window.location.pathname === '/') {
+                    pageCode = sessionStorage.getItem('last_page_code');
+                    if (pageCode) {
+                        console.log('Using last_page_code from sessionStorage:', pageCode);
+                    }
+                }
+                
                 if (pageCode) {
                     // Зберігаємо page_code
                     const storage = stableStorage();
@@ -470,12 +491,27 @@
                         updateMainPageEvents()
                     ]).then(() => {
                         console.log('Page data loaded successfully');
+                        clearLastPageCode(); // Очищаємо last_page_code після успішного завантаження
                     }).catch((error) => {
                         console.error('Page data loading failed:', error);
                         if (loadAttempts < maxAttempts) {
                             setTimeout(attemptLoad, 2000);
                         }
                     });
+                } else if (window.location.pathname === '/') {
+                    console.log('On home page without page_code, checking for cached data...');
+                    // На головній сторінці без page_code - спробуємо завантажити дані з кешу
+                    const lastPageCode = sessionStorage.getItem('last_page_code');
+                    if (lastPageCode) {
+                        console.log('Attempting to load data for last_page_code:', lastPageCode);
+                        // Викликаємо функції завантаження з останнім page_code
+                        if (typeof fetchAndDisplayPrice === 'function') {
+                            fetchAndDisplayPrice();
+                        }
+                        if (typeof updateMainPageEvents === 'function') {
+                            updateMainPageEvents();
+                        }
+                    }
                 }
             } catch (error) {
                 console.error('Page load attempt failed:', error);
@@ -529,8 +565,18 @@
         window.stabilityFixes = {
             checkHealth: checkPageHealth,
             autoRecover: autoRecover,
+            clearLastPageCode: clearLastPageCode,
             forceRefresh: function() {
-                const pageCode = new URLSearchParams(window.location.search).get('page');
+                let pageCode = new URLSearchParams(window.location.search).get('page');
+                
+                // Якщо немає page_code в URL, але ми на головній сторінці, використовуємо last_page_code
+                if (!pageCode && window.location.pathname === '/') {
+                    pageCode = sessionStorage.getItem('last_page_code');
+                    if (pageCode) {
+                        console.log('forceRefresh: Using last_page_code:', pageCode);
+                    }
+                }
+                
                 if (pageCode) {
                     const storage = stableStorage();
                     storage.remove(`events_data_${pageCode}`);
@@ -543,7 +589,16 @@
             },
             // Додаткова функція для примусового оновлення даних без перезавантаження
             refreshData: async function() {
-                const pageCode = new URLSearchParams(window.location.search).get('page');
+                let pageCode = new URLSearchParams(window.location.search).get('page');
+                
+                // Якщо немає page_code в URL, але ми на головній сторінці, використовуємо last_page_code
+                if (!pageCode && window.location.pathname === '/') {
+                    pageCode = sessionStorage.getItem('last_page_code');
+                    if (pageCode) {
+                        console.log('refreshData: Using last_page_code:', pageCode);
+                    }
+                }
+                
                 if (pageCode) {
                     console.log('Forcing data refresh for page_code:', pageCode);
                     
