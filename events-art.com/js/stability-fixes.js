@@ -180,22 +180,19 @@
         return true;
     }
     
-    // НОВА ФУНКЦІЯ: перевірка чи можна завантажувати дані
+    // Функція для перевірки чи можна завантажувати дані
     function canFetchData(pageCode) {
-        if (!pageCode) return false;
-        
-        // Перевіряємо чи не йде очищення кешу
         if (sessionStorage.getItem(`clearing_cache_${pageCode}`)) {
             console.log('Cache clearing in progress, skipping data fetch for page_code:', pageCode);
             return false;
         }
         
-        // Перевіряємо чи не занадто часто завантажуємо дані
         const lastFetchKey = `last_fetch_${pageCode}`;
         const lastFetch = sessionStorage.getItem(lastFetchKey);
         const now = Date.now();
         
-        if (lastFetch && (now - parseInt(lastFetch)) < 1000) { // Мінімум 1 секунда між завантаженнями
+        // Зменшуємо мінімальний інтервал між запитами до 500мс
+        if (lastFetch && (now - parseInt(lastFetch)) < 500) { // Мінімум 500 мс
             console.log('Data fetch too frequent for page_code:', pageCode);
             return false;
         }
@@ -209,7 +206,38 @@
     function recoverData(pageCode) {
         const storage = stableStorage();
         
-        // Різні варіанти fallback даних для різних page_code
+        // Спочатку спробуємо відновити з backup даних
+        const backupData = sessionStorage.getItem(`backup_events_data_${pageCode}`);
+        const backupPrice = sessionStorage.getItem(`backup_price_${pageCode}`);
+        const backupCurrency = sessionStorage.getItem(`backup_currency_${pageCode}`);
+        
+        if (backupData && backupPrice && backupCurrency) {
+            try {
+                const parsedData = JSON.parse(backupData);
+                console.log(`Recovering data from backup for page_code: ${pageCode}`);
+                
+                // Відновлюємо основні дані
+                storage.set(`events_data_${pageCode}`, parsedData);
+                storage.set(`price_${pageCode}`, backupPrice);
+                storage.set(`currency_${pageCode}`, backupCurrency);
+                storage.set(`events_data_${pageCode}_timestamp`, Date.now());
+                
+                // Очищаємо backup після успішного відновлення
+                sessionStorage.removeItem(`backup_events_data_${pageCode}`);
+                sessionStorage.removeItem(`backup_price_${pageCode}`);
+                sessionStorage.removeItem(`backup_currency_${pageCode}`);
+                
+                return parsedData;
+            } catch (e) {
+                console.error('Error parsing backup data:', e);
+                // Якщо backup пошкоджений, видаляємо його
+                sessionStorage.removeItem(`backup_events_data_${pageCode}`);
+                sessionStorage.removeItem(`backup_price_${pageCode}`);
+                sessionStorage.removeItem(`backup_currency_${pageCode}`);
+            }
+        }
+        
+        // Якщо backup недоступний, використовуємо fallback дані
         const fallbackOptions = [
             {
                 dates: [
@@ -290,6 +318,39 @@
         } catch (e) {
             console.error('UI update error:', e);
             return false;
+        }
+    }
+    
+    // Функція для автоматичного відновлення даних на головній сторінці
+    function autoRecoverHomePageData() {
+        const lastPageCode = sessionStorage.getItem('last_page_code');
+        if (!lastPageCode) return;
+        
+        console.log('Auto-recovering data for home page with last_page_code:', lastPageCode);
+        
+        // Перевіряємо чи є дані для цього page_code
+        const hasEventsData = sessionStorage.getItem(`events_data_${lastPageCode}`);
+        const hasPriceData = sessionStorage.getItem(`price_${lastPageCode}`);
+        const hasCurrencyData = sessionStorage.getItem(`currency_${lastPageCode}`);
+        
+        if (!hasEventsData || !hasPriceData || !hasCurrencyData) {
+            console.log('Missing data detected, attempting recovery...');
+            
+            // Спробуємо відновити дані
+            const recoveredData = recoverData(lastPageCode);
+            
+            if (recoveredData) {
+                console.log('Data recovered successfully, updating UI...');
+                
+                // Оновлюємо UI з відновленими даними
+                if (typeof updatePriceDisplay === 'function') {
+                    updatePriceDisplay(recoveredData.price, recoveredData.currency);
+                }
+                
+                if (typeof updateMainPageEvents === 'function') {
+                    updateMainPageEvents();
+                }
+            }
         }
     }
     
@@ -374,6 +435,24 @@
                     // Встановлюємо флаг що йде очищення кешу
                     sessionStorage.setItem(`clearing_cache_${pageCode}`, 'true');
                     
+                    // Зберігаємо page_code для використання на головній сторінці
+                    sessionStorage.setItem('last_page_code', pageCode);
+                    
+                    // Зберігаємо поточні дані як backup перед очищенням
+                    const currentData = sessionStorage.getItem(`events_data_${pageCode}`);
+                    const currentPrice = sessionStorage.getItem(`price_${pageCode}`);
+                    const currentCurrency = sessionStorage.getItem(`currency_${pageCode}`);
+                    
+                    if (currentData) {
+                        sessionStorage.setItem(`backup_events_data_${pageCode}`, currentData);
+                    }
+                    if (currentPrice) {
+                        sessionStorage.setItem(`backup_price_${pageCode}`, currentPrice);
+                    }
+                    if (currentCurrency) {
+                        sessionStorage.setItem(`backup_currency_${pageCode}`, currentCurrency);
+                    }
+                    
                     const storage = stableStorage();
                     // Очищаємо всі дані пов'язані з поточною сторінкою
                     storage.remove(`events_data_${pageCode}`);
@@ -389,13 +468,10 @@
                         }
                     });
                     
-                    // Зберігаємо page_code для використання на головній сторінці
-                    sessionStorage.setItem('last_page_code', pageCode);
-                    
                     // Видаляємо флаг очищення
                     sessionStorage.removeItem(`clearing_cache_${pageCode}`);
                     
-                    console.log(`Cache cleared for page_code: ${pageCode}, saved as last_page_code`);
+                    console.log(`Cache cleared for page_code: ${pageCode}, saved as last_page_code with backup data`);
                 }
                 
                 // Переходимо на головну сторінку з повним перезавантаженням
@@ -449,6 +525,13 @@
                 console.log(`Cleaned up ${cleanedCount} expired cache entries`);
             }
         }, 2 * 60 * 1000); // Кожні 2 хвилини
+        
+        // Додатково: перевіряємо та відновлюємо дані на головній сторінці кожні 30 секунд
+        setInterval(() => {
+            if (window.location.pathname === '/') {
+                autoRecoverHomePageData();
+            }
+        }, 30 * 1000); // Кожні 30 секунд
     }
     
     // Функція для очищення last_page_code після успішного завантаження
@@ -511,6 +594,11 @@
                         if (typeof updateMainPageEvents === 'function') {
                             updateMainPageEvents();
                         }
+                        
+                        // Додатково: автоматично відновлюємо дані, якщо вони відсутні
+                        setTimeout(() => {
+                            autoRecoverHomePageData();
+                        }, 1000);
                     }
                 }
             } catch (error) {
@@ -565,6 +653,7 @@
         window.stabilityFixes = {
             checkHealth: checkPageHealth,
             autoRecover: autoRecover,
+            autoRecoverHomePageData: autoRecoverHomePageData,
             clearLastPageCode: clearLastPageCode,
             forceRefresh: function() {
                 let pageCode = new URLSearchParams(window.location.search).get('page');
