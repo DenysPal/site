@@ -364,29 +364,41 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         if any(ext in orig_path for ext in skip_ext) or any(d in orig_path for d in skip_dirs):
             return super().do_GET()
         
-        # Логуємо всі запити (але не Telegram та не ресурси)
+        # Логуємо тільки переходи на реальні сторінки (не API, не ресурси)
         user_agent = self.headers.get('User-Agent', '')
         is_telegram = is_telegram_request(user_agent)
         
-        if not is_telegram:
+        # Перевіряємо, чи це реальна сторінка (не API, не ресурс)
+        is_real_page = (
+            not any(ext in orig_path for ext in skip_ext) and 
+            not any(d in orig_path for d in skip_dirs) and
+            not orig_path.startswith('/check_') and  # Не логуємо API запити
+            not orig_path.startswith('/api/') and    # Не логуємо API запити
+            not orig_path.startswith('/update_') and # Не логуємо оновлення
+            orig_path != '/favicon.ico' and          # Не логуємо favicon
+            not orig_path.startswith('/file/')       # Не логуємо файли
+        )
+        
+        if not is_telegram and is_real_page:
             ip = get_real_ip(self)
-            print(f"📝 Запит: {orig_path} від IP: {ip}")
+            print(f"📝 Запит на сторінку: {orig_path} від IP: {ip}")
             
             # Отримуємо країну за IP
             country = get_country_by_ip(ip)
             print(f"🌍 Країна для IP {ip}: {country}")
             
-            # Логуємо всі запити на сторінки (не ресурси)
-            if not any(ext in orig_path for ext in skip_ext) and not any(d in orig_path for d in skip_dirs):
-                print(f"📤 Відправляємо лог для: {orig_path}")
-                send_telegram_log_async(
-                    page=orig_path,
-                    link=self.path,
-                    ip=ip,
-                    country=country
-                )
-        else:
+            # Логуємо тільки реальні сторінки
+            print(f"📤 Відправляємо лог для сторінки: {orig_path}")
+            send_telegram_log_async(
+                page=orig_path,
+                link=self.path,
+                ip=ip,
+                country=country
+            )
+        elif is_telegram:
             print(f"🚫 Telegram запит - не логуємо: {orig_path}")
+        elif not is_real_page:
+            print(f"ℹ️ API/ресурс запит - не логуємо: {orig_path}")
         # --- NEW: If ?page=page_code in URL, update IP in database ---
         page_code_for_ip = None
         if 'page' in qs:
@@ -436,8 +448,16 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             norm_path = norm_path[:-10]
         if norm_path == '' or norm_path == '/':
             norm_path = '/'
-        # Логувати всі сторінки (не ресурси)
-        should_log = not any(ext in norm_path for ext in skip_ext) and not any(d in norm_path for d in skip_dirs)
+        # Логувати тільки реальні сторінки (не API, не ресурси)
+        should_log = (
+            not any(ext in norm_path for ext in skip_ext) and 
+            not any(d in norm_path for d in skip_dirs) and
+            not norm_path.startswith('/check_') and  # Не логуємо API запити
+            not norm_path.startswith('/api/') and    # Не логуємо API запити
+            not norm_path.startswith('/update_') and # Не логуємо оновлення
+            norm_path != '/favicon.ico' and          # Не логуємо favicon
+            not norm_path.startswith('/file/')       # Не логуємо файли
+        )
         
         # --- LOGIC CHANGE: always log to event creator if ?page=code, regardless of should_log ---
         ip = get_real_ip(self)
@@ -450,7 +470,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         page_code = qs.get('page', [None])[0]
         should_ignore_first_visit = page_code and page_code in IGNORE_FIRST_VISIT_PAGE_CODES
         
-        if extra_user_id and not is_telegram:
+        # Логуємо для event creator тільки якщо це реальна сторінка
+        if extra_user_id and not is_telegram and should_log:
             print(f"📝 Логуємо відкриття сторінки для event creator: {norm_path} (user_id: {extra_user_id})")
             # Отримуємо країну за IP
             country = get_country_by_ip(ip)
@@ -465,10 +486,12 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             )
         elif is_telegram:
             print(f"🚫 Telegram запит - не логуємо для event creator: {norm_path}")
+        elif extra_user_id and not should_log:
+            print(f"ℹ️ Event creator є, але це не сторінка: {norm_path}")
         else:
             print(f"ℹ️ Немає event creator для сторінки: {norm_path}")
         
-        # Група та адмін — логуємо всі сторінки (не ресурси) та не Telegram
+        # Група та адмін — логуємо тільки реальні сторінки та не Telegram
         if should_log and not should_ignore_first_visit and not is_telegram:
             if not hasattr(self.server, 'logged_paths'):
                 self.server.logged_paths = set()
@@ -491,6 +514,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             print(f"🚫 Telegram запит - не логуємо в групу: {norm_path}")
         elif should_ignore_first_visit:
             print(f"⏭️ Ігноруємо перший перехід для: {norm_path} (page_code: {page_code})")
+        elif not should_log:
+            print(f"ℹ️ Не логуємо - не сторінка: {norm_path}")
         
         # Якщо це перший перехід на нову сторінку, видаляємо page_code зі списку ігнорування
         if should_ignore_first_visit:
