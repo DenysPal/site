@@ -35,12 +35,31 @@ def send_telegram_log(page, link, ip, country="", page_code=None):
         f"🌍 IP: {ip}\n"
         f"🌏 Страна: {country}"
     )
+    
+    print(f"📤 Надсилаємо лог в групу та адміну...")
+    print(f"🔍 GROUP_ID: {GROUP_ID}")
+    print(f"🔍 ADMIN_ID: {ADMIN_ID}")
+    print(f"🔍 BOT_TOKEN: {BOT_TOKEN[:20]}...")
+    
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     data_group = {"chat_id": GROUP_ID, "text": msg}
     data_admin = {"chat_id": ADMIN_ID, "text": msg}
+    
     try:
-        requests.post(url, data=data_group, timeout=2)
-        requests.post(url, data=data_admin, timeout=2)
+        print(f"📤 Надсилаємо лог в групу (chat_id: {GROUP_ID})...")
+        response_group = requests.post(url, data=data_group, timeout=2)
+        if response_group.status_code == 200:
+            print(f"✅ Лог в групу надіслано успішно")
+        else:
+            print(f"⚠️ Помилка надсилання в групу: {response_group.status_code} - {response_group.text}")
+            
+        print(f"📤 Надсилаємо лог адміну (chat_id: {ADMIN_ID})...")
+        response_admin = requests.post(url, data=data_admin, timeout=2)
+        if response_admin.status_code == 200:
+            print(f"✅ Лог адміну надіслано успішно")
+        else:
+            print(f"⚠️ Помилка надсилання адміну: {response_admin.status_code} - {response_admin.text}")
+            
     except Exception as e:
         print(f"❌ Не вдалося надіслати лог у Telegram: {e}")
     
