@@ -28,7 +28,7 @@
 				<div class="medium-event-about">
 				<span class="badge badge-light"><img src="/image/date.svg"><span id="event-date" class="event-date"></span></span><span class="badge badge-light"><img src="/image/time.svg"><span id="event-time" class="event-time"></span></span>
 		<h3 id="event-title">Collection Co–selection</h3>
-		<a href="/buy-tickets/?event=1" onclick="sessionStorage.setItem('event_index', 1)">Buy ticket</a>
+		<a href="/buy-tickets/?event=1" onclick="sessionStorage.setItem('event_index', 1)" id="buy-ticket-btn">Buy ticket</a>
 	    <span id="event-places">0 ticket left</span> / Duration: 3 hours
 	    
 					</div>
@@ -320,8 +320,160 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/wow/1.1.2/wow.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.1/js/bootstrap.min.js" integrity="sha384-VHvPCCyXqtD5DqJeNxl2dtTyhF78xXNXdkwX1CZeRusQfRKp+tA7hAShOK/B/fQ2" crossorigin="anonymous"></script>
 
+<!-- Стабільна система управління page_code та даними події -->
 <script>
-// Стабільна система управління даними для виставок
+// Простий скрипт для відновлення page_code в URL при завантаженні сторінки та навігації
+(function() {
+  function restorePageCode() {
+    const storedPageCode = sessionStorage.getItem('page_code');
+    if (storedPageCode && !window.location.search.includes('page=')) {
+      const url = new URL(window.location);
+      url.searchParams.set('page', storedPageCode);
+      window.history.replaceState({}, document.title, url.toString());
+      console.log('[PageCodeRestorer] Restored page_code in URL:', storedPageCode);
+      
+      // Завантажуємо дані події та оновлюємо посилання
+      loadEventData(storedPageCode);
+      updatePageLinks(storedPageCode);
+    }
+  }
+  
+  // Відновлюємо при завантаженні сторінки
+  restorePageCode();
+  
+  // Також оновлюємо посилання при завантаженні, якщо page_code вже є в URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const pageCodeFromUrl = urlParams.get('page');
+  if (pageCodeFromUrl) {
+    updatePageLinks(pageCodeFromUrl);
+  }
+  
+  // Відновлюємо при навігації браузера (стрілки ← →)
+  window.addEventListener('popstate', restorePageCode);
+  
+  // Функція для оновлення всіх посилань на сторінці
+  function updatePageLinks(pageCode) {
+    if (!pageCode) return;
+    
+    // Оновлюємо всі посилання на сторінці
+    document.querySelectorAll('a[href]').forEach(function(link) {
+      if (link.href && link.href.includes(location.hostname)) {
+        const url = new URL(link.href);
+        if (!url.searchParams.has('page')) {
+          url.searchParams.set('page', pageCode);
+          link.href = url.toString();
+        }
+      }
+    });
+    
+    // Оновлюємо посилання в меню
+    document.querySelectorAll('.menu-header .nav-link[href]').forEach(function(link) {
+      if (link.href && link.href.includes(location.hostname)) {
+        const url = new URL(link.href);
+        if (!url.searchParams.has('page')) {
+          url.searchParams.set('page', pageCode);
+          link.href = url.toString();
+        }
+      }
+    });
+    
+    // Оновлюємо кнопку покупки квитка
+    const buyBtn = document.querySelector('a[href*="/buy-tickets/?event=1"]');
+    if (buyBtn) {
+      buyBtn.href = `/buy-tickets/?event=1&page=${encodeURIComponent(pageCode)}`;
+    }
+    
+    console.log('[PageCodeRestorer] All page links updated with page_code:', pageCode);
+  }
+  
+  // Функція для завантаження даних події
+  function loadEventData(pageCode) {
+    const eventIndex = 1; // Collection Co–selection
+    
+    fetch('/api/event_data?page=' + encodeURIComponent(pageCode) + '&event=' + eventIndex + '&_cb=' + Date.now())
+      .then(r => r.json())
+      .then(data => {
+        // Оновлюємо адресу
+        if (data.address) {
+          var el = document.getElementById('event-address');
+          if (el) el.textContent = data.address;
+        }
+        // Оновлюємо дату
+        if (data.date) {
+          var el = document.getElementById('event-date');
+          if (el) el.textContent = data.date;
+        }
+        // Оновлюємо час
+        if (data.time) {
+          var el = document.getElementById('event-time');
+          if (el) el.textContent = data.time;
+        }
+        // Оновлюємо кількість місць
+        if (data.places !== undefined && data.places !== null) {
+          var el = document.getElementById('event-places');
+          if (el) el.textContent = data.places + ' ticket left';
+        }
+        console.log('[PageCodeRestorer] Event data loaded successfully:', data);
+        
+        // Завантажуємо також дані про оплату
+        loadPaymentData(pageCode);
+      })
+      .catch(error => {
+        console.error('[PageCodeRestorer] Error loading event data:', error);
+        // Спробуємо завантажити через latest_event_data API
+        loadLatestEventData(pageCode);
+      });
+  }
+  
+  // Функція для завантаження даних про оплату
+  function loadPaymentData(pageCode) {
+    fetch('/api/payment_data?page=' + encodeURIComponent(pageCode))
+      .then(r => r.json())
+      .then(data => {
+        if (data.price && data.currency) {
+          sessionStorage.setItem('ticket_price', data.price);
+          sessionStorage.setItem('ticket_currency', data.currency);
+          console.log('[PageCodeRestorer] Payment data loaded:', data);
+        }
+      })
+      .catch(error => {
+        console.error('[PageCodeRestorer] Error loading payment data:', error);
+      });
+  }
+  
+  function loadLatestEventData(pageCode) {
+    const eventIndex = 1;
+    
+    fetch('/api/latest_event_data?page=' + encodeURIComponent(pageCode))
+      .then(res => res.json())
+      .then(data => {
+        if (data.dates && data.dates[eventIndex]) {
+          let val = data.dates[eventIndex];
+          let date = val, time = '';
+          
+          if (val.includes(' ')) {
+            [date, time] = val.split(' ');
+          } else if (val.includes('\n')) {
+            [date, time] = val.split('\n');
+          }
+          
+          const dateEl = document.querySelector('.event-date');
+          const timeEl = document.querySelector('.event-time');
+          
+          if (dateEl) dateEl.textContent = date;
+          if (timeEl) timeEl.textContent = time;
+          
+          console.log('[PageCodeRestorer] Latest event data loaded:', { date, time });
+        }
+      })
+      .catch(error => {
+        console.error('[PageCodeRestorer] Error loading latest event data:', error);
+      });
+  }
+})();
+
+</script>
+<script>
 (function() {
   'use strict';
   
@@ -360,8 +512,25 @@ document.addEventListener('DOMContentLoaded', function() {
         sessionStorage.setItem('page_code', this.pageCode);
         console.log('[EventDataManager] Page code from URL:', this.pageCode);
       } else {
-        // Якщо page_code немає в URL, очищаємо застарілі дані
-        this.clearStaleData();
+        // Якщо page_code немає в URL, пробуємо відновити з sessionStorage
+        this.pageCode = sessionStorage.getItem('page_code');
+        if (this.pageCode) {
+          console.log('[EventDataManager] Page code restored from sessionStorage:', this.pageCode);
+          // Відновлюємо page_code в URL для стабільності
+          this.restorePageCodeInUrl();
+        } else {
+          console.warn('[EventDataManager] No page_code found in URL or sessionStorage');
+          this.clearStaleData();
+        }
+      }
+    }
+    
+    restorePageCodeInUrl() {
+      if (this.pageCode && !window.location.search.includes('page=')) {
+        const url = new URL(window.location);
+        url.searchParams.set('page', this.pageCode);
+        window.history.replaceState({}, document.title, url.toString());
+        console.log('[EventDataManager] Restored page_code in URL:', this.pageCode);
       }
     }
     
@@ -374,7 +543,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     setupEventListeners() {
-      // Слухаємо зміни в URL
+      // Слухаємо зміни в URL (включаючи навігацію браузера)
       window.addEventListener('popstate', () => {
         this.handleUrlChange();
       });
@@ -385,6 +554,15 @@ document.addEventListener('DOMContentLoaded', function() {
           this.handleLinkClick(e.target);
         }
       });
+      
+      // Додатково слухаємо зміни в URL
+      let currentUrl = window.location.href;
+      setInterval(() => {
+        if (window.location.href !== currentUrl) {
+          currentUrl = window.location.href;
+          this.handleUrlChange();
+        }
+      }, 100);
     }
     
     handleUrlChange() {
@@ -397,14 +575,24 @@ document.addEventListener('DOMContentLoaded', function() {
           sessionStorage.setItem('page_code', this.pageCode);
           this.loadEventData();
           this.updatePageLinks();
+          console.log('[EventDataManager] Page code changed to:', this.pageCode);
         } else {
-          this.clearStaleData();
+          // Якщо page_code зник з URL, пробуємо відновити з sessionStorage
+          this.pageCode = sessionStorage.getItem('page_code');
+          if (this.pageCode) {
+            this.restorePageCodeInUrl();
+            this.loadEventData();
+            this.updatePageLinks();
+            console.log('[EventDataManager] Restored page_code after URL change:', this.pageCode);
+          } else {
+            console.warn('[EventDataManager] Cannot restore page_code after URL change');
+          }
         }
       }
     }
     
     handleLinkClick(link) {
-      if (link.href && link.href.includes(location.hostname) && this.pageCode) {
+      if (this.pageCode && link.href && link.href.includes(location.hostname)) {
         const url = new URL(link.href);
         if (!url.searchParams.has('page')) {
           url.searchParams.set('page', this.pageCode);
@@ -413,94 +601,103 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
     
-    async loadEventData() {
+    loadEventData() {
       if (!this.pageCode) {
-        console.log('[EventDataManager] No page code, skipping data load');
+        console.warn('[EventDataManager] Cannot load event data: no page_code');
         return;
       }
       
-      try {
-        const response = await fetch(`/api/event_data?page=${encodeURIComponent(this.pageCode)}&event=${EVENT_CONFIG.index}&_cb=${Date.now()}`);
-        const data = await response.json();
-        
-        this.eventData = data;
-        this.updateUI(data);
-        this.cacheEventData(data);
-        
-        console.log('[EventDataManager] Event data loaded successfully:', data);
-      } catch (error) {
-        console.error('[EventDataManager] Error loading event data:', error);
-        this.loadCachedData();
-      }
+      console.log('[EventDataManager] Loading event data for page_code:', this.pageCode);
+      
+      // Завантажуємо дані події
+      fetch('/api/event_data?page=' + encodeURIComponent(this.pageCode) + '&event=' + EVENT_CONFIG.index + '&_cb=' + Date.now())
+        .then(r => r.json())
+        .then(data => {
+          this.eventData = data;
+          this.updateEventDisplay(data);
+          console.log('[EventDataManager] Event data loaded successfully:', data);
+        })
+        .catch(error => {
+          console.error('[EventDataManager] Error loading event data:', error);
+          this.loadLatestEventData();
+        });
     }
     
-    updateUI(data) {
+    loadLatestEventData() {
+      console.log('[EventDataManager] Trying to load latest event data...');
+      
+      fetch('/api/latest_event_data?page=' + encodeURIComponent(this.pageCode))
+        .then(res => res.json())
+        .then(data => {
+          if (data.dates && data.dates[EVENT_CONFIG.index]) {
+            let val = data.dates[EVENT_CONFIG.index];
+            let date = val, time = '';
+            
+            if (val.includes(' ')) {
+              [date, time] = val.split(' ');
+            } else if (val.includes('\n')) {
+              [date, time] = val.split('\n');
+            }
+            
+            this.updateEventDisplay({
+              date: date,
+              time: time,
+              places: data.places || 0
+            });
+            
+            console.log('[EventDataManager] Latest event data loaded:', { date, time });
+          }
+        })
+        .catch(error => {
+          console.error('[EventDataManager] Error loading latest event data:', error);
+          this.setDefaultValues();
+        });
+      
+      // Завантажуємо також дані про оплату
+      this.loadPaymentData();
+    }
+    
+    loadPaymentData() {
+      if (!this.pageCode) return;
+      
+      fetch('/api/payment_data?page=' + encodeURIComponent(this.pageCode))
+        .then(r => r.json())
+        .then(data => {
+          if (data.price && data.currency) {
+            sessionStorage.setItem('ticket_price', data.price);
+            sessionStorage.setItem('ticket_currency', data.currency);
+            console.log('[EventDataManager] Payment data loaded:', data);
+          }
+        })
+        .catch(error => {
+          console.error('[EventDataManager] Error loading payment data:', error);
+        });
+    }
+    
+    updateEventDisplay(data) {
       // Оновлюємо адресу
       if (data.address) {
-        const addressEl = document.getElementById('event-address');
-        if (addressEl) addressEl.textContent = data.address;
+        const el = document.getElementById('event-address');
+        if (el) el.textContent = data.address;
       }
       
       // Оновлюємо дату
       if (data.date) {
-        const dateEl = document.getElementById('event-date');
-        if (dateEl) dateEl.textContent = data.date;
+        const el = document.getElementById('event-date');
+        if (el) el.textContent = data.date;
       }
       
       // Оновлюємо час
       if (data.time) {
-        const timeEl = document.getElementById('event-time');
-        if (timeEl) timeEl.textContent = data.time;
+        const el = document.getElementById('event-time');
+        if (el) el.textContent = data.time;
       }
       
       // Оновлюємо кількість місць
       if (data.places !== undefined && data.places !== null) {
-        const placesEl = document.getElementById('event-places');
-        if (placesEl) placesEl.textContent = `${data.places} ticket left`;
+        const el = document.getElementById('event-places');
+        if (el) el.textContent = data.places + ' ticket left';
       }
-      
-      // Оновлюємо ціну
-      if (data.price) {
-        const priceEl = document.querySelector('.event-price');
-        if (priceEl) priceEl.textContent = data.price;
-      }
-    }
-    
-    cacheEventData(data) {
-      if (this.pageCode) {
-        const cacheKey = `event_data_${this.pageCode}_${EVENT_CONFIG.index}`;
-        sessionStorage.setItem(cacheKey, JSON.stringify({
-          data: data,
-          timestamp: Date.now()
-        }));
-      }
-    }
-    
-    loadCachedData() {
-      if (this.pageCode) {
-        const cacheKey = `event_data_${this.pageCode}_${EVENT_CONFIG.index}`;
-        const cached = sessionStorage.getItem(cacheKey);
-        
-        if (cached) {
-          try {
-            const parsed = JSON.parse(cached);
-            const age = Date.now() - parsed.timestamp;
-            
-            // Використовуємо кеш тільки якщо він не старіший 5 хвилин
-            if (age < 5 * 60 * 1000) {
-              this.eventData = parsed.data;
-              this.updateUI(parsed.data);
-              console.log('[EventDataManager] Loaded cached event data');
-              return;
-            }
-          } catch (e) {
-            console.warn('[EventDataManager] Failed to parse cached data');
-          }
-        }
-      }
-      
-      // Якщо кеш недоступний, встановлюємо значення за замовчуванням
-      this.setDefaultValues();
     }
     
     setDefaultValues() {
@@ -550,6 +747,15 @@ document.addEventListener('DOMContentLoaded', function() {
   // Ініціалізація після завантаження DOM
   document.addEventListener('DOMContentLoaded', () => {
     window.eventDataManager = new EventDataManager();
+    
+    // Додатково перевіряємо, чи потрібно відновити page_code в URL
+    const storedPageCode = sessionStorage.getItem('page_code');
+    if (storedPageCode && !window.location.search.includes('page=')) {
+      const url = new URL(window.location);
+      url.searchParams.set('page', storedPageCode);
+      window.history.replaceState({}, document.title, url.toString());
+      console.log('[EventDataManager] Restored page_code in URL on page load:', storedPageCode);
+    }
   });
   
   // Захист від дублювання ініціалізації
