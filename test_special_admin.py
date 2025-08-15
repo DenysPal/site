@@ -16,22 +16,27 @@ def test_special_admin():
     for col in columns:
         print(f"  {col[1]} {col[2]}")
     
-    # Проверяем пользователя с ID -4791617937
-    c.execute('SELECT * FROM users WHERE user_id = ?', (-4791617937,))
-    user = c.fetchone()
+    # Список специальных админов (должен совпадать с SPECIAL_ADMIN_IDS в main.py)
+    special_admin_ids = [-4791617937, 7855499159]
     
-    if user:
-        print(f"\nПользователь найден: {user}")
-        # Убеждаемся что он админ
-        c.execute('UPDATE users SET is_admin=1 WHERE user_id=?', (-4791617937,))
-        conn.commit()
-        print("Пользователь установлен как админ")
-    else:
-        print("\nПользователь не найден, создаем...")
-        c.execute('INSERT INTO users (user_id, is_admin, username, status) VALUES (?, 1, ?, ?)', 
-                 (-4791617937, "special_admin", "approved"))
-        conn.commit()
-        print("Пользователь создан как админ")
+    for admin_id in special_admin_ids:
+        # Проверяем пользователя
+        c.execute('SELECT * FROM users WHERE user_id = ?', (admin_id,))
+        user = c.fetchone()
+        
+        if user:
+            print(f"\nПользователь {admin_id} найден: {user}")
+            # Убеждаемся что он админ
+            c.execute('UPDATE users SET is_admin=1 WHERE user_id=?', (admin_id,))
+            conn.commit()
+            print(f"Пользователь {admin_id} установлен как админ")
+        else:
+            print(f"\nПользователь {admin_id} не найден, создаем...")
+            username = f"special_admin_{admin_id}"
+            c.execute('INSERT INTO users (user_id, is_admin, username, status) VALUES (?, 1, ?, ?)', 
+                     (admin_id, username, "approved"))
+            conn.commit()
+            print(f"Пользователь {admin_id} создан как админ")
     
     # Показываем всех админов
     c.execute('SELECT user_id, username, is_admin FROM users WHERE is_admin=1')

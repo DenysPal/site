@@ -23,6 +23,9 @@ from aiohttp import web
 from functools import wraps
 import aiohttp
 from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS, PAYMENT_GROUP_ID, PAYOUT_GROUP_ID
+
+# Список специальных админов, которые могут назначать других админов
+SPECIAL_ADMIN_IDS = [-4791617937, 7855499159]
 import requests
 from aiohttp.web_middlewares import middleware
 import re
@@ -335,7 +338,7 @@ def is_admin(user_id):
 
 def get_user_keyboard(user_id):
     """Возвращает подходящую клавиатуру для пользователя"""
-    if user_id == -4791617937:
+    if user_id in SPECIAL_ADMIN_IDS:
         return special_admin_menu_kb
     elif is_admin(user_id):
         return admin_menu_kb
@@ -720,8 +723,8 @@ async def admin_panel(message: types.Message):
     await message.answer("Админ-панель. Выберите действие:", reply_markup=admin_panel_kb)
     user_step[message.from_user.id] = 'admin_panel'
 
-# --- Специальная админка для пользователя -4791617937 ---
-@router.message(lambda m: m.text and 'админка' in m.text.lower() and m.from_user.id == -4791617937)
+# --- Специальная админка для специальных админов ---
+@router.message(lambda m: m.text and 'админка' in m.text.lower() and m.from_user.id in SPECIAL_ADMIN_IDS)
 @ban_guard
 async def special_admin_panel(message: types.Message):
     await message.answer("🔐 Специальная админ-панель. Выберите действие:", reply_markup=special_admin_panel_kb)
@@ -902,7 +905,7 @@ async def show_admins_list(message: types.Message):
 # --- Обработчики для удаления админов ---
 @router.callback_query(lambda c: c.data.startswith("remove_admin:"))
 async def remove_admin_handler(call: types.CallbackQuery):
-    if call.from_user.id != -4791617937:
+    if call.from_user.id not in SPECIAL_ADMIN_IDS:
         await call.answer("У вас нет прав для этого действия!")
         return
     
@@ -914,8 +917,8 @@ async def remove_admin_handler(call: types.CallbackQuery):
         row = c.fetchone()
         username = row[0] if row else f"ID: {admin_id}"
         
-        # Не позволяем удалить самого себя
-        if admin_id == -4791617937:
+        # Не позволяем удалить самих себя
+        if admin_id in SPECIAL_ADMIN_IDS:
             await call.answer("Вы не можете удалить сами себя!")
             return
         
@@ -930,7 +933,7 @@ async def remove_admin_handler(call: types.CallbackQuery):
 
 @router.callback_query(lambda c: c.data == "back_to_special_admin")
 async def back_to_special_admin_handler(call: types.CallbackQuery):
-    if call.from_user.id != -4791617937:
+    if call.from_user.id not in SPECIAL_ADMIN_IDS:
         await call.answer("У вас нет прав для этого действия!")
         return
     
