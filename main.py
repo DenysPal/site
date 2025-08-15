@@ -690,7 +690,7 @@ async def change_nickname_save(message: types.Message):
     c.execute('UPDATE users SET form_json=? WHERE user_id=?', (json.dumps(form_json), uid))
     conn.commit()
     user_step[uid] = None
-    await message.answer(f"Псевдоним изменён на: <b>{new_nick}</b>", parse_mode='HTML', reply_markup=main_menu_kb)
+    await message.answer(f"Псевдоним изменён на: <b>{new_nick}</b>", parse_mode='HTML', reply_markup=get_user_keyboard(uid))
 
 @router.callback_query(lambda c: c.data == "change_wallet")
 async def change_wallet_start(call: types.CallbackQuery):
@@ -706,7 +706,7 @@ async def change_wallet_save(message: types.Message):
         uid = message.from_user.id
         user_step[uid] = None
         user_data[uid] = {}
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        kb = get_user_keyboard(uid)
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
@@ -718,7 +718,7 @@ async def change_wallet_save(message: types.Message):
     c.execute('UPDATE users SET form_json=? WHERE user_id=?', (json.dumps(form_json), uid))
     conn.commit()
     user_step[uid] = None
-    await message.answer(f"Кошелек сохранён: <code>{new_wallet}</code>", parse_mode='HTML', reply_markup=main_menu_kb)
+    await message.answer(f"Кошелек сохранён: <code>{new_wallet}</code>", parse_mode='HTML', reply_markup=get_user_keyboard(uid))
 
 # --- Админка ---
 @router.message(lambda m: m.text and 'админ панель' in m.text.lower() and is_admin(m.from_user.id))
@@ -749,12 +749,12 @@ async def admin_panel_action(message: types.Message):
         uid = message.from_user.id
         user_step[uid] = None
         user_data[uid] = {}
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        kb = get_user_keyboard(uid)
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
     if message.text == "⬅️ Назад":
-        kb = admin_menu_kb
+        kb = get_user_keyboard(uid)
         await message.answer("Возврат в главное меню.", reply_markup=kb)
         user_step[uid] = None
         return
