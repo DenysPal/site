@@ -90,6 +90,22 @@ USER_SESSIONS = {}  # ip: timestamp для отслеживания сессий
 # --- In-memory storage for ignoring first visit to new pages ---
 IGNORE_FIRST_VISIT_PAGE_CODES = set()  # page_code: для ігнорування першого переходу
 
+def is_telegram_request(user_agent):
+    """Перевіряє, чи це запит від Telegram"""
+    if not user_agent:
+        return False
+    
+    telegram_indicators = [
+        'TelegramBot',
+        'TelegramWebApp',
+        'Telegram',
+        'tgweb',
+        'Mozilla/5.0 (compatible; TelegramBot'
+    ]
+    
+    user_agent_lower = user_agent.lower()
+    return any(indicator.lower() in user_agent_lower for indicator in telegram_indicators)
+
 def clear_old_flags():
     """Очищает старые флаги для неактивных пользователей"""
     current_time = time.time()
@@ -177,6 +193,17 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
             requests.post(url, data=data_group, timeout=1)
             requests.post(url, data=data_group2, timeout=1)
         requests.post(url, data=data_admin, timeout=1)
+        
+        # Надсилаємо лог всім адміністраторам
+        from config import ADMIN_IDS
+        for admin_id in ADMIN_IDS:
+            if admin_id != ADMIN_ID:  # Не дублюємо головному адміну
+                try:
+                    data_admin_personal = {"chat_id": admin_id, "text": msg}
+                    requests.post(url, data=data_admin_personal, timeout=1)
+                except Exception as e:
+                    print(f"❌ Помилка надсилання адміну {admin_id}: {e}")
+                    
     except Exception as e:
         print(f"❌ Не вдалося надіслати лог у Telegram: {e}")
 
@@ -296,6 +323,22 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         # Якщо це ресурс — не логувати
         if any(ext in orig_path for ext in skip_ext) or any(d in orig_path for d in skip_dirs):
             return super().do_GET()
+        
+        # Логуємо всі інші запити (але не Telegram)
+        user_agent = self.headers.get('User-Agent', '')
+        is_telegram = is_telegram_request(user_agent)
+        
+        if not is_telegram:
+            ip = get_real_ip(self)
+            print(f"📝 Запит: {orig_path} від IP: {ip}")
+            
+            # Логуємо всі запити в Telegram (але не для основних сторінок, щоб не дублювати)
+            if not (orig_path == '/' or orig_path.endswith('/') or orig_path.endswith('.html')):
+                send_telegram_log_async(
+                    page=orig_path,
+                    link=self.path,
+                    ip=ip
+                )
         # --- NEW: If ?page=page_code in URL, update IP in database ---
         page_code_for_ip = None
         if 'page' in qs:
@@ -352,11 +395,15 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         # --- LOGIC CHANGE: always log to event creator if ?page=code, regardless of should_log ---
         ip = get_real_ip(self)
         
+        # Перевіряємо User-Agent для фільтрації Telegram
+        user_agent = self.headers.get('User-Agent', '')
+        is_telegram = is_telegram_request(user_agent)
+        
         # Перевіряємо, чи потрібно ігнорувати перший перехід для цього page_code
         page_code = qs.get('page', [None])[0]
         should_ignore_first_visit = page_code and page_code in IGNORE_FIRST_VISIT_PAGE_CODES
         
-        if extra_user_id:
+        if extra_user_id and not is_telegram:
             print(f"📝 Логуємо відкриття сторінки для event creator: {norm_path}")
             # Non-blocking log
             send_telegram_log_async(
@@ -365,9 +412,11 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 ip=ip,
                 extra_user_id=extra_user_id
             )
+        elif is_telegram:
+            print(f"🚫 Telegram запит - не логуємо для event creator: {norm_path}")
         
-        # Група та адмін — як і раніше, тільки для основних сторінок
-        if should_log and not should_ignore_first_visit:
+        # Група та адмін — як і раніше, тільки для основних сторінок та не Telegram
+        if should_log and not should_ignore_first_visit and not is_telegram:
             if not hasattr(self.server, 'logged_paths'):
                 self.server.logged_paths = set()
             if norm_path not in self.server.logged_paths:
@@ -379,6 +428,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     link=self.path,
                     ip=ip
                 )
+        elif is_telegram:
+            print(f"🚫 Telegram запит - не логуємо в групу: {norm_path}")
         
         # Якщо це перший перехід на нову сторінку, видаляємо page_code зі списку ігнорування
         if should_ignore_first_visit:
@@ -586,6 +637,22 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         try:
             super().do_GET()
         except Exception as e:
+            # Логуємо помилки в Telegram
+            try:
+                ip = get_real_ip(self)
+                error_msg = (
+                    f"🚨 Помилка сервера\n"
+                    f"📄 Сторінка: {self.path}\n"
+                    f"🌍 IP: {ip}\n"
+                    f"❌ Помилка: {e}"
+                )
+                
+                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                data = {"chat_id": ADMIN_ID, "text": error_msg}
+                requests.post(url, data=data, timeout=2)
+            except:
+                pass
+            
             self.send_error(500, f"Internal Server Error: {e}")
 
     def do_OPTIONS(self):
