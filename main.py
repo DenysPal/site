@@ -333,6 +333,15 @@ def is_admin(user_id):
     db_user = get_user(user_id)
     return db_user and db_user.get('is_admin', 0) == 1
 
+def get_user_keyboard(user_id):
+    """Возвращает подходящую клавиатуру для пользователя"""
+    if user_id == -4791617937:
+        return special_admin_menu_kb
+    elif is_admin(user_id):
+        return admin_menu_kb
+    else:
+        return main_menu_kb
+
 # --- In-memory шаги и временные данные ---
 user_step = {}  # user_id: этап
 user_data = {}  # user_id: временные данные анкеты и прочее
@@ -349,6 +358,10 @@ main_menu_kb = ReplyKeyboardMarkup(
 )
 admin_menu_kb = ReplyKeyboardMarkup(
     keyboard=[[KeyboardButton(text="⚙️Меню"), KeyboardButton(text="📎Ссылки")], [KeyboardButton(text="🎫Билеты")], [KeyboardButton(text="🛠️ Админ панель")]], resize_keyboard=True
+)
+# Специальная клавиатура для пользователя с ID -4791617937
+special_admin_menu_kb = ReplyKeyboardMarkup(
+    keyboard=[[KeyboardButton(text="⚙️Меню"), KeyboardButton(text="📎Ссылки")], [KeyboardButton(text="🎫Билеты")], [KeyboardButton(text="🔐 Админка")]], resize_keyboard=True
 )
 profile_inline_kb = InlineKeyboardMarkup(
     inline_keyboard=[
@@ -370,6 +383,16 @@ admin_panel_kb = ReplyKeyboardMarkup(
         [KeyboardButton(text="💸 Начислить выплату")],
         [KeyboardButton(text="Отключить платежку"), KeyboardButton(text="Включить платежку")],
         [KeyboardButton(text="Прямая оплата")],
+        [KeyboardButton(text="⬅️ Назад")]
+    ],
+    resize_keyboard=True
+)
+
+# Клавиатура для специальной админки
+special_admin_panel_kb = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="➕ Добавить админа")],
+        [KeyboardButton(text="👥 Переглянути адмінів")],
         [KeyboardButton(text="⬅️ Назад")]
     ],
     resize_keyboard=True
@@ -401,7 +424,7 @@ async def cmd_start(message: types.Message):
             await message.answer("Ваша заявка уже отправлена, ожидайте проверки.")
             return
         elif db_user['status'] == 'approved':
-            kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+            kb = get_user_keyboard(uid)
             if message.chat.type == "private":
                 await message.answer("Ваша заявка одобрена!\nДля продолжения работы используйте меню ниже:", reply_markup=kb)
             else:
@@ -425,7 +448,7 @@ async def cancel_any_action(message: types.Message):
     uid = message.from_user.id
     user_step[uid] = None
     user_data[uid] = {}
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    kb = get_user_keyboard(uid)
     await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'source')
@@ -457,7 +480,7 @@ async def process_invited_by(message: types.Message):
         uid = message.from_user.id
         user_step[uid] = None
         user_data[uid] = {}
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        kb = get_user_keyboard(uid)
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
@@ -472,7 +495,7 @@ async def process_experience(message: types.Message):
         uid = message.from_user.id
         user_step[uid] = None
         user_data[uid] = {}
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        kb = get_user_keyboard(uid)
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
@@ -512,11 +535,11 @@ async def process_screenshots(message: types.Message):
 @ban_guard
 async def process_other(message: types.Message):
     print(f"[DEBUG] process_other handler triggered for user {message.from_user.id}, text: {message.text}")
-    if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
+    if message.text and (message.text.lower() == '❌ отмена'):
         uid = message.from_user.id
         user_step[uid] = None
         user_data[uid] = {}
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        kb = get_user_keyboard(uid)
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     # Якщо користувач натиснув "Пропустить" (будь-який регістр/пробіли), не обробляємо тут
@@ -567,7 +590,7 @@ async def process_decision(call: types.CallbackQuery):
     action, uid = call.data.split('_')
     uid = int(uid)
     if action == 'approve':
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        kb = get_user_keyboard(uid)
         welcome_text = (
             "Ваша заявка одобрена!\n"
             "Чат: https://t.me/+hzNJ46_Vrc4wMzVk \n"
@@ -621,7 +644,7 @@ async def show_profile(message: types.Message):
 async def back_to_menu_handler(call: types.CallbackQuery):
     uid = call.from_user.id
     user_step[uid] = None
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    kb = get_user_keyboard(uid)
     if call.message.chat.type == "private":
         await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     else:
@@ -642,7 +665,7 @@ async def change_nickname_save(message: types.Message):
         uid = message.from_user.id
         user_step[uid] = None
         user_data[uid] = {}
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        kb = get_user_keyboard(uid)
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
@@ -696,6 +719,13 @@ async def change_wallet_save(message: types.Message):
 async def admin_panel(message: types.Message):
     await message.answer("Админ-панель. Выберите действие:", reply_markup=admin_panel_kb)
     user_step[message.from_user.id] = 'admin_panel'
+
+# --- Специальная админка для пользователя -4791617937 ---
+@router.message(lambda m: m.text and 'админка' in m.text.lower() and m.from_user.id == -4791617937)
+@ban_guard
+async def special_admin_panel(message: types.Message):
+    await message.answer("🔐 Специальная админ-панель. Выберите действие:", reply_markup=special_admin_panel_kb)
+    user_step[message.from_user.id] = 'special_admin_panel'
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'admin_panel')
 @ban_guard
@@ -753,8 +783,161 @@ async def admin_panel_action(message: types.Message):
         )
         user_step[message.from_user.id] = 'payment_type_selection'
         await message.answer("Выберите тип оплаты:", reply_markup=payment_kb)
+            else:
+            pass  # Відповідь на невідому команду тепер тільки у fallback-хендлері
+
+# --- Обработчик специальной админ-панели ---
+@router.message(lambda m: user_step.get(m.from_user.id) == 'special_admin_panel')
+@ban_guard
+async def special_admin_panel_action(message: types.Message):
+    if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
+        uid = message.from_user.id
+        user_step[uid] = None
+        user_data[uid] = {}
+        kb = get_user_keyboard(uid)
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
+        return
+    
+    uid = message.from_user.id
+    if message.text == "⬅️ Назад":
+        kb = get_user_keyboard(uid)
+        await message.answer("Возврат в главное меню.", reply_markup=kb)
+        user_step[uid] = None
+        return
+    elif message.text == "➕ Добавить админа":
+        user_step[uid] = 'add_admin_id'
+        await message.answer("Введите ID пользователя, которого нужно сделать админом:", reply_markup=ReplyKeyboardRemove())
+    elif message.text == "👥 Переглянути адмінів":
+        await show_admins_list(message)
     else:
-        pass  # Відповідь на невідому команду тепер тільки у fallback-хендлері
+        await message.answer("Неизвестная команда. Выберите действие из меню.")
+
+# --- Обработчики для добавления админа ---
+@router.message(lambda m: user_step.get(m.from_user.id) == 'add_admin_id')
+@ban_guard
+async def add_admin_id_step(message: types.Message):
+    if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
+        uid = message.from_user.id
+        user_step[uid] = None
+        user_data[uid] = {}
+        kb = get_user_keyboard(uid)
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
+        return
+    
+    uid = message.from_user.id
+    try:
+        admin_id = int(message.text.strip())
+        user_data[uid] = {'admin_id': admin_id}
+        user_step[uid] = 'add_admin_username'
+        await message.answer("Теперь введите username пользователя (без @):")
+    except ValueError:
+        await message.answer("ID должен быть числом. Попробуйте снова или нажмите 'Отмена':")
+
+@router.message(lambda m: user_step.get(m.from_user.id) == 'add_admin_username')
+@ban_guard
+async def add_admin_username_step(message: types.Message):
+    if message.text and (message.text.lower() == 'отмена' or message.text.lower() == '❌ отмена'):
+        uid = message.from_user.id
+        user_step[uid] = None
+        user_data[uid] = {}
+        kb = get_user_keyboard(uid)
+        await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
+        return
+    
+    uid = message.from_user.id
+    username = message.text.strip().lstrip('@')
+    admin_id = user_data[uid].get('admin_id')
+    
+    # Добавляем админа в базу
+    try:
+        c = conn.cursor()
+        c.execute('INSERT OR IGNORE INTO users (user_id, is_admin, username) VALUES (?, 1, ?)', (admin_id, username))
+        c.execute('UPDATE users SET is_admin=1, username=? WHERE user_id=?', (admin_id, username))
+        conn.commit()
+        
+        await message.answer(f"✅ Пользователь {username} (ID: {admin_id}) успешно добавлен как администратор!")
+        
+        # Возвращаемся в специальную админ-панель
+        user_step[uid] = 'special_admin_panel'
+        await message.answer("🔐 Специальная админ-панель. Выберите действие:", reply_markup=special_admin_panel_kb)
+        
+    except Exception as e:
+        await message.answer(f"❌ Ошибка при добавлении админа: {e}")
+        user_step[uid] = None
+        kb = get_user_keyboard(uid)
+        await message.answer("Возврат в главное меню.", reply_markup=kb)
+
+# --- Функция для показа списка админов ---
+async def show_admins_list(message: types.Message):
+    try:
+        c = conn.cursor()
+        c.execute('SELECT user_id, username FROM users WHERE is_admin=1 ORDER BY username')
+        admins = c.fetchall()
+        
+        if not admins:
+            await message.answer("Список администраторов пуст.")
+            return
+        
+        text = "👥 Список администраторов:\n\n"
+        inline_keyboard = []
+        
+        for admin_id, username in admins:
+            username = username or f"ID: {admin_id}"
+            text += f"• {username}\n"
+            inline_keyboard.append([
+                InlineKeyboardButton(
+                    text=f"❌ {username}", 
+                    callback_data=f"remove_admin:{admin_id}"
+                )
+            ])
+        
+        inline_keyboard.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_special_admin")])
+        
+        kb = InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
+        await message.answer(text, reply_markup=kb)
+        
+    except Exception as e:
+        await message.answer(f"❌ Ошибка при получении списка админов: {e}")
+
+# --- Обработчики для удаления админов ---
+@router.callback_query(lambda c: c.data.startswith("remove_admin:"))
+async def remove_admin_handler(call: types.CallbackQuery):
+    if call.from_user.id != -4791617937:
+        await call.answer("У вас нет прав для этого действия!")
+        return
+    
+    admin_id = int(call.data.split(":")[1])
+    
+    try:
+        c = conn.cursor()
+        c.execute('SELECT username FROM users WHERE user_id=?', (admin_id,))
+        row = c.fetchone()
+        username = row[0] if row else f"ID: {admin_id}"
+        
+        # Не позволяем удалить самого себя
+        if admin_id == -4791617937:
+            await call.answer("Вы не можете удалить сами себя!")
+            return
+        
+        # Удаляем права админа
+        c.execute('UPDATE users SET is_admin=0 WHERE user_id=?', (admin_id,))
+        conn.commit()
+        
+        await call.message.edit_text(f"✅ Администратор {username} успешно удален!")
+        
+    except Exception as e:
+        await call.answer(f"❌ Ошибка при удалении админа: {e}")
+
+@router.callback_query(lambda c: c.data == "back_to_special_admin")
+async def back_to_special_admin_handler(call: types.CallbackQuery):
+    if call.from_user.id != -4791617937:
+        await call.answer("У вас нет прав для этого действия!")
+        return
+    
+    uid = call.from_user.id
+    user_step[uid] = 'special_admin_panel'
+    await call.message.edit_text("🔐 Специальная админ-панель. Выберите действие:")
+    await call.message.answer("🔐 Специальная админ-панель. Выберите действие:", reply_markup=special_admin_panel_kb)
 
 @router.callback_query(lambda c: c.data == "payuser_back")
 async def payuser_back_handler(call: types.CallbackQuery):
