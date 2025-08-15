@@ -477,7 +477,7 @@ async def process_source(message: types.Message):
         uid = message.from_user.id
         user_step[uid] = None
         user_data[uid] = {}
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        kb = get_user_keyboard(uid)
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
@@ -1175,7 +1175,7 @@ async def payout_confirm_step(call: types.CallbackQuery):
         msg = user_data[uid]['payout']['final_message']
         await bot.send_message(uid, msg)
         await bot.send_message(PAYOUT_GROUP_ID, msg)
-        await call.message.answer("Сообщение отправлено!", reply_markup=admin_menu_kb)
+        await call.message.answer("Сообщение отправлено!", reply_markup=get_user_keyboard(uid))
         user_step[uid] = None
         user_data[uid] = {}
         await call.answer()
@@ -1230,7 +1230,7 @@ async def admin_pay_amount(message: types.Message):
         uid = message.from_user.id
         user_step[uid] = None
         user_data[uid] = {}
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        kb = get_user_keyboard(uid)
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
@@ -1285,7 +1285,7 @@ async def pay_back_handler(call: types.CallbackQuery):
     uid = call.from_user.id
     user_step[uid] = None
     manual_payment_attempts.pop(uid, None)
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    kb = get_user_keyboard(uid)
     await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
@@ -1318,7 +1318,7 @@ async def ban_save(message: types.Message):
         uid = message.from_user.id
         user_step[uid] = None
         user_data[uid] = {}
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        kb = get_user_keyboard(uid)
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     uid = message.from_user.id
@@ -1583,7 +1583,7 @@ async def handle_links_menu(message: types.Message):
         await message.answer("Последние 50 ссылок. Выберите ссылку:", reply_markup=kb)
         user_step[message.chat.id] = 'choose_link_to_edit'
     elif text == "⬅️ назад":
-        kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+        kb = get_user_keyboard(message.from_user.id)
         await message.answer("Главное меню:", reply_markup=kb)
         user_step[message.chat.id] = None
         return
@@ -1595,7 +1595,7 @@ async def handle_links_menu(message: types.Message):
 async def handle_choose_link_to_edit(message: types.Message):
     text = message.text.strip()
     if text == "⬅️ Назад":
-        kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+        kb = get_user_keyboard(message.from_user.id)
         await message.answer("Главное меню:", reply_markup=kb)
         user_step[message.chat.id] = None
         return
@@ -1661,7 +1661,7 @@ async def handle_edit_link_menu(message: types.Message):
         await message.answer("Последние 50 ссылок. Выберите ссылку:", reply_markup=kb)
         user_step[message.chat.id] = 'choose_link_to_edit'
     elif text == "⬅️ назад":
-        kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+        kb = get_user_keyboard(message.from_user.id)
         await message.answer("Главное меню:", reply_markup=kb)
         user_step[message.chat.id] = None
         return
@@ -1675,7 +1675,7 @@ async def handle_edit_places_choose(message: types.Message):
     page_code = state.replace('edit_places_choose_', '')
     text = message.text.strip()
     if text == "⬅️ Назад":
-        kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+        kb = get_user_keyboard(message.from_user.id)
         await message.answer("Главное меню:", reply_markup=kb)
         user_step[message.chat.id] = None
         return
@@ -1752,7 +1752,7 @@ async def event_all_fields_handler(message: types.Message):
         uid = message.from_user.id
         user_step[uid] = None
         user_data[uid] = {}
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        kb = get_user_keyboard(uid)
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
     # Игнорируем пустые строки, обрезаем пробелы
@@ -1826,7 +1826,7 @@ async def payment_type_selection(message: types.Message):
     elif text in ["⬅️ назад", "назад"]:
         print(f"[DEBUG] Processing back for user {uid}")
         user_step[uid] = None
-        kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+        kb = get_user_keyboard(uid)
         await message.answer("Возврат в главное меню.", reply_markup=kb)
     else:
         print(f"[DEBUG] Unknown text in payment_type_selection: {message.text!r}")
@@ -1856,7 +1856,7 @@ async def manual_payment_amount_handler(message: types.Message):
                 except Exception:
                     pass
             bot_message_ids[uid] = []
-            kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+            kb = get_user_keyboard(uid)
             await message.answer("Возврат в главное меню.", reply_markup=ReplyKeyboardRemove())
             await message.answer("Головне меню:", reply_markup=kb)
             return
@@ -1885,8 +1885,8 @@ async def manual_payment_amount_handler(message: types.Message):
                 except Exception:
                     pass
             bot_message_ids[uid] = []
-            kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-            await message.answer("Головне меню:", reply_markup=kb)
+                            kb = get_user_keyboard(uid)
+                await message.answer("Головне меню:", reply_markup=kb)
             return
         else:
             # Лічильник спроб
@@ -1901,7 +1901,7 @@ async def manual_payment_amount_handler(message: types.Message):
                     except Exception:
                         pass
                 bot_message_ids[uid] = []
-                kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+                kb = get_user_keyboard(uid)
                 await message.answer("❗️ Формат невірний. Ви повернуті в головне меню.", reply_markup=kb)
             else:
                 # --- Додаємо id повідомлення з кнопками у список ---
@@ -2047,7 +2047,7 @@ async def events_save_all(message):
             # Скидаємо крок
             user_step[message.from_user.id] = None
             # Повернення в головне меню
-            kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+            kb = get_user_keyboard(message.from_user.id)
             await message.answer("✅ Посилання збережено. Повертаємося в головне меню:", reply_markup=kb)
             return
     
@@ -2114,7 +2114,7 @@ async def events_save_all(message):
             msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
         await message.answer(msg, parse_mode='HTML')
         # Повертаємо меню після створення виставки
-        kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
+        kb = get_user_keyboard(message.from_user.id)
         await message.answer("Головне меню:", reply_markup=kb)
         # Зберігаємо зв'язок page_code <-> user_id (Telegram user_id, а не site_user_id)
         c = conn.cursor()
@@ -2895,7 +2895,7 @@ manual_payment_attempts = {}
 @ban_guard
 async def universal_back_handler(message: types.Message):
     uid = message.from_user.id
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    kb = get_user_keyboard(uid)
     user_step[uid] = None
     await message.answer("Возврат в главное меню.", reply_markup=kb)
 
@@ -2957,8 +2957,8 @@ async def back_from_choose_link_to_edit(message: types.Message):
 @ban_guard
 async def back_from_links_menu(message: types.Message):
     print("==> back_from_links_menu")
-    kb = admin_menu_kb if is_admin(message.from_user.id) else main_menu_kb
-    await message.answer("Главное меню:", reply_markup=kb)
+            kb = get_user_keyboard(message.from_user.id)
+        await message.answer("Главное меню:", reply_markup=kb)
     user_step[message.chat.id] = None
 
 # --- Універсальний хендлер для 'Назад', який не спрацьовує у вкладених меню ---
@@ -2977,7 +2977,7 @@ async def back_from_links_menu(message: types.Message):
 async def universal_back_handler(message: types.Message):
     print("==> universal_back_handler")
     uid = message.from_user.id
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    kb = get_user_keyboard(uid)
     user_step[uid] = None
     if message.chat.type == "private":
         await message.answer("Возврат в главное меню.", reply_markup=kb)
@@ -2992,7 +2992,7 @@ async def universal_inline_back_handler(call: types.CallbackQuery):
     uid = call.from_user.id
     user_step[uid] = None
     manual_payment_attempts.pop(uid, None)
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    kb = get_user_keyboard(uid)
     
     # Специальная обработка для tickets_cancel
     if call.data == "tickets_cancel":
@@ -3009,8 +3009,8 @@ async def universal_inline_back_handler(call: types.CallbackQuery):
 async def back_to_main_menu(message: types.Message):
     uid = message.from_user.id
     user_step[uid] = None
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
-    await message.answer("Возврат в главное меню.", reply_markup=kb)
+            kb = get_user_keyboard(uid)
+        await message.answer("Возврат в главное меню.", reply_markup=kb)
 
 
 
@@ -3040,7 +3040,7 @@ async def force_back_to_main(message: types.Message):
     
     user_step[uid] = None
     print(f"[DEBUG] force_back_to_main: user_step set to None, text={message.text!r}")
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    kb = get_user_keyboard(uid)
     await message.answer("Повернення в головне меню.", reply_markup=kb)
     print(f"[DEBUG] force_back_to_main: user_step={user_step.get(uid)}")
 
@@ -3049,7 +3049,7 @@ async def force_back_to_main(message: types.Message):
 async def admin_panel_back(message: types.Message):
     uid = message.from_user.id
     user_step[uid] = None
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    kb = get_user_keyboard(uid)
     await message.answer("", reply_markup=kb)
     print(f"[DEBUG] admin_panel_back: user_step={user_step.get(uid)}")
 
