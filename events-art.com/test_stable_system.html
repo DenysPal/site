@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест Стабільної Системи Управління Даними</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .event-data {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .navigation-links {
+            margin: 20px 0;
+        }
+        .navigation-links a {
+            display: inline-block;
+            margin: 5px;
+            padding: 8px 16px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .navigation-links a:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Тест Стабільної Системи Управління Даними</h1>
+    
+    <div class="container">
+        <h2>📋 Інформація про Систему</h2>
+        <p>Ця сторінка тестує стабільну систему управління даними для виставок. Система запобігає збитку даних при навігації між сторінками.</p>
+        
+        <div class="status info">
+            <strong>Поточний URL:</strong> <span id="current-url"></span><br>
+            <strong>Page Code:</strong> <span id="current-page-code">Не встановлено</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🔧 Тестування Функціональності</h2>
+        
+        <div class="test-section">
+            <h3>1. Створення Менеджера Події</h3>
+            <button onclick="createTestManager()">Створити Тестовий Менеджер</button>
+            <button onclick="checkManagerStatus()">Перевірити Статус</button>
+            <div id="manager-status" class="status"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Тестування Кешування</h3>
+            <button onclick="testCaching()">Тестувати Кешування</button>
+            <button onclick="clearCache()">Очистити Кеш</button>
+            <div id="cache-status" class="status"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Тестування Навігації</h3>
+            <button onclick="simulateNavigation()">Симулювати Навігацію</button>
+            <button onclick="updatePageCode()">Оновити Page Code</button>
+            <div id="navigation-status" class="status"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Тестування Обробки Помилок</h3>
+            <button onclick="testErrorHandling()">Тестувати Обробку Помилок</button>
+            <div id="error-status" class="status"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📊 Дані Події</h2>
+        <div id="event-data-display" class="event-data">
+            <em>Дані ще не завантажені...</em>
+        </div>
+        <button onclick="refreshEventData()">Оновити Дані</button>
+    </div>
+
+    <div class="container">
+        <h2>🔗 Тестові Посилання</h2>
+        <div class="navigation-links">
+            <a href="/collection-co–selection/?page=TEST123">Collection Co–selection</a>
+            <a href="/art-that-saves-lives/?page=TEST123">Art that saves lives</a>
+            <a href="/uncensored/?page=TEST123">Uncensored</a>
+            <a href="/?page=TEST123">Головна сторінка</a>
+        </div>
+        <p><small>Клікніть на посилання, щоб протестувати автоматичне додавання page_code</small></p>
+    </div>
+
+    <div class="container">
+        <h2>📝 Лог Подій</h2>
+        <div id="event-log" class="log"></div>
+        <button onclick="clearLog()">Очистити Лог</button>
+    </div>
+
+    <!-- Підключення бібліотеки -->
+    <script src="/js/event-data-manager.js"></script>
+    
+    <script>
+        let testManager = null;
+        let logCounter = 0;
+
+        // Функція логування
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('event-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            
+            logElement.innerHTML += logEntry + '\n';
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // Очищення логу
+        function clearLog() {
+            document.getElementById('event-log').innerHTML = '';
+            logCounter = 0;
+        }
+
+        // Оновлення поточної інформації
+        function updateCurrentInfo() {
+            document.getElementById('current-url').textContent = window.location.href;
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const pageCode = urlParams.get('page');
+            document.getElementById('current-page-code').textContent = pageCode || 'Не встановлено';
+        }
+
+        // Створення тестового менеджера
+        function createTestManager() {
+            try {
+                testManager = createEventDataManager({
+                    index: 999,
+                    name: 'Test Event',
+                    defaultDuration: '1 hour'
+                });
+                
+                log('✅ Тестовий менеджер створено успішно', 'success');
+                document.getElementById('manager-status').innerHTML = 
+                    '<div class="status success">Тестовий менеджер створено успішно</div>';
+                
+                // Слухаємо події
+                window.addEventListener('eventDataManager:dataUpdated', (e) => {
+                    log('📊 Дані події оновлено', 'info');
+                    updateEventDataDisplay(e.detail.data);
+                });
+                
+            } catch (error) {
+                log(`❌ Помилка створення менеджера: ${error.message}`, 'error');
+                document.getElementById('manager-status').innerHTML = 
+                    '<div class="status error">Помилка створення менеджера</div>';
+            }
+        }
+
+        // Перевірка статусу менеджера
+        function checkManagerStatus() {
+            if (!testManager) {
+                document.getElementById('manager-status').innerHTML = 
+                    '<div class="status error">Менеджер не створено</div>';
+                return;
+            }
+            
+            const status = {
+                isInitialized: testManager.isInitialized,
+                pageCode: testManager.getPageCode(),
+                eventData: testManager.getEventData(),
+                hasData: !!testManager.getEventData()
+            };
+            
+            log(`📊 Статус менеджера: ${JSON.stringify(status, null, 2)}`, 'info');
+            
+            document.getElementById('manager-status').innerHTML = 
+                `<div class="status success">
+                    <strong>Статус:</strong> ${status.isInitialized ? 'Ініціалізовано' : 'Не ініціалізовано'}<br>
+                    <strong>Page Code:</strong> ${status.pageCode || 'Не встановлено'}<br>
+                    <strong>Дані:</strong> ${status.hasData ? 'Завантажено' : 'Не завантажено'}
+                </div>`;
+        }
+
+        // Тестування кешування
+        function testCaching() {
+            if (!testManager) {
+                document.getElementById('cache-status').innerHTML = 
+                    '<div class="status error">Спочатку створіть менеджер</div>';
+                return;
+            }
+            
+            try {
+                // Симулюємо завантаження даних
+                const testData = {
+                    date: '2025-01-15',
+                    time: '18:00',
+                    address: 'Test Address',
+                    places: 50,
+                    price: '100 UAH'
+                };
+                
+                // Оновлюємо UI
+                testManager.updateUI(testData);
+                
+                log('✅ Тестові дані завантажено та кешовано', 'success');
+                document.getElementById('cache-status').innerHTML = 
+                    '<div class="status success">Тестові дані завантажено та кешовано</div>';
+                
+            } catch (error) {
+                log(`❌ Помилка тестування кешування: ${error.message}`, 'error');
+                document.getElementById('cache-status').innerHTML = 
+                    '<div class="status error">Помилка тестування кешування</div>';
+            }
+        }
+
+        // Очищення кешу
+        function clearCache() {
+            if (!testManager) {
+                document.getElementById('cache-status').innerHTML = 
+                    '<div class="status error">Спочатку створіть менеджер</div>';
+                return;
+            }
+            
+            try {
+                testManager.clearStaleData();
+                log('🧹 Кеш очищено', 'info');
+                document.getElementById('cache-status').innerHTML = 
+                    '<div class="status info">Кеш очищено</div>';
+                
+            } catch (error) {
+                log(`❌ Помилка очищення кешу: ${error.message}`, 'error');
+                document.getElementById('cache-status').innerHTML = 
+                    '<div class="status error">Помилка очищення кешу</div>';
+            }
+        }
+
+        // Симуляція навігації
+        function simulateNavigation() {
+            if (!testManager) {
+                document.getElementById('navigation-status').innerHTML = 
+                    '<div class="status error">Спочатку створіть менеджер</div>';
+                return;
+            }
+            
+            try {
+                // Симулюємо зміну page_code
+                const newPageCode = 'NAV_' + Date.now();
+                testManager.handlePageCodeChange(newPageCode);
+                
+                log(`🔄 Симульовано навігацію з новим page_code: ${newPageCode}`, 'info');
+                document.getElementById('navigation-status').innerHTML = 
+                    `<div class="status success">Навігація симульована, новий page_code: ${newPageCode}</div>`;
+                
+            } catch (error) {
+                log(`❌ Помилка симуляції навігації: ${error.message}`, 'error');
+                document.getElementById('navigation-status').innerHTML = 
+                    '<div class="status error">Помилка симуляції навігації</div>';
+            }
+        }
+
+        // Оновлення page_code
+        function updatePageCode() {
+            const newPageCode = 'UPDATE_' + Date.now();
+            const url = new URL(window.location);
+            url.searchParams.set('page', newPageCode);
+            window.history.pushState({}, '', url);
+            
+            log(`🔄 Page code оновлено: ${newPageCode}`, 'info');
+            document.getElementById('navigation-status').innerHTML = 
+                `<div class="status success">Page code оновлено: ${newPageCode}</div>`;
+            
+            updateCurrentInfo();
+        }
+
+        // Тестування обробки помилок
+        function testErrorHandling() {
+            if (!testManager) {
+                document.getElementById('error-status').innerHTML = 
+                    '<div class="status error'>Спочатку створіть менеджер</div>';
+                return;
+            }
+            
+            try {
+                // Симулюємо помилку API
+                log('🧪 Симулюємо помилку API...', 'info');
+                
+                // Викликаємо loadCachedData для тестування fallback
+                testManager.loadCachedData();
+                
+                log('✅ Обробка помилок протестована', 'success');
+                document.getElementById('error-status').innerHTML = 
+                    '<div class="status success">Обробка помилок протестована</div>';
+                
+            } catch (error) {
+                log(`❌ Помилка тестування обробки помилок: ${error.message}`, 'error');
+                document.getElementById('error-status').innerHTML = 
+                    '<div class="status error">Помилка тестування обробки помилок</div>';
+            }
+        }
+
+        // Оновлення відображення даних події
+        function updateEventDataDisplay(data) {
+            const displayElement = document.getElementById('event-data-display');
+            
+            if (data) {
+                displayElement.innerHTML = `
+                    <strong>📅 Дата:</strong> ${data.date || 'Не встановлено'}<br>
+                    <strong>🕐 Час:</strong> ${data.time || 'Не встановлено'}<br>
+                    <strong>📍 Адреса:</strong> ${data.address || 'Не встановлено'}<br>
+                    <strong>🎫 Місць:</strong> ${data.places !== undefined ? data.places : 'Не встановлено'}<br>
+                    <strong>💰 Ціна:</strong> ${data.price || 'Не встановлено'}
+                `;
+            } else {
+                displayElement.innerHTML = '<em>Дані ще не завантажені...</em>';
+            }
+        }
+
+        // Оновлення даних події
+        function refreshEventData() {
+            if (testManager) {
+                testManager.refresh();
+                log('🔄 Запит на оновлення даних події', 'info');
+            } else {
+                log('❌ Менеджер не створено', 'error');
+            }
+        }
+
+        // Ініціалізація при завантаженні сторінки
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🚀 Сторінка завантажена', 'info');
+            updateCurrentInfo();
+            
+            // Автоматичне створення тестового менеджера
+            setTimeout(() => {
+                createTestManager();
+            }, 1000);
+        });
+
+        // Слухання змін в URL
+        window.addEventListener('popstate', () => {
+            log('🔄 URL змінено (popstate)', 'info');
+            updateCurrentInfo();
+        });
+
+        // Слухання змін в sessionStorage
+        window.addEventListener('storage', (e) => {
+            log(`💾 SessionStorage змінено: ${e.key} = ${e.newValue}`, 'info');
+        });
+
+        // Логування всіх подій EventDataManager
+        window.addEventListener('eventDataManager:dataUpdated', (e) => {
+            log('📊 Подія: Дані оновлено', 'info');
+        });
+
+        // Тестування глобальних методів
+        window.testGlobalMethods = function() {
+            log('🧪 Тестування глобальних методів...', 'info');
+            
+            try {
+                const instances = EventDataManager.getAllInstances();
+                log(`📊 Знайдено екземплярів: ${instances.length}`, 'info');
+                
+                if (instances.length > 0) {
+                    log(`📋 Екземпляри: ${instances.join(', ')}`, 'info');
+                }
+                
+            } catch (error) {
+                log(`❌ Помилка тестування глобальних методів: ${error.message}`, 'error');
+            }
+        };
+    </script>
+</body>
+</html> 

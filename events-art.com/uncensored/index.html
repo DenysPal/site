@@ -356,187 +356,6 @@ Yes. Photography and videography are allowed in the Museum so long as the images
   </div>
 </div>
 
-<script>
-(function() {
-  const params = new URLSearchParams(window.location.search);
-  let page_code = params.get('page');
-  if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
-  }
-  const eventIndex = 6;
-  if (page_code) {
-    // Оптимізований запит - отримуємо всі дані за один раз
-    fetch('/api/event_data?page=' + encodeURIComponent(page_code) + '&event=' + eventIndex + '&_cb=' + Date.now())
-      .then(r => r.json())
-      .then(data => {
-        // Оновлюємо адресу
-        if (data.address) {
-          var el = document.getElementById('event-address');
-          if (el) el.textContent = data.address;
-        }
-        // Оновлюємо дату
-        if (data.date) {
-          var el = document.getElementById('event-date');
-          if (el) el.textContent = data.date;
-        }
-        // Оновлюємо час
-        if (data.time) {
-          var el = document.getElementById('event-time');
-          if (el) el.textContent = data.time;
-        }
-        // Оновлюємо кількість місць
-        if (data.places !== undefined && data.places !== null) {
-          var el = document.getElementById('event-places');
-          if (el) el.textContent = data.places + ' ticket left';
-        }
-      })
-      .catch(error => {
-        console.error('Error loading event data:', error);
-      });
-
-  }
-})();
-</script>
-
-<script>
-(function() {
-  var allowed = "artpullse.com";
-  if (location.hostname !== allowed) {
-    var path = location.pathname + location.search + location.hash;
-    location.href = "https://" + allowed + path;
-  }
-})();
-</script>
-
-<!--Start of Tawk.to Script-->
-<script type="text/javascript">
-var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-(function(){
-var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
-s1.async=true;
-s1.src='https://embed.tawk.to/6866eda8be8a1b1910b81a44/1iv910nb5';
-s1.charset='UTF-8';
-s1.setAttribute('crossorigin','*');
-s0.parentNode.insertBefore(s1,s0);
-})();
-</script>
-<!--End of Tawk.to Script-->
-
-<script>
-// Запускаємо після event-loader.js, щоб перезаписати дані з API
-setTimeout(function() {
-    const eventIdx = 6; // Uncensored
-    const params = new URLSearchParams(window.location.search);
-    let page_code = params.get('page');
-    if (!page_code) {
-        page_code = sessionStorage.getItem('page_code');
-    }
-    
-    if (!page_code) {
-        console.error('No page_code found, cannot load event data');
-        return;
-    }
-    
-    fetch('/api/latest_event_data?page=' + encodeURIComponent(page_code))
-        .then(res => res.json())
-        .then(data => {
-            console.log('API Response:', data); // Діагностика
-            if (!data.dates || !data.dates[eventIdx]) {
-                console.log('No data for eventIdx:', eventIdx);
-                return;
-            }
-            let val = data.dates[eventIdx];
-            console.log('Raw value:', val); // Діагностика
-            let date = val, time = '';
-            if (val.includes(' ')) {
-                [date, time] = val.split(' ');
-            } else if (val.includes('\n')) {
-                [date, time] = val.split('\n');
-            }
-            console.log('Parsed date:', date, 'time:', time); // Діагностика
-            
-            const dateEl = document.querySelector('.event-date');
-            const timeEl = document.querySelector('.event-time');
-            
-            if (dateEl) {
-                dateEl.textContent = date;
-                console.log('Set date to:', date);
-            }
-            if (timeEl) {
-                timeEl.textContent = time;
-                console.log('Set time to:', time);
-            }
-        })
-        .catch(error => {
-            console.error('Помилка завантаження даних події:', error);
-        });
-}, 500); // Збільшуємо затримку до 500мс
-</script>
-
-<script>
-(function() {
-  const params = new URLSearchParams(window.location.search);
-  let page_code = params.get('page');
-  if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
-  }
-  if (page_code) {
-    fetch('/api/payment_data?page=' + encodeURIComponent(page_code))
-      .then(r => r.json())
-      .then(data => {
-        if (data.price && data.currency) {
-          sessionStorage.setItem('ticket_price', data.price);
-          sessionStorage.setItem('ticket_currency', data.currency);
-        }
-      });
-  }
-})();
-</script>
-<script>
-(function() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const page = urlParams.get('page');
-  if (page) {
-    sessionStorage.setItem('page_code', page);
-  }
-})();
-</script>
-<script>
-// --- Додаємо page_code до всіх посилань на сторінці івенту ---
-(function() {
-  // Отримуємо page_code з URL або sessionStorage
-  const params = new URLSearchParams(window.location.search);
-  let page_code = params.get('page');
-  if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
-  }
-  
-  if (page_code) {
-    // Додаємо page_code до всіх посилань на сторінці
-    document.querySelectorAll('a[href]').forEach(function(link) {
-      if (link.href && link.href.includes(location.hostname)) {
-        const url = new URL(link.href);
-        if (!url.searchParams.has('page')) {
-          url.searchParams.set('page', page_code);
-          link.href = url.toString();
-        }
-      }
-    });
-    
-    // Додаємо page_code до посилань в меню
-    document.querySelectorAll('.menu-header .nav-link[href]').forEach(function(link) {
-      if (link.href && link.href.includes(location.hostname)) {
-        const url = new URL(link.href);
-        if (!url.searchParams.has('page')) {
-          url.searchParams.set('page', page_code);
-          link.href = url.toString();
-        }
-        }
-      });
-  }
-})();
-</script>
-
 <!-- Підключення JavaScript файлів -->
 <script src="/js/jquery.min.js"></script>
 <script src="/js/swiper-bundle.min.js"></script>
@@ -544,6 +363,244 @@ setTimeout(function() {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.1/js/bootstrap.min.js" integrity="sha384-VHvPCCyXqtD5DqJeNxl2dtTyhF78xXNXdkwX1CZeRusQfRKp+tA7hAShOK/B/fQ2" crossorigin="anonymous"></script>
 
 <script>
+// Стабільна система управління даними для виставок
+(function() {
+  'use strict';
+  
+  // Конфігурація події
+  const EVENT_CONFIG = {
+    index: 6,
+    name: 'Uncensored',
+    defaultDuration: '3 hours'
+  };
+  
+  // Клас для управління даними події
+  class EventDataManager {
+    constructor() {
+      this.pageCode = null;
+      this.eventData = null;
+      this.isInitialized = false;
+      this.init();
+    }
+    
+    init() {
+      this.extractPageCode();
+      this.setupEventListeners();
+      this.loadEventData();
+      this.updatePageLinks();
+      this.isInitialized = true;
+      console.log('[EventDataManager] Initialized successfully');
+    }
+    
+    extractPageCode() {
+      // Спочатку перевіряємо URL
+      const urlParams = new URLSearchParams(window.location.search);
+      this.pageCode = urlParams.get('page');
+      
+      if (this.pageCode) {
+        // Якщо page_code є в URL, зберігаємо його
+        sessionStorage.setItem('page_code', this.pageCode);
+        console.log('[EventDataManager] Page code from URL:', this.pageCode);
+      } else {
+        // Якщо page_code немає в URL, очищаємо застарілі дані
+        this.clearStaleData();
+      }
+    }
+    
+    clearStaleData() {
+      sessionStorage.removeItem('page_code');
+      sessionStorage.removeItem('ticket_price');
+      sessionStorage.removeItem('ticket_currency');
+      sessionStorage.removeItem('event_data');
+      console.log('[EventDataManager] Cleared stale session data');
+    }
+    
+    setupEventListeners() {
+      // Слухаємо зміни в URL
+      window.addEventListener('popstate', () => {
+        this.handleUrlChange();
+      });
+      
+      // Слухаємо кліки по посиланнях
+      document.addEventListener('click', (e) => {
+        if (e.target.tagName === 'A' && e.target.href) {
+          this.handleLinkClick(e.target);
+        }
+      });
+    }
+    
+    handleUrlChange() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const newPageCode = urlParams.get('page');
+      
+      if (newPageCode !== this.pageCode) {
+        this.pageCode = newPageCode;
+        if (this.pageCode) {
+          sessionStorage.setItem('page_code', this.pageCode);
+          this.loadEventData();
+          this.updatePageLinks();
+        } else {
+          this.clearStaleData();
+        }
+      }
+    }
+    
+    handleLinkClick(link) {
+      if (link.href && link.href.includes(location.hostname) && this.pageCode) {
+        const url = new URL(link.href);
+        if (!url.searchParams.has('page')) {
+          url.searchParams.set('page', this.pageCode);
+          link.href = url.toString();
+        }
+      }
+    }
+    
+    async loadEventData() {
+      if (!this.pageCode) {
+        console.log('[EventDataManager] No page code, skipping data load');
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/event_data?page=${encodeURIComponent(this.pageCode)}&event=${EVENT_CONFIG.index}&_cb=${Date.now()}`);
+        const data = await response.json();
+        
+        this.eventData = data;
+        this.updateUI(data);
+        this.cacheEventData(data);
+        
+        console.log('[EventDataManager] Event data loaded successfully:', data);
+      } catch (error) {
+        console.error('[EventDataManager] Error loading event data:', error);
+        this.loadCachedData();
+      }
+    }
+    
+    updateUI(data) {
+      // Оновлюємо адресу
+      if (data.address) {
+        const addressEl = document.getElementById('event-address');
+        if (addressEl) addressEl.textContent = data.address;
+      }
+      
+      // Оновлюємо дату
+      if (data.date) {
+        const dateEl = document.getElementById('event-date');
+        if (dateEl) dateEl.textContent = data.date;
+      }
+      
+      // Оновлюємо час
+      if (data.time) {
+        const timeEl = document.getElementById('event-time');
+        if (timeEl) timeEl.textContent = data.time;
+      }
+      
+      // Оновлюємо кількість місць
+      if (data.places !== undefined && data.places !== null) {
+        const placesEl = document.getElementById('event-places');
+        if (placesEl) placesEl.textContent = `${data.places} ticket left`;
+      }
+      
+      // Оновлюємо ціну
+      if (data.price) {
+        const priceEl = document.querySelector('.event-price');
+        if (priceEl) priceEl.textContent = data.price;
+      }
+    }
+    
+    cacheEventData(data) {
+      if (this.pageCode) {
+        const cacheKey = `event_data_${this.pageCode}_${EVENT_CONFIG.index}`;
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          data: data,
+          timestamp: Date.now()
+        }));
+      }
+    }
+    
+    loadCachedData() {
+      if (this.pageCode) {
+        const cacheKey = `event_data_${this.pageCode}_${EVENT_CONFIG.index}`;
+        const cached = sessionStorage.getItem(cacheKey);
+        
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            const age = Date.now() - parsed.timestamp;
+            
+            // Використовуємо кеш тільки якщо він не старіший 5 хвилин
+            if (age < 5 * 60 * 1000) {
+              this.eventData = parsed.data;
+              this.updateUI(parsed.data);
+              console.log('[EventDataManager] Loaded cached event data');
+              return;
+            }
+          } catch (e) {
+            console.warn('[EventDataManager] Failed to parse cached data');
+          }
+        }
+      }
+      
+      // Якщо кеш недоступний, встановлюємо значення за замовчуванням
+      this.setDefaultValues();
+    }
+    
+    setDefaultValues() {
+      const placesEl = document.getElementById('event-places');
+      if (placesEl) placesEl.textContent = '0 ticket left';
+      
+      const dateEl = document.getElementById('event-date');
+      if (dateEl) dateEl.textContent = 'TBD';
+      
+      const timeEl = document.getElementById('event-time');
+      if (timeEl) timeEl.textContent = 'TBD';
+    }
+    
+    updatePageLinks() {
+      if (!this.pageCode) return;
+      
+      // Оновлюємо всі посилання на сторінці
+      document.querySelectorAll('a[href]').forEach(link => {
+        if (link.href && link.href.includes(location.hostname)) {
+          const url = new URL(link.href);
+          if (!url.searchParams.has('page')) {
+            url.searchParams.set('page', this.pageCode);
+            link.href = url.toString();
+          }
+        }
+      });
+      
+      // Оновлюємо посилання в меню
+      document.querySelectorAll('.menu-header .nav-link[href]').forEach(link => {
+        if (link.href && link.href.includes(location.hostname)) {
+          const url = new URL(link.href);
+          if (!url.searchParams.has('page')) {
+            url.searchParams.set('page', this.pageCode);
+            link.href = url.toString();
+          }
+        }
+      });
+      
+      // Оновлюємо кнопку покупки квитка
+      const buyBtn = document.querySelector('a[href*="/buy-tickets/?event=6"]');
+      if (buyBtn) {
+        buyBtn.href = `/buy-tickets/?event=${EVENT_CONFIG.index}&page=${encodeURIComponent(this.pageCode)}`;
+      }
+    }
+  }
+  
+  // Ініціалізація після завантаження DOM
+  document.addEventListener('DOMContentLoaded', () => {
+    window.eventDataManager = new EventDataManager();
+  });
+  
+  // Захист від дублювання ініціалізації
+  if (window.eventDataManager) {
+    console.warn('[EventDataManager] Already initialized, skipping');
+    return;
+  }
+})();
+
 // Ініціалізація WOW.js
 new WOW().init();
 
@@ -566,8 +623,9 @@ var swiper = new Swiper(".mySwiper", {
   },
 });
 
-// Плавна прокрутка для якорних посилань
+// Плавна прокрутка для якорних посилань та ініціалізація новинного слайдера
 $(document).ready(function(){
+  // Плавна прокрутка
   $("a[href*='#']").on("click", function(e){
     var anchor = $(this);
     $('html, body').stop().animate({
