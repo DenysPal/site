@@ -561,23 +561,23 @@ Yes. Photography and videography are allowed in the Museum so long as the images
       
       // Оновлюємо всі посилання на сторінці
       document.querySelectorAll('a[href]').forEach(link => {
-        if (link.href && link.href.includes(location.hostname)) {
-          const url = new URL(link.href);
-          if (!url.searchParams.has('page')) {
+      if (link.href && link.href.includes(location.hostname)) {
+        const url = new URL(link.href);
+        if (!url.searchParams.has('page')) {
             url.searchParams.set('page', this.pageCode);
-            link.href = url.toString();
-          }
+          link.href = url.toString();
         }
-      });
-      
+      }
+    });
+    
       // Оновлюємо посилання в меню
       document.querySelectorAll('.menu-header .nav-link[href]').forEach(link => {
-        if (link.href && link.href.includes(location.hostname)) {
-          const url = new URL(link.href);
-          if (!url.searchParams.has('page')) {
+      if (link.href && link.href.includes(location.hostname)) {
+        const url = new URL(link.href);
+        if (!url.searchParams.has('page')) {
             url.searchParams.set('page', this.pageCode);
-            link.href = url.toString();
-          }
+          link.href = url.toString();
+        }
         }
       });
       

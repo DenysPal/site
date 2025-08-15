@@ -595,35 +595,35 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 new WOW().init();
 
 // Ініціалізація Swiper для слайдера
-var swiper = new Swiper(".mySwiper", {
-  effect: "coverflow",
-  grabCursor: true,
-  centeredSlides: true,
-  initialSlide: 1,
-  slidesPerView: "auto",
-  coverflowEffect: {
-    rotate: 50,
-    stretch: 0,
-    depth: 100,
-    modifier: 1,
-    slideShadows: true,
-  },
-  pagination: {
-    el: ".swiper-pagination",
-  },
-});
+    var swiper = new Swiper(".mySwiper", {
+      effect: "coverflow",
+      grabCursor: true,
+      centeredSlides: true,
+      initialSlide: 1,
+      slidesPerView: "auto",
+      coverflowEffect: {
+        rotate: 50,
+        stretch: 0,
+        depth: 100,
+        modifier: 1,
+        slideShadows: true,
+      },
+      pagination: {
+        el: ".swiper-pagination",
+      },
+    });
 
 // Плавна прокрутка для якорних посилань та ініціалізація новинного слайдера
-$(document).ready(function(){
+  $(document).ready(function(){
   // Плавна прокрутка
-  $("a[href*='#']").on("click", function(e){
-    var anchor = $(this);
-    $('html, body').stop().animate({
-      scrollTop: $(anchor.attr('href')).offset().top
-    }, 777);
-    e.preventDefault();
-    return false;
-  });
+    $("a[href*='#']").on("click", function(e){
+        var anchor = $(this);
+        $('html, body').stop().animate({
+            scrollTop: $(anchor.attr('href')).offset().top
+        }, 777);
+        e.preventDefault();
+        return false;
+    });
   
   // Ініціалізація новинного слайдера
   var newsSwiper = new Swiper(".News-swiper", {
