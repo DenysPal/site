@@ -8,7 +8,8 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Playbill - events-art.com</title>
 	<link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" onload="this.onload=null;this.rel='stylesheet'">
+	<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"></noscript>
 	<link rel="stylesheet" type="text/css" href="/css/style.css">
     <link rel="stylesheet" type="text/css" href="/css/swiper-bundle.min.css">
     <meta property="og:type" content="website" />
@@ -18,7 +19,7 @@
 <body>
 <div class="container-flued header-nav">
 <ul class="nav justify-content-center menu-header">
-	<li class="nav-item"><a class="nav-link" href="#">Home</a></li>
+	<li class="nav-item"><a class="nav-link" href="/">Home</a></li>
 	<li class="nav-item"><a class="nav-link" href="#news">News</a></li>
 	<li class="nav-item"><a class="nav-link" href="#faq">Faq</a></li>
 	<li class="nav-item"><a class="nav-link" href="#contacts">Contact</a></li>
@@ -66,7 +67,7 @@
 		<a href="art-that-saves-lives/">Show info</a>
 				</div>
 			</div>
-			<div class="medium-event wow animate__zoomIn animate__fast">
+			<div class="medium-event wow animate__ZoomIn animate__fast">
 				<div class="medium-event-img" style="background-image:url('/image/strona-csw403_auto_1400x800.webp');"></div>
 				<div class="medium-event-about">
 				<span class="badge badge-light"><img src="/image/date.svg"><span class="event-date"></span></span><span class="badge badge-light"><img src="/image/time.svg"><span class="event-time"></span></span>
@@ -121,7 +122,7 @@
 <div class="swiper News-swiper">
     <div class="swiper-wrapper">
             <div class="card news-card swiper-slide" style="width: 20rem;">
-              <img src="/image/news_1.webp" class="card-img-top">
+              <img src="/image/news_1.webp" class="card-img-top" loading="lazy">
               <div class="card-body">
                 <h5 class="card-title">What Was Life Like For Ancient Greek Women? A New Exhibition Sheds Some Light</h5>
                 <p class="card-text">A new exhibition of 180 artworks and antiquities reveals gems of Cycladic art featuring goddesses, religious icons, and everyday women.</p>
@@ -129,7 +130,7 @@
               </div>
             </div>
             <div class="card news-card swiper-slide" style="width: 20rem;">
-              <img src="/image/news_2.webp" class="card-img-top" alt="...">
+              <img src="/image/news_2.webp" class="card-img-top" alt="..." loading="lazy">
               <div class="card-body">
                 <h5 class="card-title">Michelangelo's Masterpieces Are Getting a High-Tech Makeover in a New Show</h5>
                 <p class="card-text">An experimental exhibition in Denmark is intended to spark debate about the future use of 3D-printed replicas in museums.</p>
@@ -137,7 +138,7 @@
               </div>
             </div>
             <div class="card news-card swiper-slide" style="width: 20rem;">
-              <img src="/image/news_3_1.webp" class="card-img-top">
+              <img src="/image/news_3_1.webp" class="card-img-top" loading="lazy">
               <div class="card-body">
                 <h5 class="card-title">A Sprawling Bruce Weber Retrospective Has Landed in Prague</h5>
                 <p class="card-text">"Bruce Weber: My Education" brings together hundreds of images from the photographer's iconic body of work.</p>
@@ -145,7 +146,7 @@
               </div>
             </div>
             <div class="card news-card swiper-slide" style="width: 20rem;">
-              <img src="/image/news_4.webp" class="card-img-top">
+              <img src="/image/news_4.webp" class="card-img-top" loading="lazy">
               <div class="card-body">
                 <h5 class="card-title">Here Are 5 Art Exhibitions That Shaped the Zeitgeist in 2024</h5>
                 <p class="card-text">"These exhibitions defined the spirit of the year—for better or worse.</p>
@@ -153,7 +154,7 @@
               </div>
             </div>
             <div class="card news-card swiper-slide" style="width: 20rem;">
-              <img src="/image/news_5_2.webp" class="card-img-top">
+              <img src="/image/news_5_2.webp" class="card-img-top" loading="lazy">
               <div class="card-body">
                 <h5 class="card-title">How Matisse's Fascination With Japanese Woodcuts Influenced His Paintings</h5>
                 <p class="card-text">"The French artist was heavily influenced by the art of ukiyo-e.</p>
@@ -161,7 +162,7 @@
               </div>
             </div>
             <div class="card news-card swiper-slide" style="width: 20rem;">
-              <img src="/image/news_6.webp" class="card-img-top">
+              <img src="/image/news_6.webp" class="card-img-top" loading="lazy">
               <div class="card-body">
                 <h5 class="card-title">Two mystery figures discovered beneath Picasso Blue Period painting</h5>
                 <p class="card-text">"Conservators at London's Courtauld Institute used x-ray and infrared images to reveal the previously unseen works</p>
@@ -421,121 +422,94 @@ Yes. Photography and videography are allowed in the Museum so long as the images
     </div>
   </div>
 </div>
-<script src="cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="/js/jquery.min.js"></script>
-<script src="../cdn.jsdelivr.net/npm/bootstrap%404.6.1/dist/js/bootstrap.min.js" integrity="sha384-VHvPCCyXqtD5DqJeNxl2dtTyhF78xXNXdkwX1CZeRusQfRKp+tA7hAShOK/B/fQ2" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/wow/0.1.12/wow.min.js"></script>
-<script>new WOW().init();</script>
-  <script>
-    var swiper = new Swiper(".News-swiper", {
-      slidesPerView: "auto",
-      spaceBetween: 20,
-      parallax: true
-    });
-  $(document).ready(function(){
-    $("a[href*='#']").on("click", function(e){
-        var anchor = $(this);
-        $('html, body').stop().animate({
-            scrollTop: $(anchor.attr('href')).offset().top
-        }, 777);
-        e.preventDefault();
-        return false;
-    });
-});
-  </script>
+<!-- Scripts: defer non-critical, lazy-load backgrounds -->
+<script defer src="cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+<script defer src="../cdn.jsdelivr.net/npm/bootstrap%404.6.1/dist/js/bootstrap.min.js" integrity="sha384-VHvPCCyXqtD5DqJeNxl2dtTyhF78xXNXdkwX1CZeRusQfRKp+tA7hAShOK/B/fQ2" crossorigin="anonymous"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/wow/0.1.12/wow.min.js"></script>
+<script>document.addEventListener('DOMContentLoaded',function(){ if (window.WOW) new WOW().init(); });</script>
 <script>
-(function() {
-  function getEventIdFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('event');
-  }
-  const eventId = getEventIdFromUrl();
-  if (!eventId) return;
-  fetch('/events.json')
-    .then(res => res.json())
-    .then(events => {
-      const eventData = events[eventId];
-      if (!eventData || !Array.isArray(eventData.events)) return;
-      // Підставляємо дані у всі .medium-event
-      const eventBlocks = document.querySelectorAll('.medium-event');
-      eventData.events.forEach(function(ev, idx) {
-        const block = eventBlocks[idx];
-        if (!block) return;
-        // Дата
-        const dateBadge = block.querySelector('.badge-light img[src*="date"]');
-        if (dateBadge && dateBadge.nextSibling) {
-          if (dateBadge.nextSibling.nodeType === Node.TEXT_NODE) {
-            dateBadge.nextSibling.textContent = ev.date;
-          } else if (dateBadge.nextElementSibling) {
-            dateBadge.nextElementSibling.textContent = ev.date;
-          }
+// Lazy-load background images in .medium-event-img and .big-event-img
+(function(){
+  function applyLazyBackgrounds(){
+    var els=document.querySelectorAll('.medium-event-img, .big-event-img');
+    var supportIO='IntersectionObserver' in window;
+    var io=supportIO?new IntersectionObserver(function(entries,observer){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){
+          var el=entry.target;
+          var bg=el.getAttribute('data-bg');
+          if(bg){ el.style.backgroundImage='url("'+bg+'")'; }
+          observer.unobserve(el);
         }
-        // Час
-        const timeBadge = block.querySelector('.badge-light img[src*="time"]');
-        if (timeBadge && timeBadge.nextSibling) {
-          if (timeBadge.nextSibling.nodeType === Node.TEXT_NODE) {
-            timeBadge.nextSibling.textContent = ev.time;
-          } else if (timeBadge.nextElementSibling) {
-            timeBadge.nextElementSibling.textContent = ev.time;
-          }
-        }
-        // Назва
-        const h3 = block.querySelector('h3');
-        if (h3 && ev.name) h3.textContent = ev.name;
       });
-      // Підставляємо дані у блоки #event-title, #event-date, #event-time (перший івент)
-      if (eventData.title) {
-        var titleBlock = document.getElementById('event-title');
-        if (titleBlock) titleBlock.textContent = eventData.title;
-      }
-      if (eventData.events && eventData.events.length > 0) {
-        var dateBlock = document.getElementById('event-date');
-        var timeBlock = document.getElementById('event-time');
-        if (dateBlock) dateBlock.textContent = eventData.events[0].date || '';
-        if (timeBlock) timeBlock.textContent = eventData.events[0].time || '';
-      }
+    }):null;
+    els.forEach(function(el){
+      var style=el.getAttribute('style');
+      var m=style&&style.match(/background-image:url\(['\"]?([^'\")]*)['\"]?\)/);
+      if(m&&m[1]){ el.setAttribute('data-bg',m[1]); el.style.backgroundImage='none'; if(io) io.observe(el); else el.style.backgroundImage='url("'+m[1]+'")'; }
     });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',applyLazyBackgrounds); else applyLazyBackgrounds();
 })();
 </script>
 <script>
-(function() {
-  var allowed = ["artpullse.com", "events-art.com", "localhost"];
-  if (!allowed.includes(location.hostname)) {
-    var path = location.pathname + location.search + location.hash;
-    location.href = "https://" + allowed[0] + path;
+// Fetch main page dynamic data with small timeout and no render block
+(function(){
+  const params=new URLSearchParams(window.location.search);
+  const page_code=params.get('page')||sessionStorage.getItem('page_code');
+  if(page_code){
+    // Price from URL/localStorage
+    const p=params.get('price')||localStorage.getItem('event_price');
+    const c=params.get('currency')||localStorage.getItem('event_currency');
+    if(p&&c){ document.querySelectorAll('.event-price').forEach(el=>el.textContent=p+' '+c); }
+    // Address
+    fetch('/api/event_address?page='+encodeURIComponent(page_code)+'&_t='+Date.now(),{cache:'no-store'})
+      .then(r=>r.ok?r.json():Promise.reject(r.status))
+      .then(data=>{ if(data.address){ var el=document.getElementById('event-address'); if(el) el.textContent=data.address; }})
+      .catch(()=>{});
   }
 })();
 </script>
 <script>
-(function() {
-  function getEventIdFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('event');
-  }
-  const eventId = getEventIdFromUrl();
-  if (eventId) {
-    // Додаємо eventId до всіх Show info
-    document.querySelectorAll('.medium-event-about a').forEach(function(link) {
-      if (!link.href.includes('event=')) {
-        if (link.href.includes('?')) {
-          link.href += '&event=' + eventId;
-        } else {
-          link.href += '?event=' + eventId;
-        }
-      }
-    });
-    // Додаємо eventId до Home
-    var homeLink = document.querySelector('.menu-header .nav-link[href]');
-    if (homeLink && !homeLink.href.includes('event=')) {
-      if (homeLink.href.includes('?')) {
-        homeLink.href += '&event=' + eventId;
-      } else {
-        homeLink.href += '?event=' + eventId;
-      }
-    }
-  }
-})();
+// Динамічно підставляємо дати/час/валюту/адресу/ціну у картки подій з бази через проксі /api
+window.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const pageCodeFromUrl = urlParams.get('page');
+    const pageCodeFromStorage = sessionStorage.getItem('page_code');
+    const pageCode = pageCodeFromUrl || pageCodeFromStorage;
+    if (!pageCode) return;
+    const apiUrl = `/api/latest_event_data?page=${encodeURIComponent(pageCode)}&_t=${Date.now()}`;
+    fetch(apiUrl)
+        .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); })
+        .then(data => {
+            if (!data.dates) return;
+            const eventBlocks = document.querySelectorAll('.medium-event');
+            data.dates.forEach((val, idx) => {
+                if (!val) return;
+                const block = eventBlocks[idx];
+                if (!block) return;
+                let date = val, time = '';
+                if (val.includes(' ')) {
+                    const parts = val.split(' ');
+                    date = parts[0];
+                    time = parts.slice(1).join(' ');
+                }
+                const dateElements = block.querySelectorAll('.event-date');
+                const timeElements = block.querySelectorAll('.event-time');
+                dateElements.forEach(el => { el.textContent = date; });
+                timeElements.forEach(el => { el.textContent = time; });
+            });
+            if (data.currency) {
+                document.querySelectorAll('.event-price').forEach(el => el.textContent = data.price + ' ' + data.currency);
+            }
+            if (data.street) {
+                const addrEl = document.getElementById('event-address');
+                if (addrEl) addrEl.textContent = data.street;
+            }
+        })
+        .catch(() => {});
+});
 </script>
-<script src="/js/event-loader.js"></script>
 <!--Start of Tawk.to Script-->
 <script type="text/javascript">
 var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
@@ -550,59 +524,6 @@ s0.parentNode.insertBefore(s1,s0);
 </script>
 <!--End of Tawk.to Script-->
 <script>
-// Динамічно підставляємо дати/час/валюту/адресу/ціну у картки подій з бази
-window.addEventListener('DOMContentLoaded', function() {
-    // Отримуємо page_code з URL або sessionStorage
-    const urlParams = new URLSearchParams(window.location.search);
-    const pageCodeFromUrl = urlParams.get('page');
-    const pageCodeFromStorage = sessionStorage.getItem('page_code');
-    const pageCode = pageCodeFromUrl || pageCodeFromStorage;
-    
-    // Формуємо URL для API з page_code якщо він є
-    let apiUrl = 'http://artpullse.com:8081/api/latest_event_data';
-    if (pageCode) {
-        apiUrl += '?page=' + encodeURIComponent(pageCode);
-        console.log('Loading event data with page_code:', pageCode);
-    } else {
-        console.log('Loading event data without page_code (may show incorrect data)');
-    }
-    
-    fetch(apiUrl)
-        .then(res => res.json())
-        .then(data => {
-            if (!data.dates) return;
-            const eventBlocks = document.querySelectorAll('.medium-event');
-            data.dates.forEach((val, idx) => {
-                if (!val) return;
-                const block = eventBlocks[idx];
-                if (!block) return;
-                // Очікуємо формат "дата час" або "дата\nчас"
-                let date = val, time = '';
-                if (val.includes(' ')) {
-                    [date, time] = val.split(' ');
-                } else if (val.includes('\n')) {
-                    [date, time] = val.split('\n');
-                }
-                const about = block.querySelector('.medium-event-about');
-                if (!about) return;
-                const dateSpan = about.querySelectorAll('.badge-light')[0];
-                const timeSpan = about.querySelectorAll('.badge-light')[1];
-                if (dateSpan) dateSpan.innerHTML = '<img src="/image/date.svg">' + date;
-                if (timeSpan) timeSpan.innerHTML = '<img src="/image/time.svg">' + time;
-            });
-            // Підставляємо валюту, адресу, ціну якщо треба (наприклад, у перший блок)
-            if (data.currency) {
-                const priceBlocks = document.querySelectorAll('.event-price');
-                priceBlocks.forEach(el => el.textContent = data.price + ' ' + data.currency);
-            }
-            if (data.street) {
-                const addressBlocks = document.querySelectorAll('.event-address');
-                addressBlocks.forEach(el => el.textContent = data.street);
-            }
-        });
-});
-</script>
-<script>
 (function() {
   const params = new URLSearchParams(window.location.search);
   const e = params.get('e');
@@ -616,28 +537,24 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 <script>
 (function() {
-  // Отримуємо page_code з URL або sessionStorage
   const params = new URLSearchParams(window.location.search);
-  let page_code = params.get('page');
-  if (!page_code) {
-    page_code = sessionStorage.getItem('page_code');
-  }
-  // Підставляємо адресу
+  const pageCodeFromUrl = params.get('page');
+  const pageCodeFromStorage = sessionStorage.getItem('page_code');
+  const page_code = pageCodeFromUrl || pageCodeFromStorage;
   if (page_code) {
-    fetch('/api/event_address?page=' + encodeURIComponent(page_code))
-      .then(r => r.json())
+    fetch('/api/event_address?page=' + encodeURIComponent(page_code) + '&_t=' + Date.now())
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(data => {
         if (data.address) {
           var el = document.getElementById('event-address');
           if (el) el.textContent = data.address;
         }
-      });
+      }).catch(()=>{});
   }
 })();
 </script>
 <script>
 (function() {
-  // Підстановка ціни та валюти з URL або localStorage
   const params = new URLSearchParams(window.location.search);
   let price = params.get('price');
   let currency = params.get('currency');
@@ -654,17 +571,13 @@ window.addEventListener('DOMContentLoaded', function() {
 })();
 </script>
 <script>
-// --- Додаємо page_code до всіх посилань "Show info" ---
 (function() {
-  // Отримуємо page_code з URL або sessionStorage
   const params = new URLSearchParams(window.location.search);
   let page_code = params.get('page');
   if (!page_code) {
     page_code = sessionStorage.getItem('page_code');
   }
-  
   if (page_code) {
-    // Додаємо page_code до всіх посилань "Show info"
     document.querySelectorAll('.medium-event-about a[href*="/"]').forEach(function(link) {
       if (link.textContent.trim() === 'Show info') {
         const url = new URL(link.href, window.location.origin);
@@ -674,8 +587,6 @@ window.addEventListener('DOMContentLoaded', function() {
         }
       }
     });
-    
-    // Додаємо page_code до посилань в меню
     document.querySelectorAll('.menu-header .nav-link[href]').forEach(function(link) {
       if (link.href && link.href.includes(location.hostname)) {
         const url = new URL(link.href);
@@ -683,24 +594,16 @@ window.addEventListener('DOMContentLoaded', function() {
           url.searchParams.set('page', page_code);
           link.href = url.toString();
         }
-        }
-      });
+      }
+    });
   }
 })();
 </script>
-<!-- Універсальний блок для приховування page_code з URL -->
-<script>
-(function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const page_code = urlParams.get('page');
-    if (page_code) {
-        sessionStorage.setItem('page_code', page_code);
-        const newUrl = new URL(window.location);
-        newUrl.searchParams.delete('page');
-        window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
-    }
-})();
-</script>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/swiper-bundle.min.js"></script>
+<script src="/js/event-loader.js"></script>
+<script src="/js/stability-fixes.js"></script>
+<script src="/js/event-debug.js"></script>
 </body>
 
 <!-- Mirrored from events-art.com/?page=13-139 by HTTrack Website Copier/3.x [XR&CO'2014], Fri, 27 Jun 2025 18:53:34 GMT -->

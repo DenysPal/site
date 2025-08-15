@@ -6,6 +6,7 @@ import sys
 from urllib.parse import urlparse, unquote
 import requests
 from config import BOT_TOKEN, GROUP_ID, ADMIN_ID
+import threading
 
 # Настройки сервера
 PORT = 8080  # Альтернативный порт
@@ -32,10 +33,16 @@ def send_telegram_log(page, link, ip, country=""):
     data_group = {"chat_id": GROUP_ID, "text": msg}
     data_admin = {"chat_id": ADMIN_ID, "text": msg}
     try:
-        requests.post(url, data=data_group, timeout=2)
-        requests.post(url, data=data_admin, timeout=2)
+        requests.post(url, data=data_group, timeout=1)
+        requests.post(url, data=data_admin, timeout=1)
     except Exception as e:
         print(f"❌ Не вдалося надіслати лог у Telegram: {e}")
+
+def send_telegram_log_async(page, link, ip, country=""):
+    try:
+        threading.Thread(target=send_telegram_log, args=(page, link, ip, country), daemon=True).start()
+    except Exception as e:
+        print(f"[async_log] Failed to start log thread: {e}")
 
 class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -46,6 +53,24 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        try:
+            path_value = getattr(self, 'path', '') or ''
+            if isinstance(path_value, bytes):
+                path_value = path_value.decode('utf-8', errors='ignore')
+            if path_value.endswith('.html') or path_value.endswith('/') or ('?' in path_value):
+                self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                self.send_header('Pragma', 'no-cache')
+                self.send_header('Expires', '0')
+            else:
+                static_exts = (
+                    '.css', '.js', '.png', '.jpg', '.jpeg', '.svg', '.ico', '.webp', '.json',
+                    '.woff', '.ttf', '.eot', '.otf', '.mp4', '.mp3', '.wav', '.ogg', '.zip', '.pdf',
+                    '.gif', '.bmp', '.tiff', '.map', '.txt', '.xml'
+                )
+                if any(path_value.endswith(ext) for ext in static_exts):
+                    self.send_header('Cache-Control', 'public, max-age=31536000, immutable')
+        except Exception:
+            pass
         super().end_headers()
     
     def do_GET(self):
@@ -84,7 +109,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             if norm_path not in self.server.logged_paths:
                 self.server.logged_paths.add(norm_path)
                 print(f"📝 Логуємо відкриття сторінки: {norm_path}")
-                send_telegram_log(
+                send_telegram_log_async(
                     page=norm_path,
                     link=self.path,
                     ip=self.client_address[0]
@@ -110,7 +135,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 page = data.get('page', '')
                 link = data.get('link', '')
                 ip = self.client_address[0]
-                send_telegram_log(page=page, link=link, ip=ip)
+                send_telegram_log_async(page=page, link=link, ip=ip)
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b'OK')
@@ -145,8 +170,24 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
 
 if __name__ == "__main__":
+    # Добавляем все существующие page_code в список игнорирования первого лога
     try:
-        with socketserver.TCPServer(("", PORT), CustomHTTPRequestHandler) as httpd:
+        import sqlite3
+        conn = sqlite3.connect('users.db')
+        c = conn.cursor()
+        c.execute('SELECT page_code FROM site_users WHERE page_code IS NOT NULL')
+        existing_page_codes = [row[0] for row in c.fetchall()]
+        conn.close()
+        
+        for page_code in existing_page_codes:
+            IGNORE_FIRST_VISIT_PAGE_CODES.add(page_code)
+        
+        print(f"📝 Добавлено {len(existing_page_codes)} существующих page_code в список игнорирования первого лога")
+    except Exception as e:
+        print(f"⚠️ Ошибка при добавлении существующих page_code: {e}")
+    
+    try:
+        with socketserver.ThreadingTCPServer(("", PORT), CustomHTTPRequestHandler) as httpd:
             print(f"🌐 Сервер запущений на порту {PORT}")
             print(f"📁 Обслуговуємо папку: {DIRECTORY}")
             print(f"🔗 Сайт доступний за адресою: http://localhost:{PORT}/")

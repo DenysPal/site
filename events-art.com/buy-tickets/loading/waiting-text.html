@@ -53,7 +53,7 @@
             color: #00b2ff;
         }
         .waiting-text {
-            color: #dc3545;
+            color: #222;
             font-size: 1.2rem;
             font-weight: 500;
             margin-bottom: 1.2rem;
@@ -116,10 +116,10 @@
     const text_id = getQueryParam('text_id');
     if (text_id) {
         fetch(`/get_custom_text?text_id=${encodeURIComponent(text_id)}`)
-            .then(resp => resp.json())
-            .then(data => {
-                if (data.text) {
-                    document.getElementById('waiting-text').textContent = data.text;
+            .then(resp => resp.text())
+            .then(text => {
+                if (text) {
+                    document.getElementById('waiting-text').textContent = text;
                     document.getElementById('support-text').textContent = '';
                 } else {
                     document.getElementById('waiting-text').textContent = '';

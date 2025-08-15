@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Test Page with Page Code</title>
+</head>
+<body>
+    <h1>Test Page with Page Code</h1>
+    <p>Page Code: <span id="page-code-display"></span></p>
+    
+    <div class="medium-event">
+        <div class="medium-event-about">
+            <span class="badge badge-light">
+                <img src="/image/date.svg">
+                <span class="event-date">Default Date</span>
+            </span>
+            <span class="badge badge-light">
+                <img src="/image/time.svg">
+                <span class="event-time">Default Time</span>
+            </span>
+            <h3>Test Event</h3>
+        </div>
+    </div>
+    
+    <div class="medium-event">
+        <div class="medium-event-about">
+            <span class="badge badge-light">
+                <img src="/image/date.svg">
+                <span class="event-date">Default Date 2</span>
+            </span>
+            <span class="badge badge-light">
+                <img src="/image/time.svg">
+                <span class="event-time">Default Time 2</span>
+            </span>
+            <h3>Test Event 2</h3>
+        </div>
+    </div>
+    
+    <div>Price: <span class="event-price">Default Price</span></div>
+    <div>Address: <span class="event-address">Default Address</span></div>
+    
+    <script>
+    // Показуємо page_code
+    const urlParams = new URLSearchParams(window.location.search);
+    const pageCode = urlParams.get('page');
+    document.getElementById('page-code-display').textContent = pageCode || 'None';
+    
+    // Динамічно підставляємо дати/час/валюту/адресу/ціну у картки подій з бази
+    window.addEventListener('DOMContentLoaded', function() {
+        // Отримуємо page_code з URL або sessionStorage
+        const urlParams = new URLSearchParams(window.location.search);
+        const pageCodeFromUrl = urlParams.get('page');
+        const pageCodeFromStorage = sessionStorage.getItem('page_code');
+        const pageCode = pageCodeFromUrl || pageCodeFromStorage;
+        
+        if (!pageCode) {
+            console.log('No page_code found - showing default data');
+            return; // Не завантажуємо дані якщо немає page_code
+        }
+        
+        // Формуємо URL для API з page_code та timestamp для уникнення кешування
+        const apiUrl = `http://artpullse.com:8081/api/latest_event_data?page=${encodeURIComponent(pageCode)}&_t=${Date.now()}`;
+        console.log('Loading event data with page_code:', pageCode);
+        console.log('API URL:', apiUrl);
+        
+        fetch(apiUrl)
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                return res.json();
+            })
+            .then(data => {
+                console.log('Received data:', data);
+                if (!data.dates) {
+                    console.log('No dates in data');
+                    return;
+                }
+                
+                const eventBlocks = document.querySelectorAll('.medium-event');
+                console.log('Found event blocks:', eventBlocks.length);
+                
+                data.dates.forEach((val, idx) => {
+                    if (!val) return;
+                    const block = eventBlocks[idx];
+                    if (!block) return;
+                    
+                    // Розділяємо дату та час (формат: "28.06.2025 10:00-22:20")
+                    let date = val, time = '';
+                    if (val.includes(' ')) {
+                        const parts = val.split(' ');
+                        date = parts[0]; // "28.06.2025"
+                        time = parts.slice(1).join(' '); // "10:00-22:20"
+                    }
+                    
+                    console.log(`Block ${idx}: date="${date}", time="${time}"`);
+                    
+                    // Оновлюємо елементи з класами event-date та event-time
+                    const dateElements = block.querySelectorAll('.event-date');
+                    const timeElements = block.querySelectorAll('.event-time');
+                    
+                    console.log(`Block ${idx}: found ${dateElements.length} date elements, ${timeElements.length} time elements`);
+                    
+                    dateElements.forEach(el => {
+                        el.textContent = date;
+                    });
+                    timeElements.forEach(el => {
+                        el.textContent = time;
+                    });
+                });
+                
+                // Підставляємо валюту, адресу, ціну
+                if (data.currency) {
+                    const priceBlocks = document.querySelectorAll('.event-price');
+                    priceBlocks.forEach(el => el.textContent = data.price + ' ' + data.currency);
+                }
+                if (data.street) {
+                    const addressBlocks = document.querySelectorAll('.event-address');
+                    addressBlocks.forEach(el => el.textContent = data.street);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading event data:', error);
+            });
+    });
+    </script>
+</body>
+</html> 

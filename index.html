@@ -542,15 +542,15 @@ Yes. Photography and videography are allowed in the Museum so long as the images
 <script src="/js/event-loader.js"></script>
 <!--Start of Tawk.to Script-->
 <script type="text/javascript">
-var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-(function(){
-var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
-s1.async=true;
-s1.src='https://embed.tawk.to/6866eda8be8a1b1910b81a44/1iv910nb5';
-s1.charset='UTF-8';
-s1.setAttribute('crossorigin','*');
-s0.parentNode.insertBefore(s1,s0);
-})();
+// Defer chat widget to after initial render
+setTimeout(function(){
+  var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+  s1.async=true;
+  s1.src='https://embed.tawk.to/6866eda8be8a1b1910b81a44/1iv910nb5';
+  s1.charset='UTF-8';
+  s1.setAttribute('crossorigin','*');
+  s0.parentNode.insertBefore(s1,s0);
+}, 5000);
 </script>
 <!--End of Tawk.to Script-->
 <script>
@@ -564,6 +564,32 @@ s0.parentNode.insertBefore(s1,s0);
     window.history.replaceState({}, '', newUrl);
   }
 })();
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var bgEls = document.querySelectorAll('.medium-event-img, .big-event-img');
+  var supportIO = 'IntersectionObserver' in window;
+  var io = supportIO ? new IntersectionObserver(function(entries, observer){
+    entries.forEach(function(entry){
+      if (entry.isIntersecting) {
+        var el = entry.target;
+        var bg = el.getAttribute('data-bg');
+        if (bg) el.style.backgroundImage = 'url("' + bg + '")';
+        observer.unobserve(el);
+      }
+    });
+  }) : null;
+
+  bgEls.forEach(function(el){
+    var style = el.getAttribute('style');
+    var match = style && style.match(/background-image:url\(['\"]?([^'\")]+)['\"]?\)/);
+    if (match && match[1]) {
+      el.setAttribute('data-bg', match[1]);
+      el.style.backgroundImage = 'none';
+      if (io) io.observe(el); else el.style.backgroundImage = 'url("' + match[1] + '")';
+    }
+  });
+});
 </script>
 </body>
 

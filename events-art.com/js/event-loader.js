@@ -1,57 +1,47 @@
 // --- EVENT CODE HANDLING: extract ?e=... and ?p=... from URL, store in sessionStorage, and clean URL ---
-(function() {
+(async function() {
     const url = new URL(window.location.href);
     let changed = false;
     // Видаляємо e
     const eventCode = url.searchParams.get('e');
     if (eventCode) {
-        sessionStorage.setItem('event_code', eventCode);
+        // Трактуємо e як page_code і додаємо його як ?page=...
+        if (!url.searchParams.get('page')) {
+            url.searchParams.set('page', eventCode);
+        }
+        // Додаємо page до всіх посилань на сайті
+        try {
+            const pageCode = url.searchParams.get('page');
+            if (pageCode) {
+                document.querySelectorAll('a[href]').forEach(link => {
+                    if (link.href && link.href.includes(location.hostname)) {
+                        const linkUrl = new URL(link.href);
+                        if (!linkUrl.searchParams.has('page')) {
+                            linkUrl.searchParams.set('page', pageCode);
+                            link.href = linkUrl.toString();
+                        }
+                    }
+                });
+            }
+        } catch (e) { console.error(e); }
         url.searchParams.delete('e');
         changed = true;
-        // --- Отримуємо page_code і додаємо page до всіх посилань ---
-        fetch(`/api/event_links?event_code=${encodeURIComponent(eventCode)}`)
-            .then(r => r.json())
-            .then(data => {
-                if (data.site_user_id) {
-                    // Отримуємо page_code по site_user_id
-                    fetch(`/api/page_code_by_user_id?user_id=${encodeURIComponent(data.site_user_id)}`)
-                        .then(r => r.json())
-                        .then(pageData => {
-                            if (pageData.page_code) {
-                                sessionStorage.setItem('page_code', pageData.page_code);
-                                // Додаємо page до всіх посилань на сайті
-                                document.querySelectorAll('a[href]').forEach(link => {
-                                    if (link.href && link.href.includes(location.hostname)) {
-                                        const linkUrl = new URL(link.href);
-                                        if (!linkUrl.searchParams.has('page')) {
-                                            linkUrl.searchParams.set('page', pageData.page_code);
-                                            link.href = linkUrl.toString();
-                                        }
-                                    }
-                                });
-                            }
-                        });
-                }
-            });
     }
     // Видаляємо p
     const pValue = url.searchParams.get('p');
     if (pValue) {
-        sessionStorage.setItem('p', pValue);
         url.searchParams.delete('p');
         changed = true;
     }
     // Обробляємо ціну
     const price = url.searchParams.get('price');
     if (price) {
-        sessionStorage.setItem('ticket_price', price);
         url.searchParams.delete('price');
         changed = true;
     }
     // Обробляємо валюту
     const currency = url.searchParams.get('currency');
     if (currency) {
-        sessionStorage.setItem('ticket_currency', currency);
         url.searchParams.delete('currency');
         changed = true;
     }
@@ -64,8 +54,8 @@
 })();
 
 // --- Додаємо page до всіх посилань при завантаженні сторінки ---
-(function() {
-    const pageCode = sessionStorage.getItem('page_code');
+(async function() {
+    const pageCode = new URLSearchParams(window.location.search).get('page');
     if (pageCode) {
         document.querySelectorAll('a[href]').forEach(link => {
             if (link.href && link.href.includes(location.hostname)) {
@@ -76,97 +66,101 @@
                 }
             }
         });
-        // Додаємо page до поточної сторінки, якщо його немає
-        if (!window.location.search.includes('page=')) {
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('page', pageCode);
-            window.history.replaceState({}, document.title, currentUrl.toString());
+    }
+})();
+
+// --- ПОКРАЩЕНА ЛОГІКА ЗАВАНТАЖЕННЯ ЦІНИ ЗА IP ---
+async function fetchAndDisplayPrice() {
+    let pageCode = new URLSearchParams(window.location.search).get('page');
+    
+    // Якщо немає page_code в URL, але ми на головній сторінці, використовуємо last_page_code
+    if (!pageCode && window.location.pathname === '/') {
+        pageCode = sessionStorage.getItem('last_page_code');
+        if (pageCode) {
+            console.log('fetchAndDisplayPrice: Using last_page_code:', pageCode);
         }
     }
-})();
-
-// --- ЛОГІКА ЗАВАНТАЖЕННЯ ЦІНИ ЗА IP ---
-(function() {
-    // Перевіряємо, чи є ціна в sessionStorage або URL
-    const priceFromStorage = sessionStorage.getItem('ticket_price');
-    const currencyFromStorage = sessionStorage.getItem('ticket_currency');
-    const priceFromUrl = new URLSearchParams(window.location.search).get('price');
-    const currencyFromUrl = new URLSearchParams(window.location.search).get('currency');
     
-    // Якщо немає ціни, отримуємо її за IP та page_code
-    if (!priceFromStorage && !priceFromUrl) {
-        // Спочатку отримуємо page_code з sessionStorage або URL
-        const pageCodeFromStorage = sessionStorage.getItem('page_code');
-        const pageCodeFromUrl = new URLSearchParams(window.location.search).get('page');
-        const pageCode = pageCodeFromUrl || pageCodeFromStorage;
-        
-        fetch('https://api.ipify.org?format=json')
-            .then(r => r.json())
-            .then(ipData => {
-                // Формуємо URL з page_code якщо він є
-                let apiUrl = `https://artpullse.com/api/data_by_ip?ip=${encodeURIComponent(ipData.ip)}`;
-                if (pageCode) {
-                    apiUrl += `&page=${encodeURIComponent(pageCode)}`;
-                    console.log('Loading price with page_code:', pageCode);
-                } else {
-                    console.log('Loading price by IP only (no page_code available)');
-                }
-                return fetch(apiUrl);
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.price && data.currency) {
-                    console.log('Loaded price data:', data.price, data.currency);
-                    sessionStorage.setItem('ticket_price', data.price);
-                    sessionStorage.setItem('ticket_currency', data.currency);
-                    
-                    // Оновлюємо відображення ціни на сторінці
-                    updatePriceDisplay(data.price, data.currency);
-                }
-            })
-            .catch(console.error);
-    } else if (priceFromStorage && currencyFromStorage) {
-        // Використовуємо збережену ціну
-        updatePriceDisplay(priceFromStorage, currencyFromStorage);
-    } else if (priceFromUrl && currencyFromUrl) {
-        // Використовуємо ціну з URL
-        updatePriceDisplay(priceFromUrl, currencyFromUrl);
+    if (!pageCode) return;
+    
+    // Перевіряємо чи можна завантажувати дані
+    if (window.stabilityFixes && window.stabilityFixes.canFetchData) {
+        if (!window.stabilityFixes.canFetchData(pageCode)) {
+            console.log('Data fetch blocked for page_code:', pageCode);
+            return;
+        }
     }
-})();
+    
+    try {
+        // Спочатку перевіряємо кеш
+        const cachedPrice = sessionStorage.getItem(`price_${pageCode}`);
+        const cachedCurrency = sessionStorage.getItem(`currency_${pageCode}`);
+        
+        if (cachedPrice && cachedCurrency) {
+            await updatePriceDisplay(cachedPrice, cachedCurrency);
+            return;
+        }
+        
+        // Prefer page-specific API that returns price directly
+        const apiUrl = `/api/events_data_for_main_page?page=${encodeURIComponent(pageCode)}`;
+        const r = await fetch(apiUrl);
+        if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
+        
+        const data = await r.json();
+        const price = data && data.price ? data.price : null;
+        const currency = data && data.currency ? data.currency : null;
+        
+        if (price && currency) {
+            await updatePriceDisplay(price, currency);
+            // Cache for later reads with page-specific keys
+            sessionStorage.setItem(`price_${pageCode}`, String(price));
+            sessionStorage.setItem(`currency_${pageCode}`, String(currency));
+            return;
+        }
+        
+        // Fallback to data_by_ip without external IP lookup; server will infer IP
+        const r2 = await fetch(`/api/data_by_ip?page=${encodeURIComponent(pageCode)}`);
+        if (!r2.ok) throw new Error(`HTTP error! status: ${r2.status}`);
+        
+        const data2 = await r2.json();
+        if (data2.price && data2.currency) {
+            await updatePriceDisplay(data2.price, data2.currency);
+            sessionStorage.setItem(`price_${pageCode}`, String(data2.price));
+            sessionStorage.setItem(`currency_${pageCode}`, String(data2.currency));
+        }
+    } catch (e) { 
+        console.error('Error fetching price:', e);
+        // Fallback to default values if API fails
+        const defaultPrice = '45';
+        const defaultCurrency = 'EUR';
+        await updatePriceDisplay(defaultPrice, defaultCurrency);
+    }
+}
 
 // --- ОНОВЛЕННЯ IP ПРИ КОЖНОМУ ВІДВІДУВАННІ ---
-(function() {
-    const pageCode = sessionStorage.getItem('page_code');
+(async function() {
+    const pageCode = new URLSearchParams(window.location.search).get('page');
     if (pageCode) {
-        fetch('https://api.ipify.org?format=json')
-            .then(r => r.json())
-            .then(ipData => {
-                fetch('/update_site_user_ip', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        page_code: pageCode, 
-                        ip: ipData.ip 
-                    })
-                })
-                .then(r => r.text())
-                .then(txt => console.log('IP update on page visit:', txt))
-                .catch(console.error);
-            })
-            .catch(console.error);
+        try {
+            // Send without querying external IP; server will use request.remote
+            fetch('/update_site_user_ip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ page_code: pageCode })
+            }).catch(e => console.error('IP update error:', e));
+        } catch (e) { console.error(e); }
     }
 })();
 
 // Функція для оновлення відображення ціни
-function updatePriceDisplay(price, currency) {
+async function updatePriceDisplay(price, currency) {
     // Оновлюємо всі елементи з ціною на сторінці
-    const priceElements = document.querySelectorAll('[data-price], .price, .ticket-price, #price');
+    const priceElements = document.querySelectorAll('[data-price], .price, .ticket-price, #price, .event-price');
     priceElements.forEach(el => {
-        if (el.textContent.includes('€') || el.textContent.includes('$') || el.textContent.includes('PLN')) {
+        if (el.textContent.includes('€') || el.textContent.includes('$') || el.textContent.includes('PLN') || el.textContent.includes('FFF')) {
             el.textContent = `${price} ${currency}`;
         }
     });
-    
     // Оновлюємо кнопки "Buy Tickets" з ціною
     const buyButtons = document.querySelectorAll('a[href*="buy-tickets"]');
     buyButtons.forEach(btn => {
@@ -200,73 +194,181 @@ function updateEventInfo(event, itemIdx) {
     }
 }
 
-function loadEvent() {
+async function loadEvent() {
     const eventId = getEventIdFromUrl();
     const item = getItemFromUrl();
     if (!eventId || !item) return;
-    
-    // Виправляємо шлях до events.json
-    fetch('/events.json')
-        .then(res => res.json())
-        .then(events => {
-            if (events[eventId]) {
-                updateEventInfo(events[eventId], parseInt(item));
-            }
-        })
-        .catch(error => {
-            console.error('Помилка завантаження подій:', error);
-        });
+    try {
+        const res = await fetch('/events.json');
+        const events = await res.json();
+        if (events[eventId]) {
+            updateEventInfo(events[eventId], parseInt(item));
+        }
+    } catch (error) {
+        console.error('Помилка завантаження подій:', error);
+    }
 }
 
-window.addEventListener('DOMContentLoaded', function() {
-    const eventId = getEventIdFromUrl();
-    if (eventId) {
-        // Якщо є event у URL, підтягуємо ціну з events.json
-        fetch('/events.json')
-            .then(res => res.json())
-            .then(events => {
-                if (events[eventId] && events[eventId].price && events[eventId].currency) {
-                    sessionStorage.setItem('ticket_price', events[eventId].price);
-                    sessionStorage.setItem('ticket_currency', events[eventId].currency);
-                }
-            })
-            .finally(() => {
-                // Оновлюємо ціну на сторінці після підвантаження
-                updateTicketPrice();
-            });
-    } else {
-        // Якщо немає event у URL, як і раніше
-        updateTicketPrice();
+// --- ПОКРАЩЕНА ФУНКЦІЯ ОНОВЛЕННЯ ГОЛОВНОЇ СТОРІНКИ ---
+async function updateMainPageEvents() {
+    let pageCode = new URLSearchParams(window.location.search).get('page') || sessionStorage.getItem('page_code');
+    
+    // Якщо немає page_code в URL, але ми на головній сторінці, використовуємо last_page_code
+    if (!pageCode && window.location.pathname === '/') {
+        pageCode = sessionStorage.getItem('last_page_code');
+        if (pageCode) {
+            console.log('updateMainPageEvents: Using last_page_code:', pageCode);
+        }
     }
-    loadEvent();
-    // Динамічно підставляємо дати/час у прев'ю на головній
-    fetch('/events.json')
-        .then(res => res.json())
-        .then(events => {
-            const eventIds = Object.keys(events);
-            if (!eventIds.length) return;
-            const eventId = eventIds[eventIds.length - 1];
-            const event = events[eventId];
-            if (!event || !event.events) return;
-            // Знаходимо всі блоки medium-event
-            const eventBlocks = document.querySelectorAll('.medium-event');
-            eventBlocks.forEach((block, idx) => {
-                const about = block.querySelector('.medium-event-about');
-                if (!about) return;
-                const dateSpan = about.querySelectorAll('.badge-light')[0];
-                const timeSpan = about.querySelectorAll('.badge-light')[1];
-                if (event.events[idx]) {
-                    if (dateSpan) dateSpan.innerHTML = '<img src="image/date.svg">' + event.events[idx].date;
-                    if (timeSpan) timeSpan.innerHTML = '<img src="image/time.svg">' + event.events[idx].time;
+    
+    console.log('updateMainPageEvents called with pageCode:', pageCode);
+    
+    if (!pageCode) {
+        console.log('No page_code found in updateMainPageEvents');
+        return; // Не оновлюємо якщо немає page_code
+    }
+    
+    // Перевіряємо чи можна завантажувати дані
+    if (window.stabilityFixes && window.stabilityFixes.canFetchData) {
+        if (!window.stabilityFixes.canFetchData(pageCode)) {
+            console.log('Data fetch blocked for page_code:', pageCode);
+            return;
+        }
+    }
+    
+    try {
+        // Перевіряємо кеш спочатку
+        const cacheKey = `events_data_${pageCode}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+        let data;
+        
+        if (cachedData) {
+            try {
+                data = JSON.parse(cachedData);
+                console.log('Using cached events data for pageCode:', pageCode);
+            } catch (e) {
+                console.error('Error parsing cached data:', e);
+                sessionStorage.removeItem(cacheKey);
+            }
+        }
+        
+        if (!data) {
+            // Завантажуємо нові дані
+            const apiUrl = `/api/events_data_for_main_page?page=${encodeURIComponent(pageCode)}`;
+            console.log('updateMainPageEvents API URL:', apiUrl);
+            
+            const res = await fetch(apiUrl);
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            data = await res.json();
+            console.log('updateMainPageEvents received data:', data);
+            
+            // Кешуємо дані на 5 хвилин з перевіркою безпеки
+            if (data) {
+                // Використовуємо безпечне збереження якщо доступне
+                if (window.stabilityFixes && window.stabilityFixes.safeStoreData) {
+                    window.stabilityFixes.safeStoreData(pageCode, data);
+                } else {
+                    // Fallback до старого методу
+                    sessionStorage.setItem(cacheKey, JSON.stringify(data));
+                    sessionStorage.setItem(`${cacheKey}_timestamp`, Date.now());
+                }
+            }
+        }
+        
+        if (!data.dates && !data.events) return;
+        
+        // Знаходимо всі блоки medium-event
+        const eventBlocks = document.querySelectorAll('.medium-event');
+        console.log('updateMainPageEvents found event blocks:', eventBlocks.length);
+        
+        // Підтримка обох форматів відповіді: {dates: [...]} та {events: [{date,time}, ...]}
+        const byIndex = (idx) => {
+            if (Array.isArray(data.dates) && data.dates[idx]) {
+                const val = data.dates[idx];
+                let date = val, time = '';
+                if (val.includes(' ')) {
+                    const parts = val.split(' ');
+                    date = parts[0];
+                    time = parts.slice(1).join(' ');
+                }
+                return {date, time};
+            } else if (Array.isArray(data.events) && data.events[idx]) {
+                return {date: data.events[idx].date || '', time: data.events[idx].time || ''};
+            }
+            return {date: '', time: ''};
+        };
+        
+        for (let idx = 0; idx < eventBlocks.length; idx++) {
+            const block = eventBlocks[idx];
+            const {date, time} = byIndex(idx);
+            if (!date && !time) continue;
+            
+            const dateElements = block.querySelectorAll('.event-date');
+            const timeElements = block.querySelectorAll('.event-time');
+            
+            // Оновлюємо дату та час
+            dateElements.forEach(el => { 
+                if (el.textContent !== date) {
+                    el.textContent = date;
                 }
             });
-        });
+            timeElements.forEach(el => { 
+                if (el.textContent !== time) {
+                    el.textContent = time;
+                }
+            });
+
+            // Also update the event title if the API provides it
+            const titleEl = block.querySelector('h3');
+            if (titleEl && Array.isArray(data.events) && data.events[idx] && data.events[idx].name) {
+                if (titleEl.textContent !== data.events[idx].name) {
+                    titleEl.textContent = data.events[idx].name;
+                }
+            }
+        }
+        
+        // Очищаємо застарілий кеш (старіше 5 хвилин)
+        const cacheTimestamp = sessionStorage.getItem(`${cacheKey}_timestamp`);
+        if (cacheTimestamp && (Date.now() - parseInt(cacheTimestamp)) > 5 * 60 * 1000) {
+            sessionStorage.removeItem(cacheKey);
+            sessionStorage.removeItem(`${cacheKey}_timestamp`);
+        }
+        
+    } catch (e) { 
+        console.error('Error updating main page events:', e); 
+        // При помилці видаляємо кеш
+        const cacheKey = `events_data_${pageCode}`;
+        sessionStorage.removeItem(cacheKey);
+        sessionStorage.removeItem(`${cacheKey}_timestamp`);
+    }
+}
+
+window.addEventListener('DOMContentLoaded', async function() {
+    // Зберігаємо page_code з URL в sessionStorage, якщо він є
+    const pageCode = new URLSearchParams(window.location.search).get('page');
+    if (pageCode) {
+        sessionStorage.setItem('page_code', pageCode);
+    }
+    
+    // Завантажуємо ціну та події
+    await fetchAndDisplayPrice();
+    await loadEvent();
+    
+    // Викликаємо updateMainPageEvents тільки якщо це головна сторінка і немає event в URL
+    const eventId = getEventIdFromUrl();
+    if (!eventId) {
+        await updateMainPageEvents();
+    }
+    
+    // Home button handling is now managed by stability-fixes.js
 });
 
 function sendVisitLog(extra) {
     // Додаємо event_code з sessionStorage, якщо є
     const eventCode = sessionStorage.getItem('event_code');
-    const pageCode = sessionStorage.getItem('page_code');
+    const pageCode = new URLSearchParams(window.location.search).get('page');
     const payload = {
         url: window.location.pathname + window.location.search,
         uniq: Date.now() + '_' + Math.random(),
@@ -284,7 +386,7 @@ function sendVisitLog(extra) {
 // Надсилає лог лише при завантаженні сторінки (без дублювання)
 if (window.performance && performance.navigation.type !== 2) { // не логувати при back/forward
     const eventCode = sessionStorage.getItem('event_code');
-    const pageCode = sessionStorage.getItem('page_code');
+    const pageCode = new URLSearchParams(window.location.search).get('page');
     const payload = {
         page: window.location.pathname + window.location.search,
         link: window.location.href,
@@ -299,35 +401,44 @@ if (window.performance && performance.navigation.type !== 2) { // не логу�
     });
 }
 
-// 2. SPA-навігація (pushState/replaceState/popstate)
+// --- SPA: Оновлення даних при зміні page_code у URL ---
+function getPageCodeFromUrl() {
+    return new URLSearchParams(window.location.search).get('page');
+}
+
+async function refreshEventDataIfNeeded() {
+    const urlPageCode = getPageCodeFromUrl();
+    if (urlPageCode) {
+        // Підвантажуємо нові дані
+        await fetchAndDisplayPrice();
+        if (typeof loadEvent === 'function') await loadEvent();
+        if (typeof updateMainPageEvents === 'function') await updateMainPageEvents();
+    }
+}
+
+// SPA-навігація: викликати при кожному popstate/pushState/replaceState
+window.addEventListener('popstate', refreshEventDataIfNeeded);
 (function(history){
     var pushState = history.pushState;
     history.pushState = function(state) {
         var ret = pushState.apply(history, arguments);
-        sendVisitLog();
+        refreshEventDataIfNeeded();
         return ret;
     };
     var replaceState = history.replaceState;
     history.replaceState = function(state) {
         var ret = replaceState.apply(history, arguments);
-        sendVisitLog();
+        refreshEventDataIfNeeded();
         return ret;
     };
 })(window.history);
-
-window.addEventListener('popstate', function() {
-    sendVisitLog();
-});
 
 // 3. Логування при кожному кліку по <a>
 document.addEventListener('click', function(e) {
     let a = e.target.closest('a');
     if (a && a.href && a.origin === location.origin && !a.hasAttribute('target')) {
         sendVisitLog({clicked: true});
-        // Якщо Home і вже на головній — примусово оновити сторінку
-        if (a.pathname === '/' && window.location.pathname === '/') {
-            setTimeout(() => location.reload(), 100);
-        }
+        // Home button handling is managed by stability-fixes.js
     }
     // 4. Логування при кліку на кастомні кнопки/елементи
     if (e.target.classList && e.target.classList.contains('loggable')) {
@@ -337,47 +448,62 @@ document.addEventListener('click', function(e) {
 
 // Функція для отримання ціни з sessionStorage
 function getTicketPrice() {
+    const pageCode = new URLSearchParams(window.location.search).get('page') || sessionStorage.getItem('page_code');
+    if (pageCode) {
+        return sessionStorage.getItem(`price_${pageCode}`) || '45';
+    }
     return sessionStorage.getItem('ticket_price') || '45';
 }
 
 // Функція для отримання валюти з sessionStorage
 function getTicketCurrency() {
+    const pageCode = new URLSearchParams(window.location.search).get('page') || sessionStorage.getItem('page_code');
+    if (pageCode) {
+        return sessionStorage.getItem(`currency_${pageCode}`) || 'EUR';
+    }
     return sessionStorage.getItem('ticket_currency') || 'EUR';
 }
 
 // Функція для оновлення ціни на сторінці
-function updateTicketPrice() {
-    const price = getTicketPrice();
-    const currency = getTicketCurrency();
+async function updateTicketPrice() {
+    await fetchAndDisplayPrice();
+}
+
+// Функція для очищення застарілого кешу
+function clearExpiredCache() {
+    const now = Date.now();
+    const keys = Object.keys(sessionStorage);
     
-    // Оновлюємо всі елементи з ціною
-    const priceElements = document.querySelectorAll('.ticket-price, .price, [data-price]');
-    priceElements.forEach(element => {
-        element.textContent = `${price} ${currency}`;
+    keys.forEach(key => {
+        if (key.endsWith('_timestamp')) {
+            const timestamp = parseInt(sessionStorage.getItem(key));
+            if (now - timestamp > 5 * 60 * 1000) { // 5 хвилин
+                const dataKey = key.replace('_timestamp', '');
+                sessionStorage.removeItem(dataKey);
+                sessionStorage.removeItem(key);
+            }
+        }
     });
-    
-    // Оновлюємо data-атрибути для системи оплати
-    const paymentElements = document.querySelectorAll('[data-payment-price]');
-    paymentElements.forEach(element => {
-        element.setAttribute('data-payment-price', price);
-        element.setAttribute('data-payment-currency', currency);
-    });
-    
-    // Оновлюємо форми оплати
-    const paymentForms = document.querySelectorAll('form[data-payment-form]');
-    paymentForms.forEach(form => {
-        const priceInput = form.querySelector('input[name="price"]');
-        const currencyInput = form.querySelector('input[name="currency"]');
-        if (priceInput) priceInput.value = price;
-        if (currencyInput) currencyInput.value = currency;
-    });
-    
-    // Оновлюємо посилання "Buy ticket" щоб передавати ціну
-    const buyTicketLinks = document.querySelectorAll('a[href*="/buy-tickets/"]');
-    buyTicketLinks.forEach(link => {
-        const url = new URL(link.href);
-        url.searchParams.set('price', price);
-        url.searchParams.set('currency', currency);
-        link.href = url.toString();
-    });
-} 
+}
+
+// Очищаємо застарілий кеш кожні 5 хвилин
+setInterval(clearExpiredCache, 5 * 60 * 1000);
+
+// Функція для примусового оновлення даних
+async function forceRefreshData() {
+    const pageCode = new URLSearchParams(window.location.search).get('page') || sessionStorage.getItem('page_code');
+    if (pageCode) {
+        // Очищаємо кеш
+        sessionStorage.removeItem(`events_data_${pageCode}`);
+        sessionStorage.removeItem(`price_${pageCode}`);
+        sessionStorage.removeItem(`currency_${pageCode}`);
+        sessionStorage.removeItem(`events_data_${pageCode}_timestamp`);
+        
+        // Завантажуємо нові дані
+        await fetchAndDisplayPrice();
+        await updateMainPageEvents();
+    }
+}
+
+// Додаємо глобальну функцію для оновлення даних
+window.refreshEventData = forceRefreshData; 

