@@ -22,7 +22,7 @@ import uuid
 from aiohttp import web
 from functools import wraps
 import aiohttp
-from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS, PAYMENT_GROUP_ID, PAYOUT_GROUP_ID, SPECIAL_ADMIN_IDS
+from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS, PAYMENT_GROUP_ID, PAYOUT_GROUP_ID
 import requests
 from aiohttp.web_middlewares import middleware
 import re
@@ -342,7 +342,7 @@ def is_admin(user_id):
 
 def get_user_keyboard(user_id):
     """Возвращает подходящую клавиатуру для пользователя"""
-    if user_id in SPECIAL_ADMIN_IDS:
+    if user_id == -4791617937:
         return special_admin_menu_kb
     elif is_admin(user_id):
         return admin_menu_kb
@@ -366,9 +366,9 @@ main_menu_kb = ReplyKeyboardMarkup(
 admin_menu_kb = ReplyKeyboardMarkup(
     keyboard=[[KeyboardButton(text="⚙️Меню"), KeyboardButton(text="📎Ссылки")], [KeyboardButton(text="🎫Билеты")], [KeyboardButton(text="🛠️ Админ панель")]], resize_keyboard=True
 )
-# Специальная клавиатура для пользователей с правами назначения админов
+# Специальная клавиатура для пользователя с ID -4791617937
 special_admin_menu_kb = ReplyKeyboardMarkup(
-    keyboard=[[KeyboardButton(text="⚙️Меню"), KeyboardButton(text="📎Ссылки")], [KeyboardButton(text="🎫Билеты")], [KeyboardButton(text="🔐 Админка"), KeyboardButton(text="🛠️ Админ панель")]], resize_keyboard=True
+    keyboard=[[KeyboardButton(text="⚙️Меню"), KeyboardButton(text="📎Ссылки")], [KeyboardButton(text="🎫Билеты")], [KeyboardButton(text="🔐 Админка")]], resize_keyboard=True
 )
 profile_inline_kb = InlineKeyboardMarkup(
     inline_keyboard=[
@@ -727,19 +727,12 @@ async def admin_panel(message: types.Message):
     await message.answer("Админ-панель. Выберите действие:", reply_markup=admin_panel_kb)
     user_step[message.from_user.id] = 'admin_panel'
 
-# --- Специальная админка для специальных админов ---
-@router.message(lambda m: m.text and 'админка' in m.text.lower() and m.from_user.id in SPECIAL_ADMIN_IDS)
+# --- Специальная админка для пользователя -4791617937 ---
+@router.message(lambda m: m.text and 'админка' in m.text.lower() and m.from_user.id == -4791617937)
 @ban_guard
 async def special_admin_panel(message: types.Message):
     await message.answer("🔐 Специальная админ-панель. Выберите действие:", reply_markup=special_admin_panel_kb)
     user_step[message.from_user.id] = 'special_admin_panel'
-
-# --- Обычная админ-панель для специальных админов ---
-@router.message(lambda m: m.text and 'админ панель' in m.text.lower() and m.from_user.id in SPECIAL_ADMIN_IDS)
-@ban_guard
-async def special_admin_regular_panel(message: types.Message):
-    await message.answer("🛠️ Админ-панель. Выберите действие:", reply_markup=admin_panel_kb)
-    user_step[message.from_user.id] = 'admin_panel'
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'admin_panel')
 @ban_guard
@@ -846,7 +839,6 @@ async def add_admin_id_step(message: types.Message):
     uid = message.from_user.id
     try:
         admin_id = int(message.text.strip())
-        print(f"[DEBUG] Получен admin_id: {admin_id} для пользователя {uid}")
         user_data[uid] = {'admin_id': admin_id}
         user_step[uid] = 'add_admin_username'
         # Добавляем inline кнопку "Назад"
@@ -872,35 +864,13 @@ async def add_admin_username_step(message: types.Message):
     uid = message.from_user.id
     username = message.text.strip().lstrip('@')
     admin_id = user_data[uid].get('admin_id')
-    print(f"[DEBUG] Шаг 2: uid={uid}, username={username}, admin_id={admin_id}")
-    print(f"[DEBUG] user_data для {uid}: {user_data.get(uid, {})}")
     
     # Добавляем админа в базу
     try:
-        print(f"[DEBUG] Добавляем админа: ID={admin_id}, username={username}")
-        
         c = conn.cursor()
-        
-        # Сначала проверяем, существует ли пользователь
-        c.execute('SELECT * FROM users WHERE user_id=?', (admin_id,))
-        existing_user = c.fetchone()
-        
-        if existing_user:
-            print(f"[DEBUG] Пользователь существует: {existing_user}")
-            # Обновляем существующего пользователя
-            c.execute('UPDATE users SET is_admin=1, username=? WHERE user_id=?', (username, admin_id))
-        else:
-            print(f"[DEBUG] Пользователь не существует, создаем нового")
-            # Создаем нового пользователя
-            c.execute('INSERT INTO users (user_id, is_admin, username, status) VALUES (?, 1, ?, ?)', 
-                     (admin_id, username, 'approved'))
-        
+        c.execute('INSERT OR IGNORE INTO users (user_id, is_admin, username) VALUES (?, 1, ?)', (admin_id, username))
+        c.execute('UPDATE users SET is_admin=1, username=? WHERE user_id=?', (admin_id, username))
         conn.commit()
-        
-        # Проверяем результат
-        c.execute('SELECT user_id, username, is_admin FROM users WHERE user_id=?', (admin_id,))
-        result = c.fetchone()
-        print(f"[DEBUG] Результат после добавления: {result}")
         
         await message.answer(f"✅ Пользователь {username} (ID: {admin_id}) успешно добавлен как администратор!")
         
@@ -909,7 +879,6 @@ async def add_admin_username_step(message: types.Message):
         await message.answer("🔐 Специальная админ-панель. Выберите действие:", reply_markup=special_admin_panel_kb)
         
     except Exception as e:
-        print(f"[ERROR] Ошибка при добавлении админа: {e}")
         await message.answer(f"❌ Ошибка при добавлении админа: {e}")
         user_step[uid] = None
         kb = get_user_keyboard(uid)
@@ -950,7 +919,7 @@ async def show_admins_list(message: types.Message):
 # --- Обработчики для удаления админов ---
 @router.callback_query(lambda c: c.data.startswith("remove_admin:"))
 async def remove_admin_handler(call: types.CallbackQuery):
-    if call.from_user.id not in SPECIAL_ADMIN_IDS:
+    if call.from_user.id != -4791617937:
         await call.answer("У вас нет прав для этого действия!")
         return
     
@@ -962,8 +931,8 @@ async def remove_admin_handler(call: types.CallbackQuery):
         row = c.fetchone()
         username = row[0] if row else f"ID: {admin_id}"
         
-        # Не позволяем удалить самих себя
-        if admin_id in SPECIAL_ADMIN_IDS:
+        # Не позволяем удалить самого себя
+        if admin_id == -4791617937:
             await call.answer("Вы не можете удалить сами себя!")
             return
         
@@ -983,7 +952,7 @@ async def remove_admin_handler(call: types.CallbackQuery):
 
 @router.callback_query(lambda c: c.data == "back_to_special_admin")
 async def back_to_special_admin_handler(call: types.CallbackQuery):
-    if call.from_user.id not in SPECIAL_ADMIN_IDS:
+    if call.from_user.id != -4791617937:
         await call.answer("У вас нет прав для этого действия!")
         return
     

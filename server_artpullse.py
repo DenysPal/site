@@ -313,29 +313,29 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             is_telegram = is_telegram_request(user_agent)
             
             if should_log and not is_telegram:
-                print(f"📝 Логуємо відкриття сторінки: {norm_path}")
+                    print(f"📝 Логуємо відкриття сторінки: {norm_path}")
                 
                 # Отримуємо країну за IP
-                ip = self.client_address[0]
-                country = get_country_by_ip(ip)
+                    ip = self.client_address[0]
+                    country = get_country_by_ip(ip)
                 
-                if page_code and page_code.strip():
-                    print(f"🔗 Логуємо з page_code: {page_code}")
-                    send_telegram_log(
-                        page=norm_path,
-                        link=self.path,
+                    if page_code and page_code.strip():
+                        print(f"🔗 Логуємо з page_code: {page_code}")
+                        send_telegram_log(
+                            page=norm_path,
+                            link=self.path,
                         ip=ip,
                         country=country,
-                        page_code=page_code
-                    )
-                else:
-                    print(f"ℹ️ Логуємо без page_code")
-                    send_telegram_log(
-                        page=norm_path,
-                        link=self.path,
+                            page_code=page_code
+                        )
+                    else:
+                        print(f"ℹ️ Логуємо без page_code")
+                        send_telegram_log(
+                            page=norm_path,
+                            link=self.path,
                         ip=ip,
                         country=country
-                    )
+                        )
             elif is_telegram:
                 print(f"🚫 Telegram запит - не логуємо: {norm_path}")
             else:
