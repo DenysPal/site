@@ -35,12 +35,19 @@ import shutil
 from reportlab.lib import colors
 
 # --- Logging setup ---
-logging.basicConfig(
-    filename='main.log',
-    level=logging.INFO,
-    format='%(asctime)s | %(levelname)s | %(funcName)s | %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
+try:
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s | %(levelname)s | %(funcName)s | %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        handlers=[
+            logging.StreamHandler(),  # Виводимо в консоль замість файлу
+        ]
+    )
+except Exception as e:
+    print(f"Logging setup error: {e}")
+    # Fallback to basic console logging
+    logging.basicConfig(level=logging.INFO)
 
 
 payment_type_by_uid = {}
@@ -786,8 +793,8 @@ async def admin_panel_action(message: types.Message):
         )
         user_step[message.from_user.id] = 'payment_type_selection'
         await message.answer("Выберите тип оплаты:", reply_markup=payment_kb)
-            else:
-            pass  # Відповідь на невідому команду тепер тільки у fallback-хендлері
+    else:
+        pass  # Відповідь на невідому команду тепер тільки у fallback-хендлері
 
 # --- Обработчик специальной админ-панели ---
 @router.message(lambda m: user_step.get(m.from_user.id) == 'special_admin_panel')
