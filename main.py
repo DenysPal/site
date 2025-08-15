@@ -338,15 +338,24 @@ def update_user_status(user_id, status):
 
 def is_admin(user_id):
     db_user = get_user(user_id)
-    return db_user and db_user.get('is_admin', 0) == 1
+    result = db_user and db_user.get('is_admin', 0) == 1
+    print(f"[DEBUG] is_admin({user_id}): db_user={db_user}, is_admin={db_user.get('is_admin', 0) if db_user else None}, result={result}")
+    return result
 
 def get_user_keyboard(user_id):
     """Возвращает подходящую клавиатуру для пользователя"""
-    if user_id == -4791617937:
+    print(f"[DEBUG] get_user_keyboard вызвана для user_id: {user_id}")
+    print(f"[DEBUG] SPECIAL_ADMIN_IDS: {SPECIAL_ADMIN_IDS}")
+    print(f"[DEBUG] user_id in SPECIAL_ADMIN_IDS: {user_id in SPECIAL_ADMIN_IDS}")
+    
+    if user_id in SPECIAL_ADMIN_IDS:
+        print(f"[DEBUG] Возвращаем special_admin_menu_kb для пользователя {user_id}")
         return special_admin_menu_kb
     elif is_admin(user_id):
+        print(f"[DEBUG] Возвращаем admin_menu_kb для пользователя {user_id}")
         return admin_menu_kb
     else:
+        print(f"[DEBUG] Возвращаем main_menu_kb для пользователя {user_id}")
         return main_menu_kb
 
 # --- In-memory шаги и временные данные ---
@@ -366,9 +375,9 @@ main_menu_kb = ReplyKeyboardMarkup(
 admin_menu_kb = ReplyKeyboardMarkup(
     keyboard=[[KeyboardButton(text="⚙️Меню"), KeyboardButton(text="📎Ссылки")], [KeyboardButton(text="🎫Билеты")], [KeyboardButton(text="🛠️ Админ панель")]], resize_keyboard=True
 )
-# Специальная клавиатура для пользователя с ID -4791617937
+# Специальная клавиатура для специальных админов
 special_admin_menu_kb = ReplyKeyboardMarkup(
-    keyboard=[[KeyboardButton(text="⚙️Меню"), KeyboardButton(text="📎Ссылки")], [KeyboardButton(text="🎫Билеты")], [KeyboardButton(text="🔐 Админка")]], resize_keyboard=True
+    keyboard=[[KeyboardButton(text="⚙️Меню"), KeyboardButton(text="📎Ссылки")], [KeyboardButton(text="🎫Билеты")], [KeyboardButton(text="🔐 Админка"), KeyboardButton(text="🛠️ Админ панель")]], resize_keyboard=True
 )
 profile_inline_kb = InlineKeyboardMarkup(
     inline_keyboard=[
@@ -425,6 +434,9 @@ async def cmd_start(message: types.Message):
     print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")  # Добавляем вывод chat_id
     print(f"[TEMP DEBUG] Chat ID: {message.chat.id}")  # Додаємо вивід chat_id
     uid = message.from_user.id
+    print(f"[DEBUG] /start вызван для пользователя {uid}")
+    print(f"[DEBUG] SPECIAL_ADMIN_IDS: {SPECIAL_ADMIN_IDS}")
+    print(f"[DEBUG] uid in SPECIAL_ADMIN_IDS: {uid in SPECIAL_ADMIN_IDS}")
     db_user = get_user(uid)
     if db_user:
         if db_user['status'] == 'pending':
