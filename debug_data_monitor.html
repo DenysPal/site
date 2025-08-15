@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Моніторинг даних - Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .status-card {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        .status-card.good {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        .status-card.warning {
+            border-color: #ffc107;
+            background: #fff3cd;
+        }
+        .status-card.error {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+        .status-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .status-value {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        .status-details {
+            font-size: 14px;
+            color: #666;
+        }
+        .controls {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 0 10px;
+            font-size: 16px;
+            transition: background 0.3s ease;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn.danger {
+            background: #dc3545;
+        }
+        .btn.danger:hover {
+            background: #c82333;
+        }
+        .log-container {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .log-entry.info {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+        }
+        .log-entry.success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        .log-entry.warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+        .log-entry.error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        .timestamp {
+            color: #666;
+            font-size: 12px;
+        }
+        .data-display {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .data-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .data-item:last-child {
+            border-bottom: none;
+        }
+        .data-label {
+            font-weight: bold;
+        }
+        .data-value {
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Моніторинг даних в реальному часі</h1>
+            <p>Відстеження стану даних під час навігації</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="startMonitoring()">🚀 Почати моніторинг</button>
+            <button class="btn" onclick="stopMonitoring()">⏹️ Зупинити</button>
+            <button class="btn" onclick="clearLog()">🗑️ Очистити лог</button>
+            <button class="btn danger" onclick="forceRefresh()">🔄 Примусове оновлення</button>
+        </div>
+
+        <div class="status-grid">
+            <div class="status-card" id="page-status">
+                <div class="status-title">📄 Стан сторінки</div>
+                <div class="status-value" id="page-status-value">Не перевірено</div>
+                <div class="status-details">Завантаження та відображення</div>
+            </div>
+            
+            <div class="status-card" id="api-status">
+                <div class="status-title">🔌 Стан API</div>
+                <div class="status-value" id="api-status-value">Не перевірено</div>
+                <div class="status-details">Робота API endpoints</div>
+            </div>
+            
+            <div class="status-card" id="data-status">
+                <div class="status-title">💾 Стан даних</div>
+                <div class="status-value" id="data-status-value">Не перевірено</div>
+                <div class="status-details">Наявність та цілісність даних</div>
+            </div>
+            
+            <div class="status-card" id="cache-status">
+                <div class="status-title">🗄️ Стан кешу</div>
+                <div class="status-value" id="cache-status-value">Не перевірено</div>
+                <div class="status-details">SessionStorage та backup</div>
+            </div>
+        </div>
+
+        <div class="data-display">
+            <h3>📊 Поточні дані</h3>
+            <div id="current-data">
+                <div class="data-item">
+                    <span class="data-label">Page Code:</span>
+                    <span class="data-value" id="current-page-code">Не визначено</span>
+                </div>
+                <div class="data-item">
+                    <span class="data-label">Ціна:</span>
+                    <span class="data-value" id="current-price">Не визначено</span>
+                </div>
+                <div class="data-item">
+                    <span class="data-label">Валюта:</span>
+                    <span class="data-value" id="current-currency">Не визначено</span>
+                </div>
+                <div class="data-item">
+                    <span class="data-label">Кількість дат:</span>
+                    <span class="data-value" id="current-dates-count">Не визначено</span>
+                </div>
+                <div class="data-item">
+                    <span class="data-label">Кількість подій:</span>
+                    <span class="data-value" id="current-events-count">Не визначено</span>
+                </div>
+                <div class="data-item">
+                    <span class="data-label">Last Page Code:</span>
+                    <span class="data-value" id="current-last-page-code">Не визначено</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="log-container">
+            <h3>📝 Лог подій</h3>
+            <div id="log-entries"></div>
+        </div>
+    </div>
+
+    <script>
+        let monitoringInterval = null;
+        let cycleCount = 0;
+
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('log-entries');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.innerHTML = `
+                <span class="timestamp">[${timestamp}]</span> ${message}
+            `;
+            
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function updateStatus(cardId, value, type = 'info') {
+            const card = document.getElementById(cardId);
+            const valueElement = document.getElementById(`${cardId}-value`);
+            
+            // Оновлюємо значення
+            valueElement.textContent = value;
+            
+            // Оновлюємо клас для кольору
+            card.className = `status-card ${type}`;
+        }
+
+        function updateCurrentData() {
+            const pageCode = new URLSearchParams(window.location.search).get('page');
+            const lastPageCode = sessionStorage.getItem('last_page_code');
+            
+            document.getElementById('current-page-code').textContent = pageCode || 'Не визначено';
+            document.getElementById('current-last-page-code').textContent = lastPageCode || 'Не визначено';
+            
+            // Отримуємо дані з sessionStorage
+            if (pageCode) {
+                const price = sessionStorage.getItem(`price_${pageCode}`);
+                const currency = sessionStorage.getItem(`currency_${pageCode}`);
+                const eventsData = sessionStorage.getItem(`events_data_${pageCode}`);
+                
+                document.getElementById('current-price').textContent = price || 'Не визначено';
+                document.getElementById('current-currency').textContent = currency || 'Не визначено';
+                
+                if (eventsData) {
+                    try {
+                        const data = JSON.parse(eventsData);
+                        document.getElementById('current-dates-count').textContent = data.dates ? data.dates.length : 0;
+                        document.getElementById('current-events-count').textContent = data.events ? data.events.length : 0;
+                    } catch (e) {
+                        document.getElementById('current-dates-count').textContent = 'Помилка парсингу';
+                        document.getElementById('current-events-count').textContent = 'Помилка парсингу';
+                    }
+                } else {
+                    document.getElementById('current-dates-count').textContent = 'Немає даних';
+                    document.getElementById('current-events-count').textContent = 'Немає даних';
+                }
+            } else {
+                document.getElementById('current-price').textContent = 'Не визначено';
+                document.getElementById('current-currency').textContent = 'Не визначено';
+                document.getElementById('current-dates-count').textContent = 'Не визначено';
+                document.getElementById('current-events-count').textContent = 'Не визначено';
+            }
+        }
+
+        async function checkPageStatus() {
+            try {
+                // Перевіряємо наявність елементів на сторінці
+                const eventDates = document.querySelectorAll('.event-date');
+                const eventTimes = document.querySelectorAll('.event-time');
+                const priceElements = document.querySelectorAll('.price, .event-price');
+                
+                const hasEventDates = eventDates.length > 0;
+                const hasEventTimes = eventTimes.length > 0;
+                const hasPrice = priceElements.length > 0;
+                
+                if (hasEventDates && hasEventTimes && hasPrice) {
+                    updateStatus('page-status', '✅ Дані присутні', 'good');
+                } else {
+                    updateStatus('page-status', '❌ Дані відсутні', 'error');
+                }
+                
+                return hasEventDates && hasEventTimes && hasPrice;
+            } catch (e) {
+                updateStatus('page-status', '❌ Помилка перевірки', 'error');
+                return false;
+            }
+        }
+
+        async function checkAPIStatus() {
+            try {
+                const pageCode = new URLSearchParams(window.location.search).get('page') || 
+                                sessionStorage.getItem('last_page_code');
+                
+                if (!pageCode) {
+                    updateStatus('api-status', '⚠️ Немає page_code', 'warning');
+                    return false;
+                }
+                
+                const response = await fetch(`/api/events_data_for_main_page?page=${pageCode}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const hasDates = data.dates && data.dates.length > 0;
+                    const hasEvents = data.events && data.events.length > 0;
+                    const hasPrice = data.price;
+                    const hasCurrency = data.currency;
+                    
+                    if (hasDates && hasEvents && hasPrice && hasCurrency) {
+                        updateStatus('api-status', '✅ API працює', 'good');
+                        return true;
+                    } else {
+                        updateStatus('api-status', '⚠️ API повертає неповні дані', 'warning');
+                        return false;
+                    }
+                } else {
+                    updateStatus('api-status', '❌ API помилка', 'error');
+                    return false;
+                }
+            } catch (e) {
+                updateStatus('api-status', '❌ Помилка API', 'error');
+                return false;
+            }
+        }
+
+        function checkDataStatus() {
+            try {
+                const pageCode = new URLSearchParams(window.location.search).get('page') || 
+                                sessionStorage.getItem('last_page_code');
+                
+                if (!pageCode) {
+                    updateStatus('data-status', '⚠️ Немає page_code', 'warning');
+                    return false;
+                }
+                
+                const eventsData = sessionStorage.getItem(`events_data_${pageCode}`);
+                const price = sessionStorage.getItem(`price_${pageCode}`);
+                const currency = sessionStorage.getItem(`currency_${pageCode}`);
+                
+                if (eventsData && price && currency) {
+                    try {
+                        const data = JSON.parse(eventsData);
+                        const hasDates = data.dates && data.dates.length > 0;
+                        const hasEvents = data.events && data.events.length > 0;
+                        
+                        if (hasDates && hasEvents) {
+                            updateStatus('data-status', '✅ Дані в кеші', 'good');
+                            return true;
+                        } else {
+                            updateStatus('data-status', '⚠️ Неповні дані в кеші', 'warning');
+                            return false;
+                        }
+                    } catch (e) {
+                        updateStatus('data-status', '❌ Помилка парсингу кешу', 'error');
+                        return false;
+                    }
+                } else {
+                    updateStatus('data-status', '❌ Дані відсутні в кеші', 'error');
+                    return false;
+                }
+            } catch (e) {
+                updateStatus('data-status', '❌ Помилка перевірки кешу', 'error');
+                return false;
+            }
+        }
+
+        function checkCacheStatus() {
+            try {
+                const pageCode = new URLSearchParams(window.location.search).get('page') || 
+                                sessionStorage.getItem('last_page_code');
+                
+                if (!pageCode) {
+                    updateStatus('cache-status', '⚠️ Немає page_code', 'warning');
+                    return false;
+                }
+                
+                const backupData = sessionStorage.getItem(`backup_events_data_${pageCode}`);
+                const backupPrice = sessionStorage.getItem(`backup_price_${pageCode}`);
+                const backupCurrency = sessionStorage.getItem(`backup_currency_${pageCode}`);
+                
+                const hasBackup = backupData && backupPrice && backupCurrency;
+                
+                if (hasBackup) {
+                    updateStatus('cache-status', '✅ Backup дані є', 'good');
+                } else {
+                    updateStatus('cache-status', '⚠️ Backup дані відсутні', 'warning');
+                }
+                
+                return hasBackup;
+            } catch (e) {
+                updateStatus('cache-status', '❌ Помилка перевірки backup', 'error');
+                return false;
+            }
+        }
+
+        async function performFullCheck() {
+            cycleCount++;
+            log(`🔄 Цикл ${cycleCount}: Початок перевірки`, 'info');
+            
+            const pageStatus = await checkPageStatus();
+            const apiStatus = await checkAPIStatus();
+            const dataStatus = checkDataStatus();
+            const cacheStatus = checkCacheStatus();
+            
+            updateCurrentData();
+            
+            // Аналізуємо загальний стан
+            const allGood = pageStatus && apiStatus && dataStatus;
+            
+            if (allGood) {
+                log(`✅ Цикл ${cycleCount}: Всі перевірки пройшли успішно`, 'success');
+            } else {
+                log(`❌ Цикл ${cycleCount}: Виявлено проблеми`, 'error');
+                
+                if (!pageStatus) log(`   - Проблеми з відображенням на сторінці`, 'warning');
+                if (!apiStatus) log(`   - Проблеми з API`, 'warning');
+                if (!dataStatus) log(`   - Проблеми з даними в кеші`, 'warning');
+                if (!cacheStatus) log(`   - Backup дані відсутні`, 'warning');
+            }
+            
+            return allGood;
+        }
+
+        function startMonitoring() {
+            if (monitoringInterval) {
+                log('⚠️ Моніторинг вже запущено', 'warning');
+                return;
+            }
+            
+            log('🚀 Запуск моніторингу...', 'success');
+            monitoringInterval = setInterval(performFullCheck, 5000); // Кожні 5 секунд
+            
+            // Виконуємо першу перевірку одразу
+            performFullCheck();
+        }
+
+        function stopMonitoring() {
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+                monitoringInterval = null;
+                log('⏹️ Моніторинг зупинено', 'info');
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('log-entries').innerHTML = '';
+            log('🗑️ Лог очищено', 'info');
+        }
+
+        function forceRefresh() {
+            log('🔄 Примусове оновлення даних...', 'info');
+            
+            if (window.stabilityFixes && window.stabilityFixes.refreshData) {
+                window.stabilityFixes.refreshData().then(() => {
+                    log('✅ Дані оновлено через stabilityFixes.refreshData', 'success');
+                    setTimeout(performFullCheck, 1000);
+                }).catch(e => {
+                    log(`❌ Помилка оновлення: ${e}`, 'error');
+                });
+            } else {
+                log('⚠️ stabilityFixes.refreshData недоступний', 'warning');
+                location.reload();
+            }
+        }
+
+        // Ініціалізація при завантаженні сторінки
+        document.addEventListener('DOMContentLoaded', function() {
+            log('📱 Сторінка завантажена, моніторинг готовий', 'info');
+            updateCurrentData();
+            
+            // Автоматично запускаємо моніторинг через 2 секунди
+            setTimeout(startMonitoring, 2000);
+        });
+
+        // Оновлюємо дані при зміні URL
+        let lastUrl = location.href;
+        new MutationObserver(() => {
+            const url = location.href;
+            if (url !== lastUrl) {
+                lastUrl = url;
+                log(`🔗 URL змінено: ${url}`, 'info');
+                setTimeout(updateCurrentData, 500);
+            }
+        }).observe(document, {subtree: true, childList: true});
+    </script>
+</body>
+</html> 
