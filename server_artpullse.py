@@ -21,6 +21,36 @@ IGNORE_FIRST_VISIT_PAGE_CODES = set()  # page_code: для ігноруванн�
 API_CACHE = {}
 CACHE_TIMEOUT = 300  # 5 хвилин
 
+def is_telegram_request(user_agent):
+    """Перевіряє, чи це запит від Telegram"""
+    if not user_agent:
+        return False
+    
+    telegram_indicators = [
+        'TelegramBot',
+        'TelegramWebApp',
+        'Telegram',
+        'tgweb',
+        'Mozilla/5.0 (compatible; TelegramBot'
+    ]
+    
+    user_agent_lower = user_agent.lower()
+    return any(indicator.lower() in user_agent_lower for indicator in telegram_indicators)
+
+def get_country_by_ip(ip):
+    """Отримує країну за IP адресою"""
+    try:
+        # Використовуємо безкоштовний сервіс ipinfo.io
+        response = requests.get(f"https://ipinfo.io/{ip}/json", timeout=3)
+        if response.status_code == 200:
+            data = response.json()
+            return data.get('country', 'Unknown')
+        else:
+            return 'Unknown'
+    except Exception as e:
+        print(f"❌ Помилка отримання країни за IP {ip}: {e}")
+        return 'Unknown'
+
 def add_ignore_first_visit(page_code):
     """Додає page_code до списку для ігнорування першого переходу"""
     if page_code:
@@ -53,12 +83,27 @@ def send_telegram_log(page, link, ip, country="", page_code=None):
         else:
             print(f"⚠️ Помилка надсилання в групу: {response_group.status_code} - {response_group.text}")
             
-        print(f"📤 Надсилаємо лог адміну (chat_id: {ADMIN_ID})...")
+        # Надсилаємо лог головному адміну
+        print(f"📤 Надсилаємо лог головному адміну (chat_id: {ADMIN_ID})...")
         response_admin = requests.post(url, data=data_admin, timeout=2)
         if response_admin.status_code == 200:
-            print(f"✅ Лог адміну надіслано успішно")
+            print(f"✅ Лог головному адміну надіслано успішно")
         else:
-            print(f"⚠️ Помилка надсилання адміну: {response_admin.status_code} - {response_admin.text}")
+            print(f"⚠️ Помилка надсилання головному адміну: {response_admin.status_code} - {response_admin.text}")
+        
+        # Надсилаємо лог всім адміністраторам
+        from config import ADMIN_IDS
+        for admin_id in ADMIN_IDS:
+            if admin_id != ADMIN_ID:  # Не дублюємо головному адміну
+                try:
+                    data_admin_personal = {"chat_id": admin_id, "text": msg}
+                    response_personal = requests.post(url, data=data_admin_personal, timeout=2)
+                    if response_personal.status_code == 200:
+                        print(f"✅ Лог адміну {admin_id} надіслано успішно")
+                    else:
+                        print(f"⚠️ Помилка надсилання адміну {admin_id}: {response_personal.status_code}")
+                except Exception as e:
+                    print(f"❌ Помилка надсилання адміну {admin_id}: {e}")
             
     except Exception as e:
         print(f"❌ Не вдалося надіслати лог у Telegram: {e}")
@@ -154,6 +199,22 @@ def send_log_to_link_creator(page, link, ip, country, page_code):
             
     except Exception as e:
         print(f"❌ Помилка пошуку створювача посилання: {e}")
+        
+        # Логуємо помилки в Telegram
+        try:
+            error_msg = (
+                f"🚨 Помилка пошуку створювача посилання\n"
+                f"📄 page_code: {page_code}\n"
+                f"🌍 IP: {ip}\n"
+                f"🌏 Країна: {country}\n"
+                f"❌ Помилка: {e}"
+            )
+            
+            url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+            data = {"chat_id": ADMIN_ID, "text": error_msg}
+            requests.post(url, data=data, timeout=2)
+        except:
+            pass
 
 def get_cached_response(cache_key):
     """Отримує кешовану відповідь якщо вона ще актуальна"""
@@ -205,6 +266,23 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             if any(ext in path for ext in skip_ext) or any(d in path for d in skip_dirs):
                 return super().do_GET()
             
+            # Логуємо всі інші запити (але не Telegram)
+            user_agent = self.headers.get('User-Agent', '')
+            is_telegram = is_telegram_request(user_agent)
+            
+            if not is_telegram:
+                ip = self.client_address[0]
+                country = get_country_by_ip(ip)
+                print(f"📝 Запит: {path} від IP: {ip} ({country})")
+                
+                # Логуємо всі запити в Telegram
+                send_telegram_log(
+                    page=path,
+                    link=self.path,
+                    ip=ip,
+                    country=country
+                )
+            
             # Перевіряємо page_code з URL
             page_code = None
             if '?' in self.path:
@@ -225,22 +303,29 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 norm_path = norm_path[:-10]
             if norm_path == '' or norm_path == '/':
                 norm_path = '/'
-            # Логувати тільки якщо це основна сторінка
+            # Логувати тільки якщо це основна сторінка та не Telegram
             should_log = (
                 norm_path == '/' or norm_path.endswith('/') or norm_path.endswith('.html')
             )
-            if should_log and not should_ignore_first_visit:
-                if not hasattr(self.server, 'logged_paths'):
-                    self.server.logged_paths = set()
-                if norm_path not in self.server.logged_paths:
-                    self.server.logged_paths.add(norm_path)
+            
+            # Перевіряємо User-Agent для фільтрації Telegram
+            user_agent = self.headers.get('User-Agent', '')
+            is_telegram = is_telegram_request(user_agent)
+            
+            if should_log and not is_telegram:
                     print(f"📝 Логуємо відкриття сторінки: {norm_path}")
+                
+                # Отримуємо країну за IP
+                    ip = self.client_address[0]
+                    country = get_country_by_ip(ip)
+                
                     if page_code and page_code.strip():
                         print(f"🔗 Логуємо з page_code: {page_code}")
                         send_telegram_log(
                             page=norm_path,
                             link=self.path,
-                            ip=self.client_address[0],
+                        ip=ip,
+                        country=country,
                             page_code=page_code
                         )
                     else:
@@ -248,8 +333,13 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         send_telegram_log(
                             page=norm_path,
                             link=self.path,
-                            ip=self.client_address[0]
+                        ip=ip,
+                        country=country
                         )
+            elif is_telegram:
+                print(f"🚫 Telegram запит - не логуємо: {norm_path}")
+            else:
+                print(f"ℹ️ Не логуємо: {norm_path}")
             
             # Якщо це перший перехід на нову сторінку, видаляємо page_code зі списку ігнорування
             if should_ignore_first_visit and page_code:
@@ -265,11 +355,47 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             
         except Exception as e:
             print(f"❌ Error in do_GET: {e}")
+            
+            # Логуємо помилки в Telegram
+            try:
+                ip = self.client_address[0]
+                country = get_country_by_ip(ip)
+                error_msg = (
+                    f"🚨 Помилка сервера\n"
+                    f"📄 Сторінка: {self.path}\n"
+                    f"🌍 IP: {ip}\n"
+                    f"🌏 Країна: {country}\n"
+                    f"❌ Помилка: {e}"
+                )
+                
+                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                data = {"chat_id": ADMIN_ID, "text": error_msg}
+                requests.post(url, data=data, timeout=2)
+            except:
+                pass
+            
             self.send_error(500, f"Internal Server Error: {e}")
     
     def handle_api_request(self, path):
         """Обробляє API запити"""
         try:
+            # Логуємо API запити (але не Telegram)
+            user_agent = self.headers.get('User-Agent', '')
+            is_telegram = is_telegram_request(user_agent)
+            
+            if not is_telegram:
+                ip = self.client_address[0]
+                country = get_country_by_ip(ip)
+                print(f"📝 API запит: {path} від IP: {ip} ({country})")
+                
+                # Логуємо API запити в Telegram
+                send_telegram_log(
+                    page=f"API: {path}",
+                    link=self.path,
+                    ip=ip,
+                    country=country
+                )
+            
             if path.startswith('/api/events_data_for_main_page'):
                 self.handle_events_data_request()
             elif path.startswith('/api/data_by_ip'):
@@ -278,6 +404,25 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(404, "API endpoint not found")
         except Exception as e:
             print(f"❌ Error handling API request: {e}")
+            
+            # Логуємо помилки API в Telegram
+            try:
+                ip = self.client_address[0]
+                country = get_country_by_ip(ip)
+                error_msg = (
+                    f"🚨 Помилка API\n"
+                    f"📄 Сторінка: {path}\n"
+                    f"🌍 IP: {ip}\n"
+                    f"🌏 Країна: {country}\n"
+                    f"❌ Помилка: {e}"
+                )
+                
+                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                data = {"chat_id": ADMIN_ID, "text": error_msg}
+                requests.post(url, data=data, timeout=2)
+            except:
+                pass
+            
             self.send_error(500, f"API Error: {e}")
     
     def handle_events_data_request(self):
@@ -406,6 +551,25 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     
             except Exception as e:
                 print(f"❌ Database error: {e}")
+                
+                # Логуємо помилки бази даних в Telegram
+                try:
+                    ip = self.client_address[0]
+                    country = get_country_by_ip(ip)
+                    error_msg = (
+                        f"🚨 Помилка бази даних\n"
+                        f"📄 API: events_data_for_main_page\n"
+                        f"🌍 IP: {ip}\n"
+                        f"🌏 Країна: {country}\n"
+                        f"❌ Помилка: {e}"
+                    )
+                    
+                    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                    data = {"chat_id": ADMIN_ID, "text": error_msg}
+                    requests.post(url, data=data, timeout=2)
+                except:
+                    pass
+                
                 # Fallback дані при помилці бази
                 fallback_dates = [
                     '28.06.2025 10:00-22:08',
@@ -450,6 +614,25 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 
         except Exception as e:
             print(f"❌ Error in handle_events_data_request: {e}")
+            
+            # Логуємо помилки в Telegram
+            try:
+                ip = self.client_address[0]
+                country = get_country_by_ip(ip)
+                error_msg = (
+                    f"🚨 Помилка обробки API\n"
+                    f"📄 API: events_data_for_main_page\n"
+                    f"🌍 IP: {ip}\n"
+                    f"🌏 Країна: {country}\n"
+                    f"❌ Помилка: {e}"
+                )
+                
+                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                data = {"chat_id": ADMIN_ID, "text": error_msg}
+                requests.post(url, data=data, timeout=2)
+            except:
+                pass
+            
             self.send_error(500, f"Internal Server Error: {e}")
     
     def handle_data_by_ip_request(self):
@@ -518,6 +701,25 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 
             except Exception as e:
                 print(f"❌ Database error in data_by_ip: {e}")
+                
+                # Логуємо помилки бази даних в Telegram
+                try:
+                    ip = self.client_address[0]
+                    country = get_country_by_ip(ip)
+                    error_msg = (
+                        f"🚨 Помилка бази даних\n"
+                        f"📄 API: data_by_ip\n"
+                        f"🌍 IP: {ip}\n"
+                        f"🌏 Країна: {country}\n"
+                        f"❌ Помилка: {e}"
+                    )
+                    
+                    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                    data = {"chat_id": ADMIN_ID, "text": error_msg}
+                    requests.post(url, data=data, timeout=2)
+                except:
+                    pass
+                
                 # Fallback дані при помилці бази
                 fallback_data = {
                     'price': '45',
@@ -533,6 +735,25 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 
         except Exception as e:
             print(f"❌ Error in handle_data_by_ip_request: {e}")
+            
+            # Логуємо помилки в Telegram
+            try:
+                ip = self.client_address[0]
+                country = get_country_by_ip(ip)
+                error_msg = (
+                    f"🚨 Помилка обробки API\n"
+                    f"📄 API: data_by_ip\n"
+                    f"🌍 IP: {ip}\n"
+                    f"🌏 Країна: {country}\n"
+                    f"❌ Помилка: {e}"
+                )
+                
+                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                data = {"chat_id": ADMIN_ID, "text": error_msg}
+                requests.post(url, data=data, timeout=2)
+            except:
+                pass
+            
             self.send_error(500, f"Internal Server Error: {e}")
     
     def log_message(self, format, *args):
@@ -553,10 +774,12 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     page_code_from_data = data.get('page_code')
                     if page_code_from_data and page_code_from_data.strip():
                         print(f"🔗 Логуємо з page_code: {page_code_from_data}")
-                        send_telegram_log(page=page, link=link, ip=ip, page_code=page_code_from_data)
+                        country = get_country_by_ip(ip)
+                        send_telegram_log(page=page, link=link, ip=ip, country=country, page_code=page_code_from_data)
                     else:
                         print(f"ℹ️ Логуємо без page_code")
-                        send_telegram_log(page=page, link=link, ip=ip)
+                        country = get_country_by_ip(ip)
+                        send_telegram_log(page=page, link=link, ip=ip, country=country)
                     self.send_response(200)
                     self.end_headers()
                     self.wfile.write(b'OK')
@@ -604,6 +827,11 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         conn.commit()
                         conn.close()
                         
+                        # Логуємо оновлення IP
+                        ip = self.client_address[0]
+                        country = get_country_by_ip(ip)
+                        print(f"📝 Оновлення IP для page_code {page_code}: {ip} ({country})")
+                        
                         self.send_response(200)
                         self.end_headers()
                         self.wfile.write(b'OK')
@@ -617,10 +845,42 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self.end_headers()
                     self.wfile.write(b'Error')
             else:
+                # Логуємо невідомий POST запит
+                ip = self.client_address[0]
+                country = get_country_by_ip(ip)
+                print(f"⚠️ Невідомий POST запит: {path} від IP: {ip} ({country})")
+                
+                # Логуємо в Telegram
+                send_telegram_log(
+                    page=f"POST: {path}",
+                    link=self.path,
+                    ip=ip,
+                    country=country
+                )
+                
                 self.send_response(404)
                 self.end_headers()
         except Exception as e:
             print(f"❌ Error in do_POST: {e}")
+            
+            # Логуємо помилки в Telegram
+            try:
+                ip = self.client_address[0]
+                country = get_country_by_ip(ip)
+                error_msg = (
+                    f"🚨 Помилка POST запиту\n"
+                    f"📄 Сторінка: {self.path}\n"
+                    f"🌍 IP: {ip}\n"
+                    f"🌏 Країна: {country}\n"
+                    f"❌ Помилка: {e}"
+                )
+                
+                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                data = {"chat_id": ADMIN_ID, "text": error_msg}
+                requests.post(url, data=data, timeout=2)
+            except:
+                pass
+            
             self.send_error(500, f"Internal Server Error: {e}")
 
 def main():
