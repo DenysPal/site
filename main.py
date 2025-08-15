@@ -820,7 +820,12 @@ async def special_admin_panel_action(message: types.Message):
         return
     elif message.text == "➕ Добавить админа":
         user_step[uid] = 'add_admin_id'
+        # Добавляем inline кнопку "Назад"
+        back_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_special_admin")]
+        ])
         await message.answer("Введите ID пользователя, которого нужно сделать админом:", reply_markup=ReplyKeyboardRemove())
+        await message.answer("Для возврата в админ-панель нажмите кнопку ниже:", reply_markup=back_kb)
     elif message.text == "👥 Переглянути адмінів":
         await show_admins_list(message)
     else:
@@ -844,7 +849,12 @@ async def add_admin_id_step(message: types.Message):
         print(f"[DEBUG] Получен admin_id: {admin_id} для пользователя {uid}")
         user_data[uid] = {'admin_id': admin_id}
         user_step[uid] = 'add_admin_username'
+        # Добавляем inline кнопку "Назад"
+        back_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_special_admin")]
+        ])
         await message.answer("Теперь введите username пользователя (без @):")
+        await message.answer("Для возврата в админ-панель нажмите кнопку ниже:", reply_markup=back_kb)
     except ValueError:
         await message.answer("ID должен быть числом. Попробуйте снова или нажмите 'Отмена':")
 
@@ -961,7 +971,12 @@ async def remove_admin_handler(call: types.CallbackQuery):
         c.execute('UPDATE users SET is_admin=0 WHERE user_id=?', (admin_id,))
         conn.commit()
         
+        # Показываем сообщение об успехе с кнопкой возврата
+        back_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⬅️ Назад к списку админов", callback_data="back_to_special_admin")]
+        ])
         await call.message.edit_text(f"✅ Администратор {username} успешно удален!")
+        await call.message.answer("Выберите действие:", reply_markup=back_kb)
         
     except Exception as e:
         await call.answer(f"❌ Ошибка при удалении админа: {e}")
@@ -974,15 +989,22 @@ async def back_to_special_admin_handler(call: types.CallbackQuery):
     
     uid = call.from_user.id
     user_step[uid] = 'special_admin_panel'
-    await call.message.edit_text("🔐 Специальная админ-панель. Выберите действие:")
+    
+    # Удаляем предыдущее сообщение и отправляем новое с правильной клавиатурой
+    try:
+        await call.message.delete()
+    except:
+        pass
+    
     await call.message.answer("🔐 Специальная админ-панель. Выберите действие:", reply_markup=special_admin_panel_kb)
+    await call.answer()
 
 @router.callback_query(lambda c: c.data == "payuser_back")
 async def payuser_back_handler(call: types.CallbackQuery):
     uid = call.from_user.id
     user_step[uid] = None
     manual_payment_attempts.pop(uid, None)
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    kb = get_user_keyboard(uid)
     await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
