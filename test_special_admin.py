@@ -16,8 +16,15 @@ def test_special_admin():
     for col in columns:
         print(f"  {col[1]} {col[2]}")
     
-    # Список специальных админов (должен совпадать с SPECIAL_ADMIN_IDS в main.py)
-    special_admin_ids = [-4791617937, 7855499159]
+    # Импортируем список специальных админов из конфига
+    try:
+        from config import SPECIAL_ADMIN_IDS
+        special_admin_ids = SPECIAL_ADMIN_IDS
+        print(f"Загружены специальные админы из конфига: {special_admin_ids}")
+    except ImportError:
+        # Fallback если конфиг недоступен
+        special_admin_ids = [-4791617937, 7855499159]
+        print(f"Конфиг недоступен, используем fallback: {special_admin_ids}")
     
     for admin_id in special_admin_ids:
         # Проверяем пользователя

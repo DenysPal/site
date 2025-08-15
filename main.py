@@ -22,10 +22,7 @@ import uuid
 from aiohttp import web
 from functools import wraps
 import aiohttp
-from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS, PAYMENT_GROUP_ID, PAYOUT_GROUP_ID
-
-# Список специальных админов, которые могут назначать других админов
-SPECIAL_ADMIN_IDS = [-4791617937, 7855499159]
+from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS, PAYMENT_GROUP_ID, PAYOUT_GROUP_ID, SPECIAL_ADMIN_IDS
 import requests
 from aiohttp.web_middlewares import middleware
 import re
@@ -369,9 +366,9 @@ main_menu_kb = ReplyKeyboardMarkup(
 admin_menu_kb = ReplyKeyboardMarkup(
     keyboard=[[KeyboardButton(text="⚙️Меню"), KeyboardButton(text="📎Ссылки")], [KeyboardButton(text="🎫Билеты")], [KeyboardButton(text="🛠️ Админ панель")]], resize_keyboard=True
 )
-# Специальная клавиатура для пользователя с ID -4791617937
+# Специальная клавиатура для пользователей с правами назначения админов
 special_admin_menu_kb = ReplyKeyboardMarkup(
-    keyboard=[[KeyboardButton(text="⚙️Меню"), KeyboardButton(text="📎Ссылки")], [KeyboardButton(text="🎫Билеты")], [KeyboardButton(text="🔐 Админка")]], resize_keyboard=True
+    keyboard=[[KeyboardButton(text="⚙️Меню"), KeyboardButton(text="📎Ссылки")], [KeyboardButton(text="🎫Билеты")], [KeyboardButton(text="🔐 Админка"), KeyboardButton(text="🛠️ Админ панель")]], resize_keyboard=True
 )
 profile_inline_kb = InlineKeyboardMarkup(
     inline_keyboard=[
@@ -737,6 +734,13 @@ async def special_admin_panel(message: types.Message):
     await message.answer("🔐 Специальная админ-панель. Выберите действие:", reply_markup=special_admin_panel_kb)
     user_step[message.from_user.id] = 'special_admin_panel'
 
+# --- Обычная админ-панель для специальных админов ---
+@router.message(lambda m: m.text and 'админ панель' in m.text.lower() and m.from_user.id in SPECIAL_ADMIN_IDS)
+@ban_guard
+async def special_admin_regular_panel(message: types.Message):
+    await message.answer("🛠️ Админ-панель. Выберите действие:", reply_markup=admin_panel_kb)
+    user_step[message.from_user.id] = 'admin_panel'
+
 @router.message(lambda m: user_step.get(m.from_user.id) == 'admin_panel')
 @ban_guard
 @log_function
@@ -837,6 +841,7 @@ async def add_admin_id_step(message: types.Message):
     uid = message.from_user.id
     try:
         admin_id = int(message.text.strip())
+        print(f"[DEBUG] Получен admin_id: {admin_id} для пользователя {uid}")
         user_data[uid] = {'admin_id': admin_id}
         user_step[uid] = 'add_admin_username'
         await message.answer("Теперь введите username пользователя (без @):")
@@ -857,13 +862,35 @@ async def add_admin_username_step(message: types.Message):
     uid = message.from_user.id
     username = message.text.strip().lstrip('@')
     admin_id = user_data[uid].get('admin_id')
+    print(f"[DEBUG] Шаг 2: uid={uid}, username={username}, admin_id={admin_id}")
+    print(f"[DEBUG] user_data для {uid}: {user_data.get(uid, {})}")
     
     # Добавляем админа в базу
     try:
+        print(f"[DEBUG] Добавляем админа: ID={admin_id}, username={username}")
+        
         c = conn.cursor()
-        c.execute('INSERT OR IGNORE INTO users (user_id, is_admin, username) VALUES (?, 1, ?)', (admin_id, username))
-        c.execute('UPDATE users SET is_admin=1, username=? WHERE user_id=?', (admin_id, username))
+        
+        # Сначала проверяем, существует ли пользователь
+        c.execute('SELECT * FROM users WHERE user_id=?', (admin_id,))
+        existing_user = c.fetchone()
+        
+        if existing_user:
+            print(f"[DEBUG] Пользователь существует: {existing_user}")
+            # Обновляем существующего пользователя
+            c.execute('UPDATE users SET is_admin=1, username=? WHERE user_id=?', (username, admin_id))
+        else:
+            print(f"[DEBUG] Пользователь не существует, создаем нового")
+            # Создаем нового пользователя
+            c.execute('INSERT INTO users (user_id, is_admin, username, status) VALUES (?, 1, ?, ?)', 
+                     (admin_id, username, 'approved'))
+        
         conn.commit()
+        
+        # Проверяем результат
+        c.execute('SELECT user_id, username, is_admin FROM users WHERE user_id=?', (admin_id,))
+        result = c.fetchone()
+        print(f"[DEBUG] Результат после добавления: {result}")
         
         await message.answer(f"✅ Пользователь {username} (ID: {admin_id}) успешно добавлен как администратор!")
         
@@ -872,6 +899,7 @@ async def add_admin_username_step(message: types.Message):
         await message.answer("🔐 Специальная админ-панель. Выберите действие:", reply_markup=special_admin_panel_kb)
         
     except Exception as e:
+        print(f"[ERROR] Ошибка при добавлении админа: {e}")
         await message.answer(f"❌ Ошибка при добавлении админа: {e}")
         user_step[uid] = None
         kb = get_user_keyboard(uid)
