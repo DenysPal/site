@@ -1885,8 +1885,8 @@ async def manual_payment_amount_handler(message: types.Message):
                 except Exception:
                     pass
             bot_message_ids[uid] = []
-                            kb = get_user_keyboard(uid)
-                await message.answer("Головне меню:", reply_markup=kb)
+            kb = get_user_keyboard(uid)
+            await message.answer("Головне меню:", reply_markup=kb)
             return
         else:
             # Лічильник спроб
@@ -2957,8 +2957,8 @@ async def back_from_choose_link_to_edit(message: types.Message):
 @ban_guard
 async def back_from_links_menu(message: types.Message):
     print("==> back_from_links_menu")
-            kb = get_user_keyboard(message.from_user.id)
-        await message.answer("Главное меню:", reply_markup=kb)
+    kb = get_user_keyboard(message.from_user.id)
+    await message.answer("Главное меню:", reply_markup=kb)
     user_step[message.chat.id] = None
 
 # --- Універсальний хендлер для 'Назад', який не спрацьовує у вкладених меню ---
@@ -3009,8 +3009,8 @@ async def universal_inline_back_handler(call: types.CallbackQuery):
 async def back_to_main_menu(message: types.Message):
     uid = message.from_user.id
     user_step[uid] = None
-            kb = get_user_keyboard(uid)
-        await message.answer("Возврат в главное меню.", reply_markup=kb)
+    kb = get_user_keyboard(uid)
+    await message.answer("Возврат в главное меню.", reply_markup=kb)
 
 
 
