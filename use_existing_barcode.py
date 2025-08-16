@@ -30,13 +30,13 @@ def create_ticket_with_existing_barcode():
     c = canvas.Canvas(pdf_path, pagesize=A4)
     width, height = A4
     
-            # Малюємо повністю сірий прямокутник для всього білета
-        c.setFillColorRGB(0.9, 0.9, 0.9)  # Сірий колір
+            # Малюємо темніший сірий прямокутник для всього білета (як на другому скріншоті)
+        c.setFillColorRGB(0.7, 0.7, 0.7)  # Темніший сірий колір
         c.rect(0, 0, width, height, fill=1)
         
-        # Білий прямокутник всередині сірого
+        # Білий прямокутник всередині сірого (більший, як на другому скріншоті)
         c.setFillColorRGB(1, 1, 1)  # Білий колір
-        c.rect(20, 20, width - 40, height - 40, fill=1)
+        c.rect(10, 10, width - 20, height - 20, fill=1)
     
             # Верхний домен по центру, серым (опускаємо нижче для рамки)
         top_y = height - 60
@@ -106,29 +106,12 @@ def create_ticket_with_existing_barcode():
         pass
     c.line(50, line_y, width - 50, line_y)
     
-    # Штрих-код (як на першому скріншоті - з сірою рамкою)
-    barcode_y = line_y - 20
-    print(f"🔍 Малюємо існуючий штрих-код на позиції y={barcode_y}")
+    # Штрих-код прибрано - залишаємо пусте місце
+    print(f"🔍 Штрих-код прибрано згідно з вимогами")
     
-    try:
-        # Малюємо сіру рамку для штрих-коду (як на першому скріншоті)
-        c.setFillColorRGB(0.9, 0.9, 0.9)  # Сірий колір
-        c.rect((width - 600) // 2, barcode_y - 10, 600, 160, fill=1)
-        
-        # Малюємо існуючий штрих-код
-        c.drawImage(existing_barcode, (width - 600) // 2, barcode_y, width=600, height=160)
-        print(f"✅ Штрих-код додано з файлу: {existing_barcode}")
-    except Exception as e:
-        print(f"❌ Помилка малювання штрих-коду: {e}")
-    
-    # Номер штрих-коду (як на другому скріншоті)
-    barcode_value = "1234567890123456"
-    c.setFont("Helvetica", 12)
-    c.drawCentredString(width / 2, barcode_y - 18, barcode_value)
-    
-    # Додаємо фото image.png знизу (замість QR-коду)
+    # Додаємо фото image.png знизу (замість штрих-коду)
     bottom_image_path = os.path.join('events-art.com', 'image', 'image.png')
-    bottom_image_y = barcode_y - 200  # Розташовуємо фото вище штрих-коду
+    bottom_image_y = line_y - 100  # Розташовуємо фото нижче пунктирної лінії
     
     if os.path.exists(bottom_image_path):
         try:
