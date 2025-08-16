@@ -205,6 +205,67 @@ def is_api_request(path):
             return True
     return False
 
+def get_page_name(path):
+    """Визначає назву сторінки за шляхом"""
+    if path == '/' or path == '/index.html':
+        return "Главная страница"
+    elif '/buy-tickets/' in path:
+        if '/code/' in path:
+            return "Оформление заказа (код)"
+        elif '/quantity/' in path:
+            return "Оформление заказа (количество)"
+        elif '/payment/' in path:
+            return "Оформление заказа (оплата)"
+        else:
+            return "Оформление заказа"
+    elif '/events/' in path:
+        if '/overview/' in path:
+            return "Обзор события"
+        elif '/details/' in path:
+            return "Детали события"
+        else:
+            return "События"
+    elif '/about/' in path:
+        return "О нас"
+    elif '/contact/' in path:
+        return "Контакты"
+    elif '/gallery/' in path:
+        return "Галерея"
+    else:
+        # Спробуємо витягнути назву з шляху
+        clean_path = path.strip('/').replace('-', ' ').replace('_', ' ').title()
+        if clean_path:
+            return clean_path
+        return "Неизвестная страница"
+
+def get_event_name_from_page_code(page_code):
+    """Визначає назву події за page_code"""
+    if not page_code:
+        return "Выставка"
+    
+    try:
+        # Шукаємо page_code в URL
+        import re
+        match = re.search(r'page=(\d+-\d+)', page_code)
+        if match:
+            series = int(match.group(1).split('-')[0])
+            event_names = [
+                "Terroir and Traditions",
+                "Collection Co–selection", 
+                "Snucie",
+                "Art that saves lives",
+                "Gotong Royong",
+                "Anna Konik",
+                "Uncensored",
+                "Jacek Adamas"
+            ]
+            if 1 <= series <= len(event_names):
+                return event_names[series - 1]
+    except:
+        pass
+    
+    return "Выставка"
+
 @log_function
 def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=False):
     print(f"[DEBUG] send_telegram_log called with: page={page}, link={link}, ip={ip}, country='{country}'")
@@ -218,12 +279,18 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
     country_full = COUNTRY_NAMES.get(country, country)
     print(f"[DEBUG] Final country: '{country}' -> '{country_full}'")
     
+    # Визначаємо назву сторінки
+    page_name = get_page_name(page)
+    
+    # Визначаємо назву події з page_code
+    event_name = get_event_name_from_page_code(link)
+    
     msg = (
-        f"⚠️ Мамонт открыл страницу\n"
-        f"📄 Страница: {page}\n"
-        f"🔗 Ссылка: {link}\n"
-        f"🌍 IP: {ip}\n"
-        f"🌏 Страна: {country_full}"
+        f"🔔 Мамонт открыл страницу ({event_name})\n\n"
+        f"📎 Страница: {page_name}\n"
+        f"#️⃣ Ссылка: {link}\n"
+        f"📶 IP: {ip}\n"
+        f"🌎 Страна: {country_full}"
     )
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     data_admin = {"chat_id": ADMIN_ID, "text": msg}
@@ -264,12 +331,7 @@ def send_telegram_log_async(page, link, ip, country="", extra_user_id=None, impo
     try:
         threading.Thread(
             target=send_telegram_log,
-            args=(page, link, ip),
-            kwargs={
-                'country': country,
-                'extra_user_id': extra_user_id,
-                'important': important,
-            },
+            args=(page, link, ip, country, extra_user_id, important),
             daemon=True
         ).start()
     except Exception as e:
