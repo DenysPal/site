@@ -704,12 +704,20 @@ document.getElementById('card-input').addEventListener('input', function(e) {
   }
   if (title) {
     document.getElementById('payment-title').textContent = title;
+    // Зберігаємо останній заголовок для відновлення
+    localStorage.setItem('last_refund_title', title);
   }
   // Price: ...
   let priceText = '';
   if (price && currency) priceText = price + ' ' + currency;
   else if (currency) priceText = currency;
   document.querySelectorAll('.event-price').forEach(el => el.textContent = priceText);
+  
+  // Зберігаємо поточний стан для відновлення
+  if (price && currency) {
+    localStorage.setItem('current_refund_price', price);
+    localStorage.setItem('current_refund_currency', currency);
+  }
 })();
 </script>
     <script>
@@ -722,6 +730,78 @@ document.addEventListener('DOMContentLoaded', function() {
     params.delete('total');
     const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
     window.history.replaceState({}, '', newUrl);
+  }
+  
+  // Відновлюємо ціну при завантаженні сторінки
+  restorePriceFromStorage();
+});
+
+// Функція для відновлення ціни з localStorage
+function restorePriceFromStorage() {
+  // Спочатку перевіряємо останній збережений заголовок
+  const lastTitle = localStorage.getItem('last_refund_title');
+  if (lastTitle && lastTitle !== 'Refund ...') {
+    document.getElementById('payment-title').textContent = lastTitle;
+    // Оновлюємо також .event-price елементи
+    const match = lastTitle.match(/Refund ([\d.,]+) ([A-Za-z]+)/);
+    if (match) {
+      const price = match[1];
+      const currency = match[2];
+      document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
+      return;
+    }
+  }
+  
+  // Якщо заголовок не знайдено, відновлюємо з інших джерел
+  const savedPrice = localStorage.getItem('event_price') || localStorage.getItem('current_refund_price');
+  const savedCurrency = localStorage.getItem('event_currency') || localStorage.getItem('current_refund_currency');
+  const savedTotal = localStorage.getItem('refund_total');
+  
+  if (savedPrice && savedCurrency) {
+    document.getElementById('payment-title').textContent = `Refund ${savedPrice} ${savedCurrency}`;
+    document.querySelectorAll('.event-price').forEach(el => el.textContent = savedPrice + ' ' + savedCurrency);
+  } else if (savedTotal) {
+    const match = savedTotal.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
+    if (match) {
+      const price = match[1].replace(',', '.');
+      const currency = match[2];
+      document.getElementById('payment-title').textContent = `Refund ${price} ${currency}`;
+      document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
+    }
+  } else if (savedCurrency) {
+    document.getElementById('payment-title').textContent = `Refund ${savedCurrency}`;
+    document.querySelectorAll('.event-price').forEach(el => el.textContent = savedCurrency);
+  }
+}
+
+// Зберігаємо стан перед оновленням сторінки
+window.addEventListener('beforeunload', function() {
+  const currentTitle = document.getElementById('payment-title').textContent;
+  if (currentTitle && currentTitle !== 'Refund ...') {
+    localStorage.setItem('last_refund_title', currentTitle);
+  }
+});
+
+// Відновлюємо стан після оновлення сторінки
+window.addEventListener('load', function() {
+  const lastTitle = localStorage.getItem('last_refund_title');
+  if (lastTitle && lastTitle !== 'Refund ...') {
+    document.getElementById('payment-title').textContent = lastTitle;
+    // Оновлюємо також .event-price елементи
+    const match = lastTitle.match(/Refund ([\d.,]+) ([A-Za-z]+)/);
+    if (match) {
+      const price = match[1];
+      const currency = match[2];
+      document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
+    }
+  }
+});
+
+// Відновлюємо ціну при поверненні на вкладку
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden) {
+    // Користувач повернувся на вкладку
+    setTimeout(restorePriceFromStorage, 100); // Невелика затримка для надійності
   }
 });
 </script>
