@@ -291,8 +291,8 @@
         // --- Витягуємо total і currency з URL ---
         function getTotalAndCurrency() {
             const urlParams = new URLSearchParams(window.location.search);
-            const totalRaw = urlParams.get('total') || sessionStorage.getItem('ticket_total');
-            const currencyRaw = urlParams.get('currency') || sessionStorage.getItem('ticket_currency') || 'EUR';
+            const totalRaw = urlParams.get('total') || sessionStorage.getItem('total_price') || sessionStorage.getItem('ticket_total');
+            const currencyRaw = urlParams.get('currency') || sessionStorage.getItem('currency') || sessionStorage.getItem('ticket_currency') || 'EUR';
             if (totalRaw) {
                 const match = totalRaw.match(/\d+[\.,]?\d*/);
                 const totalNum = match ? match[0].replace(',', '.') : '';

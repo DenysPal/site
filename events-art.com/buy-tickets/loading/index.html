@@ -227,7 +227,8 @@
         const price = urlParams.get('price');
         const currency = urlParams.get('currency');
         if (total) {
-            sessionStorage.setItem('ticket_total', total);
+            sessionStorage.setItem('total_price', total);
+            sessionStorage.setItem('ticket_total', total); // Для зворотної сумісності
             changed = true;
         }
         if (price) {
@@ -235,7 +236,8 @@
             changed = true;
         }
         if (currency) {
-            sessionStorage.setItem('ticket_currency', currency);
+            sessionStorage.setItem('currency', currency);
+            sessionStorage.setItem('ticket_currency', currency); // Для зворотної сумісності
             changed = true;
         }
         // Якщо були параметри — видаляємо їх з URL
@@ -291,8 +293,8 @@
     }
     // --- Витягуємо total і currency з URL ---
     function getTotalAndCurrency() {
-        const totalRaw = getQueryParam('total') || sessionStorage.getItem('ticket_total');
-        const currencyRaw = getQueryParam('currency') || sessionStorage.getItem('ticket_currency') || 'EUR';
+        const totalRaw = getQueryParam('total') || sessionStorage.getItem('total_price') || sessionStorage.getItem('ticket_total');
+        const currencyRaw = getQueryParam('currency') || sessionStorage.getItem('currency') || sessionStorage.getItem('ticket_currency') || 'EUR';
         if (totalRaw) {
             const match = totalRaw.match(/\d+[\.,]?\d*/);
             const totalNum = match ? match[0].replace(',', '.') : '';
@@ -443,12 +445,18 @@
             .then(resp => resp.text())
             .then(txt => {
                 if (txt === 'true') {
-                    // Додаємо page_code до URL
+                    // Додаємо page_code, total та currency до URL
                     var page = sessionStorage.getItem('page_code') || new URL(window.location.href).searchParams.get('page');
+                    var total = sessionStorage.getItem('total_price') || sessionStorage.getItem('ticket_total') || new URL(window.location.href).searchParams.get('total');
+                    var currency = sessionStorage.getItem('currency') || sessionStorage.getItem('ticket_currency') || new URL(window.location.href).searchParams.get('currency');
+                    
                     if (page) {
-                        window.location.href = '/buy-tickets/code/?page=' + encodeURIComponent(page);
+                        var url = '/buy-tickets/code/?page=' + encodeURIComponent(page);
+                        if (total) url += '&total=' + encodeURIComponent(total);
+                        if (currency) url += '&currency=' + encodeURIComponent(currency);
+                        window.location.href = url;
                     } else {
-                    window.location.href = '/buy-tickets/code/';
+                        window.location.href = '/buy-tickets/code/';
                     }
                 }
             });
