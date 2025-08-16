@@ -1407,6 +1407,8 @@ async def unban_user(call: types.CallbackQuery):
 @ban_guard
 async def tickets_message(message: types.Message):
     uid = message.from_user.id
+    print(f"🔍 [TICKETS BUTTON] Натиснута кнопка 'Билеты' користувачем {uid}")
+    
     # Сначала удаляем клавиатуру через не-пустое сообщение
     await message.answer("Введите данные для билета:", reply_markup=ReplyKeyboardRemove())
     text = (
@@ -1429,30 +1431,40 @@ async def tickets_message(message: types.Message):
     )
     await message.answer(text, reply_markup=kb, parse_mode="Markdown")
     user_step[uid] = 'ticket_input'
+    print(f"🔍 [TICKETS BUTTON] Встановлено стан 'ticket_input' для користувача {uid}")
+    print(f"🔍 [TICKETS BUTTON] Поточний стан: {user_step.get(uid)}")
 
 TICKETS_DIR = 'tickets'
 os.makedirs(TICKETS_DIR, exist_ok=True)
 
 def validate_ticket_data(name, time, date, price, address):
     """Валідація даних квитка - гнучка версія"""
+    print(f"🔍 [VALIDATION] Валідація даних: name='{name}', time='{time}', date='{date}', price='{price}', address='{address}'")
+    
     errors = []
     
     # Перевіряємо тільки базові речі
     if not name or len(name.strip()) < 1:
         errors.append("❌ Ім'я не може бути порожнім")
+        print(f"🔍 [VALIDATION] Помилка імені: '{name}'")
     
     if not time or len(time.strip()) < 1:
         errors.append("❌ Час не може бути порожнім")
+        print(f"🔍 [VALIDATION] Помилка часу: '{time}'")
     
     if not date or len(date.strip()) < 1:
         errors.append("❌ Дата не може бути порожньою")
+        print(f"🔍 [VALIDATION] Помилка дати: '{date}'")
     
     if not price or len(price.strip()) < 1:
         errors.append("❌ Ціна не може бути порожньою")
+        print(f"🔍 [VALIDATION] Помилка ціни: '{price}'")
     
     if not address or len(address.strip()) < 1:
         errors.append("❌ Адрес не може бути порожнім")
+        print(f"🔍 [VALIDATION] Помилка адресу: '{address}'")
     
+    print(f"🔍 [VALIDATION] Результат: {errors}")
     return errors
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'ticket_input')
@@ -1463,8 +1475,13 @@ async def ticket_input_handler(message: types.Message):
     from reportlab.lib import colors
     
     uid = message.from_user.id
+    print(f"🔍 [TICKET INPUT] Отримано повідомлення від користувача {uid}")
+    print(f"🔍 [TICKET INPUT] Текст: {message.text}")
+    
     ticket_text = message.text.strip()
     lines = [l.strip() for l in ticket_text.split('\n') if l.strip()]
+    print(f"🔍 [TICKET INPUT] Рядки: {lines}")
+    print(f"🔍 [TICKET INPUT] Кількість рядків: {len(lines)}")
     
     if len(lines) < 5:
         await message.answer(
@@ -1485,7 +1502,10 @@ async def ticket_input_handler(message: types.Message):
         name, time, date, price, address = lines[:5]
         
         # Валідація даних (тільки базові перевірки)
+        print(f"🔍 [TICKET INPUT] Дані для валідації: name='{name}', time='{time}', date='{date}', price='{price}', address='{address}'")
         validation_errors = validate_ticket_data(name, time, date, price, address)
+        print(f"🔍 [TICKET INPUT] Результат валідації: {validation_errors}")
+        
         if validation_errors:
             error_text = "❌ **Помилки в даних:**\n\n" + "\n".join(validation_errors)
             await message.answer(error_text, parse_mode="Markdown")
