@@ -202,6 +202,20 @@ def create_demo_ticket():
         c.setFont("Helvetica", 12)
         c.drawCentredString(width / 2, barcode_y - 18, barcode_value)
         
+        # Додаємо QR-код
+        qr_code_path = os.path.join('events-art.com', 'image', 'qr_code.png')
+        qr_code_y = barcode_y - 120  # Розташовуємо QR-код вище штрих-коду
+        
+        if os.path.exists(qr_code_path):
+            try:
+                # Малюємо QR-код (розмір 100x100)
+                c.drawImage(qr_code_path, (width - 100) // 2, qr_code_y, width=100, height=100)
+                print(f"✅ QR-код додано з файлу: {qr_code_path}")
+            except Exception as e:
+                print(f"❌ Помилка малювання QR-коду: {e}")
+        else:
+            print(f"⚠️ QR-код не знайдено: {qr_code_path}")
+        
         # Зберігаємо PDF
         c.save()
         print("✅ PDF створено успішно")

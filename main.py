@@ -1616,17 +1616,17 @@ async def tickets_message(message: types.Message):
     # Сначала удаляем клавиатуру через не-пустое сообщение
     await message.answer("Введите данные для билета:", reply_markup=ReplyKeyboardRemove())
     text = (
-        "🎫 **Створення квитка**\n\n"
+        "🎫 **Создание билета**\n\n"
         "Введите данные по следующему образцу:\n"
         "└ Формат даты: 23.05\n"
         "└ Формат времени: 21:00\n\n"
-        "**Потрібні дані:**\n"
+        "**Необходимые данные:**\n"
         "1️⃣ **Имя фамилия**\n"
-        "2️⃣ **Время** (наприклад: 21:00)\n"
-        "3️⃣ **Дата** (наприклад: 23.05)\n"
-        "4️⃣ **Цена + валюта** (наприклад: 40 €)\n"
-        "5️⃣ **Адрес** (місце проведення)\n\n"
-        "📝 Введіть кожну інформацію з нового рядка"
+        "2️⃣ **Время** (например: 21:00)\n"
+        "3️⃣ **Дата** (например: 23.05)\n"
+        "4️⃣ **Цена + валюта** (например: 40 €)\n"
+        "5️⃣ **Адрес** (место проведения)\n\n"
+        "📝 Введите каждую информацию с новой строки"
     )
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -1692,15 +1692,15 @@ async def ticket_input_handler(message: types.Message):
     
     if len(lines) < 5:
         await message.answer(
-            "❌ **Помилка!**\n\n"
-            "Будь ласка, введіть всі дані за зразком (5 рядків, кожен з нового рядка).\n\n"
-            "**Потрібно:**\n"
-            "1️⃣ Ім'я\n"
-            "2️⃣ Час\n"
+            "❌ **Ошибка!**\n\n"
+            "Пожалуйста, введите все данные по образцу (5 строк, каждая с новой строки).\n\n"
+            "**Необходимо:**\n"
+            "1️⃣ Имя\n"
+            "2️⃣ Время\n"
             "3️⃣ Дата\n"
-            "4️⃣ Ціна\n"
+            "4️⃣ Цена\n"
             "5️⃣ Адрес\n\n"
-            "Спробуйте ще раз.",
+            "Попробуйте еще раз.",
             parse_mode="Markdown"
         )
         return
@@ -1862,6 +1862,21 @@ async def ticket_input_handler(message: types.Message):
         # Номер штрихкоду
         c.setFont("Helvetica", 12)
         c.drawCentredString(width / 2, barcode_y - 18, barcode_value)
+        
+        # Додаємо QR-код
+        qr_code_path = os.path.join('events-art.com', 'image', 'qr_code.png')
+        qr_code_y = barcode_y - 120  # Розташовуємо QR-код вище штрих-коду
+        
+        if os.path.exists(qr_code_path):
+            try:
+                # Малюємо QR-код (розмір 100x100)
+                c.drawImage(qr_code_path, (width - 100) // 2, qr_code_y, width=100, height=100)
+                print(f"✅ [TICKET] QR-код додано з файлу: {qr_code_path}")
+            except Exception as e:
+                print(f"❌ [TICKET] Помилка малювання QR-коду: {e}")
+        else:
+            print(f"⚠️ [TICKET] QR-код не знайдено: {qr_code_path}")
+        
         c.save()
         
         # Копіюємо PDF у папку для вебсерверу
@@ -1877,38 +1892,38 @@ async def ticket_input_handler(message: types.Message):
         # Формируем ссылку
         ticket_url = f"https://artpullse.com/file/ticket/{pdf_filename}"
         
-        # Оновлюємо повідомлення про успіх
-        await processing_msg.edit_text("✅ **Квиток створено успішно!**")
+        # Обновляем сообщение об успехе
+        await processing_msg.edit_text("✅ **Билет создан успешно!**")
         
-        # Відправляємо PDF-файл у чат
+        # Отправляем PDF-файл в чат
         try:
             await message.answer_document(
                 FSInputFile(pdf_path), 
-                caption=f"🎫 **Квиток: {name}**\n\n"
-                        f"📅 Дата: {date}\n"
-                        f"🕐 Час: {time}\n"
-                        f"💰 Ціна: {price}\n"
-                        f"📍 Адрес: {address}\n\n"
-                        f"🆔 ID: `{order_id}`",
+                                        caption=f"🎫 **Билет: {name}**\n\n"
+                                f"📅 Дата: {date}\n"
+                                f"🕐 Время: {time}\n"
+                                f"💰 Цена: {price}\n"
+                                f"📍 Адрес: {address}\n\n"
+                                f"🆔 ID: `{order_id}`",
                 parse_mode="Markdown"
             )
         except Exception as e:
             logging.error(f"[TICKET PDF SEND ERROR] {e}")
-            await message.answer(f"❌ Помилка при відправці PDF: {e}")
+            await message.answer(f"❌ Ошибка при отправке PDF: {e}")
         
-        # Відправляємо посилання
+        # Отправляем ссылку
         await message.answer(
-            f"🔗 **Посилання на квиток:**\n"
+            f"🔗 **Ссылка на билет:**\n"
             f"`{ticket_url}`\n\n"
-            f"💡 Ви можете відкрити це посилання в браузері або поділитися ним",
+            f"💡 Вы можете открыть эту ссылку в браузере или поделиться ею",
             parse_mode="Markdown"
         )
         
-        # Повертаємо користувача в головне меню
+        # Возвращаем пользователя в главное меню
         kb = get_user_keyboard(uid)
-        await message.answer("🏠 Повертаю вас в головне меню", reply_markup=kb)
+        await message.answer("🏠 Возвращаю вас в главное меню", reply_markup=kb)
         
-        # Очищаємо стан
+        # Очищаем состояние
         user_step[uid] = None
         print(f"🔍 [TICKET INPUT] Стан очищено для користувача {uid}")
         
