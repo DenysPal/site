@@ -105,9 +105,9 @@ def create_demo_ticket():
         c.setFillColorRGB(0.3, 0.3, 0.3)  # Ще темніший сірий колір
         c.rect(0, 0, width, height, fill=1)
         
-        # Білий прямокутник всередині сірого (ще менший по ширині, як на другому скріншоті)
+        # Білий прямокутник всередині сірого (менший по ширині та довжині, як на другому скріншоті)
         c.setFillColorRGB(1, 1, 1)  # Білий колір
-        c.rect(80, 30, width - 160, height - 60, fill=1)
+        c.rect(80, 30, width - 160, height - 200, fill=1)  # Зменшено довжину з height - 60 на height - 200
         
         # Верхний домен по центру, серым (опускаємо нижче для рамки)
         top_y = height - 60
@@ -160,7 +160,7 @@ def create_demo_ticket():
         c.setFont("Helvetica-Bold", 16)
         c.drawCentredString(width / 2, loc_y, f"Location: {demo_data['address']}")
         
-        # Пунктирна лінія
+        # Пунктирна лінія (в межах білого прямокутника)
         line_y = loc_y - 30
         c.setStrokeColor(colors.grey)
         c.setLineWidth(1)
@@ -168,7 +168,7 @@ def create_demo_ticket():
             c.setDash(1, 3)
         except Exception:
             pass
-        c.line(50, line_y, width - 50, line_y)
+        c.line(100, line_y, width - 100, line_y)  # Лінія в межах білого прямокутника (80px + 20px відступ)
         
         # Штрих-код прибрано - залишаємо пусте місце
         print(f"🔍 [DEMO] Штрих-код прибрано згідно з вимогами")
@@ -178,7 +178,7 @@ def create_demo_ticket():
         
         # Додаємо фото image.png знизу (замість штрих-коду) - в межах білого прямокутника
         bottom_image_path = os.path.join('events-art.com', 'image', 'image.png')
-        bottom_image_y = 50  # Розташовуємо фото внизу білого прямокутника
+        bottom_image_y = 180  # Підтянуто вгору, щоб було в білому прямокутнику
         bottom_image_width = width - 200  # Ширина в межах білого прямокутника
         bottom_image_x = 100  # Позиція по центру білого прямокутника
         
