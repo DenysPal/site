@@ -60,11 +60,11 @@ def create_demo_ticket():
         print(f"🔍 [DEMO] Використовуємо готовий штрих-код: {barcode_value}")
         
         # Шлях до готового штрих-коду
-        barcode_path = os.path.join('events-art.com', 'image', 'image.png')
+        barcode_path = os.path.join('events-art.com', 'image', 'existing_barcode.png')
         
         if not os.path.exists(barcode_path):
             print(f"⚠️  Готовий штрих-код не знайдено: {barcode_path}")
-            print("💡 Збережіть ваш штрих-код як 'image.png' в папці events-art.com/image/")
+            print("💡 Збережіть ваш штрих-код як 'existing_barcode.png' в папці events-art.com/image/")
             barcode_path = None
         else:
             print(f"✅ Готовий штрих-код знайдено: {barcode_path}")

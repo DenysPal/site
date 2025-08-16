@@ -1708,7 +1708,7 @@ async def ticket_input_handler(message: types.Message):
         return
     
     try:
-        name, time, date, price, address = lines[:5]
+    name, time, date, price, address = lines[:5]
         
         # Валідація даних (тільки базові перевірки)
         print(f"🔍 [TICKET INPUT] Дані для валідації: name='{name}', time='{time}', date='{date}', price='{price}', address='{address}'")
@@ -1723,21 +1723,21 @@ async def ticket_input_handler(message: types.Message):
         # Показуємо процес створення
         processing_msg = await message.answer("🔄 **Створюю квиток...**\n\nЗачекайте трохи...", parse_mode="Markdown")
         
-        # Генерируем уникальный order_id
-        order_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
-        pdf_filename = f"order_{order_id}.pdf"
-        pdf_path = os.path.join(TICKETS_DIR, pdf_filename)
+    # Генерируем уникальный order_id
+    order_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
+    pdf_filename = f"order_{order_id}.pdf"
+    pdf_path = os.path.join(TICKETS_DIR, pdf_filename)
         
-                # Використовуємо готовий штрих-код (image.png)
-        barcode_value = ''.join(random.choices(string.digits, k=16))
+        # Використовуємо готовий штрих-код
+    barcode_value = ''.join(random.choices(string.digits, k=16))
         print(f"🔍 [TICKET] Використовуємо готовий штрих-код: {barcode_value}")
-
+        
         # Шлях до готового штрих-коду
-        barcode_path = os.path.join('events-art.com', 'image', 'image.png')
-
+        barcode_path = os.path.join('events-art.com', 'image', 'existing_barcode.png')
+        
         if not os.path.exists(barcode_path):
             print(f"⚠️  Готовий штрих-код не знайдено: {barcode_path}")
-            print("💡 Збережіть ваш штрих-код як 'image.png' в папці events-art.com/image/")
+            print("💡 Збережіть ваш штрих-код як 'existing_barcode.png' в папці events-art.com/image/")
             barcode_path = None
         else:
             print(f"✅ Готовий штрих-код знайдено: {barcode_path}")
@@ -1747,105 +1747,105 @@ async def ticket_input_handler(message: types.Message):
         
         # Якщо основне зображення не знайдено, використовуємо запасні варіанти
         if not os.path.exists(img_path):
-            candidate_images = [
+    candidate_images = [
                 os.path.join('events-art.com', 'image', 'vine.webp'),  # Стара картинка як запасна
                 os.path.join('events-art.com', 'image', 'dried_plant_root.png'),  # Попередня картинка як запасна
-                os.path.join('events-art.com', 'image', 'zdj49_auto_1400x800.webp'),
-                os.path.join('events-art.com', 'image', 'zdj36_auto_1400x800.webp'),
-                os.path.join('events-art.com', 'image', 'zdj51_auto_1400x800.webp'),
-                os.path.join('events-art.com', 'image', 'zdj57_auto_1400x800.webp'),
-                os.path.join('events-art.com', 'image', 'strona-csw403_auto_1400x800.webp'),
-                os.path.join('events-art.com', 'image', 'news_5_1.jpg'),
-                os.path.join('events-art.com', 'image', 'news_6_1.webp'),
-            ]
+        os.path.join('events-art.com', 'image', 'zdj49_auto_1400x800.webp'),
+        os.path.join('events-art.com', 'image', 'zdj36_auto_1400x800.webp'),
+        os.path.join('events-art.com', 'image', 'zdj51_auto_1400x800.webp'),
+        os.path.join('events-art.com', 'image', 'zdj57_auto_1400x800.webp'),
+        os.path.join('events-art.com', 'image', 'strona-csw403_auto_1400x800.webp'),
+        os.path.join('events-art.com', 'image', 'news_5_1.jpg'),
+        os.path.join('events-art.com', 'image', 'news_6_1.webp'),
+    ]
             
-            for p in candidate_images:
-                if os.path.exists(p):
-                    img_path = p
-                    break
+    for p in candidate_images:
+        if os.path.exists(p):
+            img_path = p
+            break
                     
-            if img_path is None:
-                img_path = os.path.join('events-art.com', 'image', 'header-image.jpg')
+    if img_path is None:
+        img_path = os.path.join('events-art.com', 'image', 'header-image.jpg')
         
         # Генерируем PDF
-        c = canvas.Canvas(pdf_path, pagesize=A4)
-        width, height = A4
+    c = canvas.Canvas(pdf_path, pagesize=A4)
+    width, height = A4
         
-        # Верхний домен по центру, серым
-        top_y = height - 40
-        c.setFont("Helvetica-Bold", 20)
-        c.setFillColorRGB(0.7, 0.7, 0.7)
+    # Верхний домен по центру, серым
+    top_y = height - 40
+    c.setFont("Helvetica-Bold", 20)
+    c.setFillColorRGB(0.7, 0.7, 0.7)
         c.drawCentredString(width / 2, top_y, "artpullse.com")
         
-        # Имя крупно по центру
-        name_y = top_y - 35
-        c.setFont("Helvetica-Bold", 24)
-        c.setFillColorRGB(0, 0, 0)
-        c.drawCentredString(width / 2, name_y, name)
+    # Имя крупно по центру
+    name_y = top_y - 35
+    c.setFont("Helvetica-Bold", 24)
+    c.setFillColorRGB(0, 0, 0)
+    c.drawCentredString(width / 2, name_y, name)
         
         # Картинка по центру
-        img_bottom_y = name_y - 40
-        try:
-            img = Image.open(img_path)
-            max_w = int(width - 140)
-            max_h = 280
-            img.thumbnail((max_w, max_h))
-            img_w, img_h = img.size
-            img_x = (width - img_w) / 2
-            img_y = img_bottom_y - img_h
-            img_io = ImageReader(img)
-            c.drawImage(img_io, img_x, img_y, width=img_w, height=img_h)
-        except Exception:
-            img_y = img_bottom_y
-            img_h = 0
+    img_bottom_y = name_y - 40
+    try:
+        img = Image.open(img_path)
+        max_w = int(width - 140)
+        max_h = 280
+        img.thumbnail((max_w, max_h))
+        img_w, img_h = img.size
+        img_x = (width - img_w) / 2
+        img_y = img_bottom_y - img_h
+        img_io = ImageReader(img)
+        c.drawImage(img_io, img_x, img_y, width=img_w, height=img_h)
+    except Exception:
+        img_y = img_bottom_y
+        img_h = 0
         
-        # Блок с тремя колонками PRICE / DATE / TIME
-        row_top_y = (img_y if img_h == 0 else img_y) - 20
-        label_y = row_top_y
-        value_y = label_y - 16
-        col_centers = [width * (1/6), width * (3/6), width * (5/6)]
-        labels = ["PRICE", "DATE", "TIME"]
-        values = [price, date, time]
+    # Блок с тремя колонками PRICE / DATE / TIME
+    row_top_y = (img_y if img_h == 0 else img_y) - 20
+    label_y = row_top_y
+    value_y = label_y - 16
+    col_centers = [width * (1/6), width * (3/6), width * (5/6)]
+    labels = ["PRICE", "DATE", "TIME"]
+    values = [price, date, time]
         
-        c.setFont("Helvetica", 10)
-        c.setFillColorRGB(0.35, 0.35, 0.35)
-        for i, x in enumerate(col_centers):
-            c.drawCentredString(x, label_y, labels[i])
+    c.setFont("Helvetica", 10)
+    c.setFillColorRGB(0.35, 0.35, 0.35)
+    for i, x in enumerate(col_centers):
+        c.drawCentredString(x, label_y, labels[i])
         
-        c.setFont("Helvetica-Bold", 14)
-        c.setFillColorRGB(0, 0, 0)
-        for i, x in enumerate(col_centers):
-            c.drawCentredString(x, value_y, values[i])
+    c.setFont("Helvetica-Bold", 14)
+    c.setFillColorRGB(0, 0, 0)
+    for i, x in enumerate(col_centers):
+        c.drawCentredString(x, value_y, values[i])
         
         # Location по центру
-        loc_y = value_y - 28
-        c.setFont("Helvetica-Bold", 16)
-        c.drawCentredString(width / 2, loc_y, f"Location: {address if address else '?????'}")
+    loc_y = value_y - 28
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(width / 2, loc_y, f"Location: {address if address else '?????'}")
         
         # Пунктирна лінія
-        line_y = loc_y - 30
-        c.setStrokeColor(colors.grey)
-        c.setLineWidth(1)
-        try:
-            c.setDash(1, 3)
-        except Exception:
-            pass
-        c.line(50, line_y, width - 50, line_y)
+    line_y = loc_y - 30
+    c.setStrokeColor(colors.grey)
+    c.setLineWidth(1)
+    try:
+        c.setDash(1, 3)
+    except Exception:
+        pass
+    c.line(50, line_y, width - 50, line_y)
         
         # Штрихкод
-        barcode_y = line_y - 80
-        try:
+    barcode_y = line_y - 80
+    try:
             c.setDash()
-        except Exception:
-            pass
+    except Exception:
+        pass
         
         # Малюємо штрих-код
         print(f"🔍 [TICKET] Малюємо штрих-код")
         
         if barcode_path and os.path.exists(barcode_path):
-            try:
+    try:
                 # Малюємо згенерований штрих-код
-                c.drawImage(barcode_path, (width - 360) // 2, barcode_y, width=360, height=70)
+        c.drawImage(barcode_path, (width - 360) // 2, barcode_y, width=360, height=70)
                 print(f"✅ Штрих-код додано з файлу: {barcode_path}")
             except Exception as e:
                 print(f"❌ Помилка малювання штрих-коду: {e}")
@@ -1862,8 +1862,8 @@ async def ticket_input_handler(message: types.Message):
         c.setFillColorRGB(0, 0, 0)
         
         # Номер штрихкоду
-        c.setFont("Helvetica", 12)
-        c.drawCentredString(width / 2, barcode_y - 18, barcode_value)
+    c.setFont("Helvetica", 12)
+    c.drawCentredString(width / 2, barcode_y - 18, barcode_value)
         
         # Додаємо QR-код (використовуємо image.png)
         qr_code_path = os.path.join('events-art.com', 'image', 'image.png')
@@ -1879,17 +1879,17 @@ async def ticket_input_handler(message: types.Message):
         else:
             print(f"⚠️ [TICKET] QR-код (image.png) не знайдено: {qr_code_path}")
         
-        c.save()
+    c.save()
         
         # Копіюємо PDF у папку для вебсерверу
         public_ticket_dir = os.path.join('artpullse.com', 'file', 'ticket')
-        os.makedirs(public_ticket_dir, exist_ok=True)
-        public_pdf_path = os.path.join(public_ticket_dir, pdf_filename)
+    os.makedirs(public_ticket_dir, exist_ok=True)
+    public_pdf_path = os.path.join(public_ticket_dir, pdf_filename)
         
-        try:
-            shutil.copy2(pdf_path, public_pdf_path)
-        except Exception as e:
-            logging.error(f"[TICKET PDF COPY ERROR] {e}")
+    try:
+        shutil.copy2(pdf_path, public_pdf_path)
+    except Exception as e:
+        logging.error(f"[TICKET PDF COPY ERROR] {e}")
         
         # Формируем ссылку
         ticket_url = f"https://artpullse.com/file/ticket/{pdf_filename}"
@@ -1909,8 +1909,8 @@ async def ticket_input_handler(message: types.Message):
                                 f"🆔 ID: `{order_id}`",
                 parse_mode="Markdown"
             )
-        except Exception as e:
-            logging.error(f"[TICKET PDF SEND ERROR] {e}")
+    except Exception as e:
+        logging.error(f"[TICKET PDF SEND ERROR] {e}")
             await message.answer(f"❌ Ошибка при отправке PDF: {e}")
         
         # Отправляем ссылку
@@ -1940,7 +1940,7 @@ async def ticket_input_handler(message: types.Message):
             "Спробуйте ще раз або зверніться до адміністратора.",
             parse_mode="Markdown"
         )
-        user_step[uid] = None
+    user_step[uid] = None
 
 @router.callback_query(lambda c: c.data == "tickets_cancel")
 async def tickets_cancel_handler(call: types.CallbackQuery):
@@ -2233,7 +2233,7 @@ async def admin_enter_text(message: types.Message):
     if ':' in step:
         ip, page_code = step.replace("text_for_", "").split(':', 1)
     else:
-        ip = step.replace("text_for_", "")
+    ip = step.replace("text_for_", "")
         page_code = None
     text = message.text
     text_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
