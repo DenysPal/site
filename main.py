@@ -46,6 +46,9 @@ except Exception as e:
     # Fallback to basic console logging
     logging.basicConfig(level=logging.INFO)
 
+# --- Глобальні змінні ---
+WEBHOOK_PORT = 8081  # Початковий порт для webhook
+
 
 payment_type_by_uid = {}
 
@@ -3210,9 +3213,28 @@ if __name__ == '__main__':
         app.router.add_get('/api/event_data', event_data_api)  # <-- Додаємо новий endpoint
         runner = web.AppRunner(app)
         await runner.setup()
-        site = web.TCPSite(runner, '0.0.0.0', 8081)
+        
+        # Функція для пошуку вільного порту
+        def find_free_port(start_port=8081, max_attempts=10):
+            import socket
+            for port in range(start_port, start_port + max_attempts):
+                try:
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                        s.bind(('0.0.0.0', port))
+                        return port
+                except OSError:
+                    continue
+            return start_port  # Повертаємо початковий порт якщо нічого не знайдено
+        
+        # Знаходимо вільний порт
+        port = find_free_port(8081, 20)
+        site = web.TCPSite(runner, '0.0.0.0', port)
         await site.start()
-        print('Запускаю aiohttp webhook на 0.0.0.0:8081')
+        print(f'✅ Запускаю aiohttp webhook на 0.0.0.0:{port}')
+        
+        # Зберігаємо порт у глобальній змінній для використання в інших частинах
+        global WEBHOOK_PORT
+        WEBHOOK_PORT = port
         # aiogram polling
         await dp.start_polling(bot)
     asyncio.run(main())

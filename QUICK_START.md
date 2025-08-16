@@ -20,7 +20,18 @@ python demo_ticket_generation.py
 ## 🎯 Як використовувати
 
 ### Через Telegram бота:
-1. Запустіть бота: `python main.py`
+1. **Запустіть бота** (виберіть один з варіантів):
+   ```bash
+   # Варіант 1: Автоматичний пошук порту
+   python quick_start.py
+   
+   # Варіант 2: Прямий запуск (може бути помилка з портом)
+   python main.py
+   
+   # Варіант 3: Розширений запуск з перевірками
+   python start_bot.py
+   ```
+
 2. Натисніть кнопку **"🎫Билеты"**
 3. Введіть дані у форматі:
    ```
@@ -40,6 +51,8 @@ python demo_ticket_generation.py
 ```
 ├── main.py                    # Основний бот
 ├── requirements.txt           # Залежності
+├── quick_start.py            # Швидкий запуск (рекомендовано)
+├── start_bot.py              # Розширений запуск
 ├── test_ticket_system.py     # Тестування
 ├── demo_ticket_generation.py # Демонстрація
 ├── tickets/                  # Локальні квитки
@@ -50,6 +63,12 @@ python demo_ticket_generation.py
 
 ## 🔧 Якщо щось не працює
 
+### Проблема з портом (помилка "address already in use"):
+1. **Перевірте порти**: `python check_ports.py`
+2. **Автоматичний запуск**: `python quick_start.py`
+3. **Розширена перевірка**: `python start_bot.py`
+
+### Інші проблеми:
 1. **Перевірте залежності**: `python test_ticket_system.py`
 2. **Створіть папки**: `mkdir -p tickets events-art.com/file/ticket`
 3. **Додайте зображення** в `events-art.com/image/`
