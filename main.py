@@ -1770,6 +1770,14 @@ async def ticket_input_handler(message: types.Message):
         c = canvas.Canvas(pdf_path, pagesize=A4)
         width, height = A4
         
+        # Малюємо сіру окантовку для всього білета
+        c.setFillColorRGB(0.95, 0.95, 0.95)  # Дуже світло-сірий колір
+        c.rect(20, 20, width - 40, height - 40, fill=1)
+        
+        # Білий фон для білета
+        c.setFillColorRGB(1, 1, 1)  # Білий колір
+        c.rect(30, 30, width - 60, height - 60, fill=1)
+        
         # Верхний домен по центру, серым
         top_y = height - 40
         c.setFont("Helvetica-Bold", 20)
@@ -1832,7 +1840,7 @@ async def ticket_input_handler(message: types.Message):
         c.line(50, line_y, width - 50, line_y)
         
         # Штрихкод
-        barcode_y = line_y - 60  # Піднімаємо вище (було -80, стало -60)
+        barcode_y = line_y - 20  # Піднімаємо ще вище (було -40, стало -20)
         try:
             c.setDash()
         except Exception:
@@ -1845,10 +1853,10 @@ async def ticket_input_handler(message: types.Message):
             try:
                 # Малюємо сіру рамку для штрих-коду
                 c.setFillColorRGB(0.9, 0.9, 0.9)  # Сірий колір
-                c.rect((width - 450) // 2, barcode_y - 10, 450, 110, fill=1)
+                c.rect((width - 500) // 2, barcode_y - 10, 500, 130, fill=1)
                 
                 # Малюємо згенерований штрих-код (збільшуємо розмір ще більше)
-                c.drawImage(barcode_path, (width - 450) // 2, barcode_y, width=450, height=110)
+                c.drawImage(barcode_path, (width - 500) // 2, barcode_y, width=500, height=130)
                 print(f"✅ Штрих-код додано з файлу: {barcode_path}")
             except Exception as e:
                 print(f"❌ Помилка малювання штрих-коду: {e}")

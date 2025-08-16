@@ -7,6 +7,8 @@ import os
 import shutil
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
+from reportlab.lib import colors
+from reportlab.platypus import ImageReader
 
 def create_ticket_with_existing_barcode():
     """Створює квиток з існуючим штрих-кодом"""
@@ -23,72 +25,98 @@ def create_ticket_with_existing_barcode():
     
     # Створюємо тестовий PDF
     pdf_path = 'ticket_with_existing_barcode.pdf'
+    
+    # Генерируем PDF
     c = canvas.Canvas(pdf_path, pagesize=A4)
     width, height = A4
     
-    # Додаємо тестовий контент
-    c.setFont("Helvetica-Bold", 24)
-    c.drawCentredString(width / 2, height - 100, "TICKET WITH EXISTING BARCODE")
+    # Малюємо сіру окантовку для всього білета
+    c.setFillColorRGB(0.95, 0.95, 0.95)  # Дуже світло-сірий колір
+    c.rect(20, 20, width - 40, height - 40, fill=1)
     
-    # Додаємо домен
+    # Білий фон для білета
+    c.setFillColorRGB(1, 1, 1)  # Білий колір
+    c.rect(30, 30, width - 60, height - 60, fill=1)
+    
+    # Верхний домен по центру, серым
+    top_y = height - 40
     c.setFont("Helvetica-Bold", 20)
     c.setFillColorRGB(0.7, 0.7, 0.7)
-    c.drawCentredString(width / 2, height - 150, "artpullse.com")
+    c.drawCentredString(width / 2, top_y, "artpullse.com")
     
-    # Додаємо зображення (якщо є)
+    # Имя крупно по центру
+    name_y = top_y - 35
+    c.setFont("Helvetica-Bold", 24)
+    c.setFillColorRGB(0, 0, 0)
+    c.drawCentredString(width / 2, name_y, "TICKET WITH EXISTING BARCODE")
+    
+    # Картинка по центру
+    img_bottom_y = name_y - 40
     image_path = os.path.join('events-art.com', 'image', '_dsf0493_ko_lekcja_3000px_auto_1400x800.webp')
     if os.path.exists(image_path):
         try:
-            from reportlab.platypus import Image
-            img = Image(image_path, width=200, height=100)
-            img.drawOn(c, (width - 200) // 2, height - 250)
-            print(f"✅ Додано зображення: {image_path}")
+            img = ImageReader(image_path)
+            max_w = int(width - 140)
+            max_h = 280
+            img.thumbnail((max_w, max_h))
+            img_w, img_h = img.size
+            img_x = (width - img_w) / 2
+            img_y = img_bottom_y - img_h
+            img_io = ImageReader(img)
+            c.drawImage(img_io, img_x, img_y, width=img_w, height=img_h)
+            print(f"✅ Додано зображення: {os.path.basename(image_path)}")
         except Exception as e:
             print(f"⚠️  Помилка завантаження зображення: {e}")
+            img_y = img_bottom_y
+            img_h = 0
     else:
-        # Спробуємо запасні картинки
-        fallback_images = [
-            os.path.join('events-art.com', 'image', 'dried_plant_root.png'),
-            os.path.join('events-art.com', 'image', 'vine.webp')
-        ]
-        
-        for fallback_path in fallback_images:
-            if os.path.exists(fallback_path):
-                try:
-                    from reportlab.platypus import Image
-                    img = Image(fallback_path, width=200, height=100)
-                    img.drawOn(c, (width - 200) // 2, height - 250)
-                    print(f"✅ Додано запасне зображення: {fallback_path}")
-                    break
-                except Exception as e:
-                    print(f"⚠️  Помилка завантаження запасного зображення: {e}")
-                    continue
+        img_y = img_bottom_y
+        img_h = 0
     
-    # Додаємо інформацію про квиток
-    info_y = height - 350
+    # Блок с тремя колонками PRICE / DATE / TIME
+    row_top_y = (img_y if img_h == 0 else img_y) - 20
+    label_y = row_top_y
+    value_y = label_y - 16
+    col_centers = [width * (1/6), width * (3/6), width * (5/6)]
+    labels = ["PRICE", "DATE", "TIME"]
+    values = ["40 €", "23.05", "21:00"]
+    
+    c.setFont("Helvetica", 10)
+    c.setFillColorRGB(0.35, 0.35, 0.35)
+    for i, x in enumerate(col_centers):
+        c.drawCentredString(x, label_y, labels[i])
+    
+    c.setFont("Helvetica-Bold", 14)
+    c.setFillColorRGB(0, 0, 0)
+    for i, x in enumerate(col_centers):
+        c.drawCentredString(x, value_y, values[i])
+    
+    # Location по центру
+    loc_y = value_y - 28
     c.setFont("Helvetica-Bold", 16)
-    c.drawCentredString(width / 2, info_y, "PRICE: 54sdd")
-    c.drawCentredString(width / 2, info_y - 25, "DATE: 20.20")
-    c.drawCentredString(width / 2, info_y - 50, "TIME: 20.20")
-    c.drawCentredString(width / 2, info_y - 75, "Location: ddd")
+    c.drawCentredString(width / 2, loc_y, "Location: ?????")
     
     # Пунктирна лінія
-    line_y = info_y - 100
-    c.setStrokeColorRGB(0.5, 0.5, 0.5)
+    line_y = loc_y - 30
+    c.setStrokeColor(colors.grey)
     c.setLineWidth(1)
+    try:
+        c.setDash(1, 3)
+    except Exception:
+        pass
     c.line(50, line_y, width - 50, line_y)
     
-    # Малюємо існуючий штрих-код
-    barcode_y = line_y - 80  # Піднімаємо вище (було -100, стало -80)
+    # Штрих-код
+    barcode_y = line_y - 20  # Піднімаємо ще вище (було -40, стало -20)
     print(f"🔍 Малюємо існуючий штрих-код на позиції y={barcode_y}")
     
     try:
         # Малюємо сіру рамку для штрих-коду
         c.setFillColorRGB(0.9, 0.9, 0.9)  # Сірий колір
-        c.rect((width - 450) // 2, barcode_y - 10, 450, 110, fill=1)
+        c.rect((width - 500) // 2, barcode_y - 10, 500, 130, fill=1)
         
         # Малюємо існуючий штрих-код (збільшуємо розмір ще більше)
-        c.drawImage(existing_barcode, (width - 450) // 2, barcode_y, width=450, height=110)
+        c.drawImage(existing_barcode, (width - 500) // 2, barcode_y, width=500, height=130)
         print(f"✅ Штрих-код додано з файлу: {existing_barcode}")
     except Exception as e:
         print(f"❌ Помилка малювання штрих-коду: {e}")
@@ -101,7 +129,7 @@ def create_ticket_with_existing_barcode():
     
     # Додаємо QR-код (використовуємо image.png)
     qr_code_path = os.path.join('events-art.com', 'image', 'image.png')
-    qr_code_y = barcode_y - 140  # Розташовуємо QR-код вище штрих-коду (збільшуємо відстань)
+    qr_code_y = barcode_y - 160  # Розташовуємо QR-код вище штрих-коду (збільшуємо відстань)
     
     if os.path.exists(qr_code_path):
         try:

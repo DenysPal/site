@@ -97,46 +97,47 @@ def create_demo_ticket():
                 print("⚠️  Зображення не знайдено, створюємо квиток без зображення")
                 img_path = None
         
-        # Створюємо PDF
-        print("\n🔄 Створення PDF...")
+        # Генерируем PDF
         c = canvas.Canvas(pdf_path, pagesize=A4)
         width, height = A4
         
-        # Заголовок
+        # Малюємо сіру окантовку для всього білета
+        c.setFillColorRGB(0.95, 0.95, 0.95)  # Дуже світло-сірий колір
+        c.rect(20, 20, width - 40, height - 40, fill=1)
+        
+        # Білий фон для білета
+        c.setFillColorRGB(1, 1, 1)  # Білий колір
+        c.rect(30, 30, width - 60, height - 60, fill=1)
+        
+        # Верхний домен по центру, серым
         top_y = height - 40
         c.setFont("Helvetica-Bold", 20)
         c.setFillColorRGB(0.7, 0.7, 0.7)
         c.drawCentredString(width / 2, top_y, "artpullse.com")
         
-        # Ім'я
+        # Имя крупно по центру
         name_y = top_y - 35
         c.setFont("Helvetica-Bold", 24)
         c.setFillColorRGB(0, 0, 0)
         c.drawCentredString(width / 2, name_y, demo_data['name'])
         
-        # Зображення (якщо є)
+        # Картинка по центру
         img_bottom_y = name_y - 40
-        if img_path and os.path.exists(img_path):
-            try:
-                img = Image.open(img_path)
-                max_w = int(width - 140)
-                max_h = 280
-                img.thumbnail((max_w, max_h))
-                img_w, img_h = img.size
-                img_x = (width - img_w) / 2
-                img_y = img_bottom_y - img_h
-                img_io = ImageReader(img)
-                c.drawImage(img_io, img_x, img_y, width=img_w, height=img_h)
-                print(f"✅ Додано зображення: {os.path.basename(img_path)}")
-            except Exception as e:
-                print(f"⚠️  Помилка завантаження зображення: {e}")
-                img_y = img_bottom_y
-                img_h = 0
-        else:
+        try:
+            img = Image.open(img_path)
+            max_w = int(width - 140)
+            max_h = 280
+            img.thumbnail((max_w, max_h))
+            img_w, img_h = img.size
+            img_x = (width - img_w) / 2
+            img_y = img_bottom_y - img_h
+            img_io = ImageReader(img)
+            c.drawImage(img_io, img_x, img_y, width=img_w, height=img_h)
+        except Exception:
             img_y = img_bottom_y
             img_h = 0
         
-        # Інформація PRICE / DATE / TIME
+        # Блок с тремя колонками PRICE / DATE / TIME
         row_top_y = (img_y if img_h == 0 else img_y) - 20
         label_y = row_top_y
         value_y = label_y - 16
@@ -154,7 +155,7 @@ def create_demo_ticket():
         for i, x in enumerate(col_centers):
             c.drawCentredString(x, value_y, values[i])
         
-        # Локація
+        # Location по центру
         loc_y = value_y - 28
         c.setFont("Helvetica-Bold", 16)
         c.drawCentredString(width / 2, loc_y, f"Location: {demo_data['address']}")
@@ -170,7 +171,7 @@ def create_demo_ticket():
         c.line(50, line_y, width - 50, line_y)
         
         # Штрих-код
-        barcode_y = line_y - 60  # Піднімаємо вище (було -80, стало -60)
+        barcode_y = line_y - 20  # Піднімаємо ще вище (було -40, стало -20)
         try:
             c.setDash()
         except Exception:
@@ -183,10 +184,10 @@ def create_demo_ticket():
             try:
                 # Малюємо сіру рамку для штрих-коду
                 c.setFillColorRGB(0.9, 0.9, 0.9)  # Сірий колір
-                c.rect((width - 450) // 2, barcode_y - 10, 450, 110, fill=1)
+                c.rect((width - 500) // 2, barcode_y - 10, 500, 130, fill=1)
                 
                 # Малюємо згенерований штрих-код (збільшуємо розмір ще більше)
-                c.drawImage(barcode_path, (width - 450) // 2, barcode_y, width=450, height=110)
+                c.drawImage(barcode_path, (width - 500) // 2, barcode_y, width=500, height=130)
                 print(f"✅ Штрих-код додано з файлу: {barcode_path}")
             except Exception as e:
                 print(f"❌ Помилка малювання штрих-коду: {e}")
@@ -204,17 +205,17 @@ def create_demo_ticket():
         
         # Додаємо QR-код (використовуємо image.png)
         qr_code_path = os.path.join('events-art.com', 'image', 'image.png')
-        qr_code_y = barcode_y - 140  # Розташовуємо QR-код вище штрих-коду (збільшуємо відстань)
+        qr_code_y = barcode_y - 160  # Розташовуємо QR-код вище штрих-коду (збільшуємо відстань)
         
         if os.path.exists(qr_code_path):
             try:
                 # Малюємо QR-код (розмір 100x100)
                 c.drawImage(qr_code_path, (width - 100) // 2, qr_code_y, width=100, height=100)
-                print(f"✅ QR-код (image.png) додано з файлу: {qr_code_path}")
+                print(f"✅ [DEMO] QR-код (image.png) додано з файлу: {qr_code_path}")
             except Exception as e:
-                print(f"❌ Помилка малювання QR-коду: {e}")
+                print(f"❌ [DEMO] Помилка малювання QR-коду: {e}")
         else:
-            print(f"⚠️ QR-код (image.png) не знайдено: {qr_code_path}")
+            print(f"⚠️ [DEMO] QR-код (image.png) не знайдено: {qr_code_path}")
         
         # Зберігаємо PDF
         c.save()
