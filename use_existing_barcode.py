@@ -36,7 +36,7 @@ def create_ticket_with_existing_barcode():
     c.drawCentredString(width / 2, height - 150, "artpullse.com")
     
     # Додаємо зображення (якщо є)
-    image_path = os.path.join('events-art.com', 'image', 'vine.webp')
+    image_path = os.path.join('events-art.com', 'image', 'dried_plant_root.png')
     if os.path.exists(image_path):
         try:
             from reportlab.platypus import Image
@@ -45,6 +45,17 @@ def create_ticket_with_existing_barcode():
             print(f"✅ Додано зображення: {image_path}")
         except Exception as e:
             print(f"⚠️  Помилка завантаження зображення: {e}")
+    else:
+        # Спробуємо запасну картинку
+        fallback_path = os.path.join('events-art.com', 'image', 'vine.webp')
+        if os.path.exists(fallback_path):
+            try:
+                from reportlab.platypus import Image
+                img = Image(fallback_path, width=200, height=100)
+                img.drawOn(c, (width - 200) // 2, height - 250)
+                print(f"✅ Додано запасне зображення: {fallback_path}")
+            except Exception as e:
+                print(f"⚠️  Помилка завантаження запасного зображення: {e}")
     
     # Додаємо інформацію про квиток
     info_y = height - 350
