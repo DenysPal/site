@@ -36,7 +36,7 @@ def create_ticket_with_existing_barcode():
     c.drawCentredString(width / 2, height - 150, "artpullse.com")
     
     # Додаємо зображення (якщо є)
-    image_path = os.path.join('events-art.com', 'image', 'dried_plant_root.png')
+    image_path = os.path.join('events-art.com', 'image', '_dsf0493_ko_lekcja_3000px_auto_1400x800.webp')
     if os.path.exists(image_path):
         try:
             from reportlab.platypus import Image
@@ -46,16 +46,23 @@ def create_ticket_with_existing_barcode():
         except Exception as e:
             print(f"⚠️  Помилка завантаження зображення: {e}")
     else:
-        # Спробуємо запасну картинку
-        fallback_path = os.path.join('events-art.com', 'image', 'vine.webp')
-        if os.path.exists(fallback_path):
-            try:
-                from reportlab.platypus import Image
-                img = Image(fallback_path, width=200, height=100)
-                img.drawOn(c, (width - 200) // 2, height - 250)
-                print(f"✅ Додано запасне зображення: {fallback_path}")
-            except Exception as e:
-                print(f"⚠️  Помилка завантаження запасного зображення: {e}")
+        # Спробуємо запасні картинки
+        fallback_images = [
+            os.path.join('events-art.com', 'image', 'dried_plant_root.png'),
+            os.path.join('events-art.com', 'image', 'vine.webp')
+        ]
+        
+        for fallback_path in fallback_images:
+            if os.path.exists(fallback_path):
+                try:
+                    from reportlab.platypus import Image
+                    img = Image(fallback_path, width=200, height=100)
+                    img.drawOn(c, (width - 200) // 2, height - 250)
+                    print(f"✅ Додано запасне зображення: {fallback_path}")
+                    break
+                except Exception as e:
+                    print(f"⚠️  Помилка завантаження запасного зображення: {e}")
+                    continue
     
     # Додаємо інформацію про квиток
     info_y = height - 350

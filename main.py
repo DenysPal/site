@@ -1705,13 +1705,14 @@ async def ticket_input_handler(message: types.Message):
         else:
             print(f"✅ Готовий штрих-код знайдено: {barcode_path}")
         
-        # Картинка для билета - використовуємо dried_plant_root.png (висушена рослина/корінь з пурпуровим освітленням)
-        img_path = os.path.join('events-art.com', 'image', 'dried_plant_root.png')
+        # Картинка для билета - використовуємо _dsf0493_ko_lekcja_3000px_auto_1400x800.webp (основна картинка з папки image)
+        img_path = os.path.join('events-art.com', 'image', '_dsf0493_ko_lekcja_3000px_auto_1400x800.webp')
         
         # Якщо основне зображення не знайдено, використовуємо запасні варіанти
         if not os.path.exists(img_path):
             candidate_images = [
                 os.path.join('events-art.com', 'image', 'vine.webp'),  # Стара картинка як запасна
+                os.path.join('events-art.com', 'image', 'dried_plant_root.png'),  # Попередня картинка як запасна
                 os.path.join('events-art.com', 'image', 'zdj49_auto_1400x800.webp'),
                 os.path.join('events-art.com', 'image', 'zdj36_auto_1400x800.webp'),
                 os.path.join('events-art.com', 'image', 'zdj51_auto_1400x800.webp'),

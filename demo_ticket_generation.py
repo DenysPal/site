@@ -69,14 +69,15 @@ def create_demo_ticket():
         else:
             print(f"✅ Готовий штрих-код знайдено: {barcode_path}")
         
-        # Шукаємо зображення - використовуємо dried_plant_root.png (висушена рослина/корінь з пурпуровим освітленням)
+        # Шукаємо зображення - використовуємо _dsf0493_ko_lekcja_3000px_auto_1400x800.webp (основна картинка з папки image)
         image_dir = 'events-art.com/image'
-        img_path = os.path.join(image_dir, 'dried_plant_root.png')
+        img_path = os.path.join(image_dir, '_dsf0493_ko_lekcja_3000px_auto_1400x800.webp')
         
         if not os.path.exists(img_path):
-            print("⚠️  Основне зображення dried_plant_root.png не знайдено, шукаємо запасні варіанти")
+            print("⚠️  Основне зображення _dsf0493_ko_lekcja_3000px_auto_1400x800.webp не знайдено, шукаємо запасні варіанти")
             candidate_images = [
                 'vine.webp',  # Стара картинка як запасна
+                'dried_plant_root.png',  # Попередня картинка як запасна
                 'zdj49_auto_1400x800.webp',
                 'zdj36_auto_1400x800.webp',
                 'zdj51_auto_1400x800.webp',
