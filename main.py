@@ -661,7 +661,7 @@ async def show_profile(message: types.Message):
         ]
     )
     await message.answer(text, reply_markup=profile_inline_kb, parse_mode='HTML')
-            await message.answer("Вернуться в главное меню:", reply_markup=back_inline_kb)
+    await message.answer("Вернуться в главное меню:", reply_markup=back_inline_kb)
     user_step[uid] = None
 
 @router.callback_query(lambda c: c.data == "back_to_menu")
