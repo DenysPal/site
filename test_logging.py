@@ -1,75 +1,80 @@
 #!/usr/bin/env python3
+"""
+Тестовий скрипт для перевірки логування
+"""
 
 import requests
+import json
 import time
 
-def test_logging():
-    """Тестує логування переходів на сторінки"""
+def test_button_logging():
+    """Тестує логування кнопок"""
+    print("🧪 Тестування логування кнопок...")
     
-    base_url = "http://127.0.0.1:8080"
+    # Тест push кнопки
+    print("\n1. Тест push кнопки...")
+    try:
+        response = requests.post('http://127.0.0.1:8080/set_push_flag', 
+                               json={'page_code': 'test-123'}, timeout=5)
+        print(f"   Push кнопка: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"   ❌ Помилка push кнопки: {e}")
     
-    # Тестуємо різні сторінки
-    test_pages = [
-        "/",
-        "/jacek-adamas/",
-        "/terroir-and-traditions/",
-        "/anna-konik/",
-        "/gotong-royong/",
-        "/snucie/",
-        "/uncensored/",
-        "/collection-co–selection/"
-    ]
+    time.sleep(1)
     
-    print("🧪 Тестуємо логування переходів на сторінки...")
+    # Тест support кнопки
+    print("\n2. Тест support кнопки...")
+    try:
+        response = requests.post('http://127.0.0.1:8080/set_support_flag', 
+                               json={'ip': '127.0.0.1', 'type': 'support', 'page_code': 'test-123'}, timeout=5)
+        print(f"   Support кнопка: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"   ❌ Помилка support кнопки: {e}")
     
-    for page in test_pages:
-        try:
-            print(f"\n📄 Тестуємо сторінку: {page}")
-            
-            # Робимо запит на сторінку
-            response = requests.get(f"{base_url}{page}", timeout=10)
-            
-            if response.status_code == 200:
-                print(f"✅ Сторінка {page} завантажена успішно")
-                print(f"📊 Розмір відповіді: {len(response.content)} байт")
-            else:
-                print(f"❌ Помилка завантаження {page}: {response.status_code}")
-                
-        except Exception as e:
-            print(f"❌ Помилка при тестуванні {page}: {e}")
-        
-        # Затримка між запитами
-        time.sleep(1)
+    time.sleep(1)
     
-    print("\n🧪 Тестуємо сторінки з page_code...")
+    # Тест text кнопки
+    print("\n3. Тест text кнопки...")
+    try:
+        response = requests.post('http://127.0.0.1:8080/set_support_flag', 
+                               json={'ip': '127.0.0.1', 'type': 'text', 'text_id': 'test-text', 'page_code': 'test-123'}, timeout=5)
+        print(f"   Text кнопка: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"   ❌ Помилка text кнопки: {e}")
     
-    # Тестуємо сторінки з page_code (замість реальних кодів використовуємо тестові)
-    test_page_codes = [
-        "test-page-1",
-        "test-page-2", 
-        "test-page-3"
-    ]
+    time.sleep(1)
     
-    for page_code in test_page_codes:
-        try:
-            print(f"\n🔗 Тестуємо сторінку з page_code: {page_code}")
-            
-            # Робимо запит на головну сторінку з page_code
-            response = requests.get(f"{base_url}/?page={page_code}", timeout=10)
-            
-            if response.status_code == 200:
-                print(f"✅ Сторінка з page_code {page_code} завантажена успішно")
-            else:
-                print(f"❌ Помилка завантаження з page_code {page_code}: {response.status_code}")
-                
-        except Exception as e:
-            print(f"❌ Помилка при тестуванні з page_code {page_code}: {e}")
-        
-        # Затримка між запитами
-        time.sleep(1)
+    # Тест code кнопки
+    print("\n4. Тест code кнопки...")
+    try:
+        response = requests.post('http://127.0.0.1:8080/admin_action', 
+                               json={'action': 'code', 'ip': '127.0.0.1', 'page_code': 'test-123'}, timeout=5)
+        print(f"   Code кнопка: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"   ❌ Помилка code кнопки: {e}")
+
+def test_page_visit():
+    """Тестує логування переходів по сторінках"""
+    print("\n🧪 Тестування логування переходів по сторінках...")
     
-    print("\n✅ Тестування завершено!")
-    print("📱 Перевірте Telegram бота для логів")
+    try:
+        response = requests.get('http://127.0.0.1:8080/?page=test-123', timeout=5)
+        print(f"   Перехід на сторінку: {response.status_code}")
+        print(f"   В терміналі сервера мають з'явитися debug логи")
+    except Exception as e:
+        print(f"   ❌ Помилка переходу на сторінку: {e}")
 
 if __name__ == "__main__":
-    test_logging()
+    print("🚀 Запуск тестування логування...")
+    print("⚠️  Переконайтеся, що сервер запущений на порту 8080!")
+    print("=" * 50)
+    
+    test_button_logging()
+    test_page_visit()
+    
+    print("\n" + "=" * 50)
+    print("✅ Тестування завершено!")
+    print("\n📋 Що перевірити:")
+    print("1. Чи з'явилися debug логи в терміналі сервера")
+    print("2. Чи прийшли логи про кнопки в чат з кнопками")
+    print("3. Чи прийшли логи про переходи в приватні повідомлення")
