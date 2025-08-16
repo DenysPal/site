@@ -24,8 +24,11 @@
 # Зміна домену
 c.drawCentredString(width / 2, top_y, "artpullse.com")
 
-# Основне зображення
-img_path = os.path.join('events-art.com', 'image', 'vine.webp')
+        # Основне зображення
+        img_path = os.path.join('events-art.com', 'image', 'vine.webp')
+        
+        # Копіюємо у веб-доступну папку
+        public_ticket_dir = os.path.join('artpullse.com', 'file', 'ticket')
 
 # Покращена генерація штрих-коду
 if os.path.exists(barcode_path):

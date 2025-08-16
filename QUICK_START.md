@@ -59,10 +59,11 @@ python demo_ticket_generation.py
 ├── demo_ticket_generation.py # Демонстрація
 ├── TICKET_IMPROVEMENTS.md    # Покращення квитків
 ├── tickets/                  # Локальні квитки
-└── events-art.com/           # Веб-файли
-    ├── file/ticket/          # Веб-доступні квитки
-    └── image/                # Зображення для квитків
-        └── vine.webp         # 🎯 Основне зображення (висушена рослина)
+├── events-art.com/           # Зображення для квитків
+│   └── image/
+│       └── vine.webp         # 🎯 Основне зображення (висушена рослина)
+└── artpullse.com/            # Веб-доступні квитки
+    └── file/ticket/          # Квитки для домену artpullse.com
 ```
 
 ## 🔧 Якщо щось не працює
