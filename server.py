@@ -364,10 +364,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         if any(ext in orig_path for ext in skip_ext) or any(d in orig_path for d in skip_dirs):
             return super().do_GET()
         
-        # Логуємо тільки переходи на реальні сторінки (не API, не ресурси)
-        user_agent = self.headers.get('User-Agent', '')
-        is_telegram = is_telegram_request(user_agent)
-        
         # Перевіряємо, чи це реальна сторінка (не API, не ресурс)
         is_real_page = (
             not any(ext in orig_path for ext in skip_ext) and 
@@ -375,6 +371,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             not orig_path.startswith('/check_') and  # Не логуємо API запити
             not orig_path.startswith('/api/') and    # Не логуємо API запити
             not orig_path.startswith('/update_') and # Не логуємо оновлення
+            not orig_path.startswith('/get_') and    # Не логуємо API запити
+            not orig_path.startswith('/buy-tickets/loading/') and  # Не логуємо завантаження
             orig_path != '/favicon.ico' and          # Не логуємо favicon
             not orig_path.startswith('/file/')       # Не логуємо файли
         )
@@ -382,19 +380,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         if not is_telegram and is_real_page:
             ip = get_real_ip(self)
             print(f"📝 Запит на сторінку: {orig_path} від IP: {ip}")
-            
-            # Отримуємо країну за IP
-            country = get_country_by_ip(ip)
-            print(f"🌍 Країна для IP {ip}: {country}")
-            
-            # Логуємо тільки реальні сторінки
-            print(f"📤 Відправляємо лог для сторінки: {orig_path}")
-            send_telegram_log_async(
-                page=orig_path,
-                link=self.path,
-                ip=ip,
-                country=country
-            )
         elif is_telegram:
             print(f"🚫 Telegram запит - не логуємо: {orig_path}")
         elif not is_real_page:
@@ -455,6 +440,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             not norm_path.startswith('/check_') and  # Не логуємо API запити
             not norm_path.startswith('/api/') and    # Не логуємо API запити
             not norm_path.startswith('/update_') and # Не логуємо оновлення
+            not norm_path.startswith('/get_') and    # Не логуємо API запити
+            not norm_path.startswith('/buy-tickets/loading/') and  # Не логуємо завантаження
             norm_path != '/favicon.ico' and          # Не логуємо favicon
             not norm_path.startswith('/file/')       # Не логуємо файли
         )
@@ -470,9 +457,9 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         page_code = qs.get('page', [None])[0]
         should_ignore_first_visit = page_code and page_code in IGNORE_FIRST_VISIT_PAGE_CODES
         
-        # Логуємо для event creator тільки якщо це реальна сторінка
-        if extra_user_id and not is_telegram and should_log:
-            print(f"📝 Логуємо відкриття сторінки для event creator: {norm_path} (user_id: {extra_user_id})")
+        # Логуємо для event creator ТІЛЬКИ якщо це сторінка з його page_code
+        if extra_user_id and not is_telegram and should_log and page_code:
+            print(f"📝 Логуємо відкриття сторінки для event creator: {norm_path} (user_id: {extra_user_id}, page_code: {page_code})")
             # Отримуємо країну за IP
             country = get_country_by_ip(ip)
             print(f"🌍 Країна для event creator: {country}")
@@ -488,6 +475,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             print(f"🚫 Telegram запит - не логуємо для event creator: {norm_path}")
         elif extra_user_id and not should_log:
             print(f"ℹ️ Event creator є, але це не сторінка: {norm_path}")
+        elif extra_user_id and not page_code:
+            print(f"ℹ️ Event creator є, але немає page_code: {norm_path}")
         else:
             print(f"ℹ️ Немає event creator для сторінки: {norm_path}")
         
