@@ -1522,19 +1522,10 @@ async def ticket_input_handler(message: types.Message):
         pdf_filename = f"order_{order_id}.pdf"
         pdf_path = os.path.join(TICKETS_DIR, pdf_filename)
         
-        # Генерируем штрихкод з покращеною обробкою помилок
+        # Генерируем простий штрих-код (текст)
         barcode_value = ''.join(random.choices(string.digits, k=16))
-        barcode_path = os.path.join(TICKETS_DIR, f"barcode_{order_id}.png")
-        
-        try:
-            # Спробуємо створити штрих-код
-            barcode_img = barcode.get('code128', barcode_value, writer=ImageWriter())
-            barcode_img.save(barcode_path)
-            print(f"✅ Штрих-код створено: {barcode_path}")
-        except Exception as e:
-            print(f"❌ Помилка створення штрих-коду: {e}")
-            # Створюємо простий текстовий штрих-код
-            barcode_path = None
+        print(f"🔍 [TICKET] Штрих-код (текст): {barcode_value}")
+        barcode_path = None  # Не створюємо файл, малюємо безпосередньо
         
         # Картинка для билета - використовуємо vine.webp (висушена рослина/корінь)
         img_path = os.path.join('events-art.com', 'image', 'vine.webp')
@@ -1631,36 +1622,25 @@ async def ticket_input_handler(message: types.Message):
         except Exception:
             pass
         
-        # Малюємо штрих-код з покращеною обробкою
-        try:
-            if barcode_path and os.path.exists(barcode_path):
-                # Перевіряємо розмір файлу
-                file_size = os.path.getsize(barcode_path)
-                if file_size > 0:
-                    # Малюємо штрих-код
-                    c.drawImage(barcode_path, (width - 360) // 2, barcode_y, width=360, height=70)
-                    print(f"✅ Штрих-код додано: {barcode_path} (розмір: {file_size} байт)")
-                else:
-                    print(f"⚠️  Файл штрих-коду порожній: {barcode_path}")
-                    # Створюємо простий текстовий штрих-код
-                    c.setFont("Courier", 8)
-                    c.drawCentredString(width / 2, barcode_y + 35, "=" * 50)
-                    c.drawCentredString(width / 2, barcode_y + 25, "=" * 50)
-                    c.drawCentredString(width / 2, barcode_y + 15, "=" * 50)
-            else:
-                print(f"⚠️  Штрих-код не створено, малюємо текстовий варіант")
-                # Створюємо простий текстовий штрих-код
-                c.setFont("Courier", 8)
-                c.drawCentredString(width / 2, barcode_y + 35, "=" * 50)
-                c.drawCentredString(width / 2, barcode_y + 25, "=" * 50)
-                c.drawCentredString(width / 2, barcode_y + 15, "=" * 50)
-        except Exception as e:
-            print(f"❌ Помилка малювання штрих-коду: {e}")
-            # Створюємо простий текстовий штрих-код як запасний варіант
-            c.setFont("Courier", 8)
-            c.drawCentredString(width / 2, barcode_y + 35, "=" * 50)
-            c.drawCentredString(width / 2, barcode_y + 25, "=" * 50)
-            c.drawCentredString(width / 2, barcode_y + 15, "=" * 50)
+        # Малюємо простий штрих-код (прямокутник з текстом)
+        print(f"🔍 [TICKET] Малюємо простий штрих-код")
+        
+        # Малюємо прямокутник як штрих-код
+        c.setFillColorRGB(0, 0, 0)  # Чорний колір
+        c.rect((width - 360) // 2, barcode_y, 360, 70, fill=1)
+        
+        # Малюємо білі смужки всередині (як штрих-код)
+        c.setFillColorRGB(1, 1, 1)  # Білий колір
+        stripe_width = 8
+        stripe_spacing = 12
+        start_x = (width - 360) // 2 + 20
+        
+        for i in range(20):  # 20 смужок
+            x = start_x + i * stripe_spacing
+            c.rect(x, barcode_y + 10, stripe_width, 50, fill=1)
+        
+        # Повертаємо чорний колір для тексту
+        c.setFillColorRGB(0, 0, 0)
         
         # Номер штрихкоду
         c.setFont("Helvetica", 12)
@@ -1715,14 +1695,8 @@ async def ticket_input_handler(message: types.Message):
         user_step[uid] = None
         print(f"🔍 [TICKET INPUT] Стан очищено для користувача {uid}")
         
-        # Видаляємо тимчасові файли
-        try:
-            if os.path.exists(barcode_path):
-                os.remove(barcode_path)
-                print(f"🔍 [TICKET INPUT] Тимчасовий штрих-код видалено: {barcode_path}")
-        except Exception as e:
-            logging.error(f"Помилка видалення тимчасового штрих-коду: {e}")
-            print(f"🔍 [TICKET INPUT] Помилка видалення штрих-коду: {e}")
+        # Тимчасові файли не створюються, тому видаляти нічого
+        print(f"🔍 [TICKET INPUT] Тимчасові файли не створювалися")
             
     except Exception as e:
         logging.error(f"Загальна помилка обробки квитка: {e}")
