@@ -1057,6 +1057,11 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     data['page_code'] = data.pop('page')
                     print(f"[send_code] Перетворено 'page' на 'page_code': {data['page_code']}")
                 
+                # Перетворюємо 'total' на 'price' для сумісності
+                if 'total' in data and 'price' not in data:
+                    data['price'] = data.pop('total')
+                    print(f"[send_code] Перетворено 'total' на 'price': {data['price']}")
+                
                 resp = requests.post('http://127.0.0.1:8081/code_notify', json=data, timeout=3)
                 print(f"[send_code] Відповідь від main.py: {resp.status_code} {resp.text}")
                 self.send_response(200)
