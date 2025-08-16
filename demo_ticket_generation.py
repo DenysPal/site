@@ -115,13 +115,13 @@ def create_demo_ticket():
         c.setFillColorRGB(0.7, 0.7, 0.7)
         c.drawCentredString(width / 2, top_y, "artpullse.com")
         
-        # Имя крупно по центру
+        # Имя крупно по центру (як на другому скріншоті)
         name_y = top_y - 35
         c.setFont("Helvetica-Bold", 24)
         c.setFillColorRGB(0, 0, 0)
         c.drawCentredString(width / 2, name_y, demo_data['name'])
         
-        # Картинка по центру
+        # Картинка по центру (як на другому скріншоті)
         img_bottom_y = name_y - 40
         try:
             img = Image.open(img_path)
@@ -137,7 +137,7 @@ def create_demo_ticket():
             img_y = img_bottom_y
             img_h = 0
         
-        # Блок с тремя колонками PRICE / DATE / TIME
+        # Блок с тремя колонками PRICE / DATE / TIME (як на другому скріншоті)
         row_top_y = (img_y if img_h == 0 else img_y) - 20
         label_y = row_top_y
         value_y = label_y - 16
@@ -155,7 +155,7 @@ def create_demo_ticket():
         for i, x in enumerate(col_centers):
             c.drawCentredString(x, value_y, values[i])
         
-        # Location по центру
+        # Location по центру (як на другому скріншоті)
         loc_y = value_y - 28
         c.setFont("Helvetica-Bold", 16)
         c.drawCentredString(width / 2, loc_y, f"Location: {demo_data['address']}")
@@ -170,8 +170,8 @@ def create_demo_ticket():
             pass
         c.line(50, line_y, width - 50, line_y)
         
-        # Штрих-код
-        barcode_y = line_y - 20  # Піднімаємо ще вище (було -40, стало -20)
+        # Штрих-код (як на першому скріншоті - з сірою рамкою)
+        barcode_y = line_y - 20
         try:
             c.setDash()
         except Exception:
@@ -182,30 +182,28 @@ def create_demo_ticket():
         
         if barcode_path and os.path.exists(barcode_path):
             try:
-                # Малюємо сіру рамку для штрих-коду
+                # Малюємо сіру рамку для штрих-коду (як на першому скріншоті)
                 c.setFillColorRGB(0.9, 0.9, 0.9)  # Сірий колір
                 c.rect((width - 600) // 2, barcode_y - 10, 600, 160, fill=1)
                 
-                # Малюємо згенерований штрих-код (збільшуємо розмір ще більше)
+                # Малюємо згенерований штрих-код
                 c.drawImage(barcode_path, (width - 600) // 2, barcode_y, width=600, height=160)
                 print(f"✅ Штрих-код додано з файлу: {barcode_path}")
             except Exception as e:
                 print(f"❌ Помилка малювання штрих-коду: {e}")
-                # Не малюємо fallback - залишаємо пусто
         else:
             print(f"⚠️  Файл штрих-коду не знайдено")
-            # Не малюємо fallback - залишаємо пусто
         
         # Повертаємо чорний колір для тексту
         c.setFillColorRGB(0, 0, 0)
         
-        # Номер штрих-коду
+        # Номер штрих-коду (як на другому скріншоті)
         c.setFont("Helvetica", 12)
         c.drawCentredString(width / 2, barcode_y - 18, barcode_value)
         
         # Додаємо QR-код (використовуємо image.png)
-        qr_code_path = os.path.join('afisha-events.com', 'image', 'image.png')
-        qr_code_y = barcode_y - 160  # Розташовуємо QR-код вище штрих-коду (збільшуємо відстань)
+        qr_code_path = os.path.join('events-art.com', 'image', 'image.png')
+        qr_code_y = barcode_y - 140  # Розташовуємо QR-код вище штрих-коду
         
         if os.path.exists(qr_code_path):
             try:
