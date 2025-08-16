@@ -64,7 +64,7 @@ def create_demo_ticket():
         
         if not os.path.exists(barcode_path):
             print(f"⚠️  Готовий штрих-код не знайдено: {barcode_path}")
-            print("💡 Збережіть ваш штрих-код як 'existing_barcode.png' в папці afisha-events.com/image/")
+            print("💡 Збережіть ваш штрих-код як 'existing_barcode.png' в папці events-art.com/image/")
             barcode_path = None
         else:
             print(f"✅ Готовий штрих-код знайдено: {barcode_path}")
