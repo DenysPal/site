@@ -107,7 +107,7 @@ def create_demo_ticket():
         
         # Білий прямокутник всередині сірого (менший по ширині та довжині, як на другому скріншоті)
         c.setFillColorRGB(1, 1, 1)  # Білий колір
-        c.rect(80, 10, width - 160, height - 60, fill=1)  # Повернуто оригінальну довжину height - 60, але залишено y = 10
+        c.rect(80, 10, width - 160, height - 120, fill=1)  # Зменшено довжину знизу, але залишено y = 10
         
         # Верхний домен по центру, серым (опускаємо нижче для рамки)
         top_y = height - 60
@@ -141,7 +141,7 @@ def create_demo_ticket():
         row_top_y = (img_y if img_h == 0 else img_y) - 20
         label_y = row_top_y
         value_y = label_y - 16
-        col_centers = [width * (1/6), width * (3/6), width * (5/6)]
+        col_centers = [width * (2/6), width * (3/6), width * (4/6)]  # PRICE і TIME підтянуто ближче до центру
         labels = ["PRICE", "DATE", "TIME"]
         values = [demo_data['price'], demo_data['date'], demo_data['time']]
         
