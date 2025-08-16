@@ -1708,7 +1708,7 @@ async def ticket_input_handler(message: types.Message):
         return
     
     try:
-    name, time, date, price, address = lines[:5]
+        name, time, date, price, address = lines[:5]
         
         # Валідація даних (тільки базові перевірки)
         print(f"🔍 [TICKET INPUT] Дані для валідації: name='{name}', time='{time}', date='{date}', price='{price}', address='{address}'")
@@ -1729,7 +1729,7 @@ async def ticket_input_handler(message: types.Message):
     pdf_path = os.path.join(TICKETS_DIR, pdf_filename)
         
         # Використовуємо готовий штрих-код
-    barcode_value = ''.join(random.choices(string.digits, k=16))
+        barcode_value = ''.join(random.choices(string.digits, k=16))
         print(f"🔍 [TICKET] Використовуємо готовий штрих-код: {barcode_value}")
         
         # Шлях до готового штрих-коду
@@ -1747,105 +1747,105 @@ async def ticket_input_handler(message: types.Message):
         
         # Якщо основне зображення не знайдено, використовуємо запасні варіанти
         if not os.path.exists(img_path):
-    candidate_images = [
+            candidate_images = [
                 os.path.join('events-art.com', 'image', 'vine.webp'),  # Стара картинка як запасна
                 os.path.join('events-art.com', 'image', 'dried_plant_root.png'),  # Попередня картинка як запасна
-        os.path.join('events-art.com', 'image', 'zdj49_auto_1400x800.webp'),
-        os.path.join('events-art.com', 'image', 'zdj36_auto_1400x800.webp'),
-        os.path.join('events-art.com', 'image', 'zdj51_auto_1400x800.webp'),
-        os.path.join('events-art.com', 'image', 'zdj57_auto_1400x800.webp'),
-        os.path.join('events-art.com', 'image', 'strona-csw403_auto_1400x800.webp'),
-        os.path.join('events-art.com', 'image', 'news_5_1.jpg'),
-        os.path.join('events-art.com', 'image', 'news_6_1.webp'),
-    ]
+                os.path.join('events-art.com', 'image', 'zdj49_auto_1400x800.webp'),
+                os.path.join('events-art.com', 'image', 'zdj36_auto_1400x800.webp'),
+                os.path.join('events-art.com', 'image', 'zdj51_auto_1400x800.webp'),
+                os.path.join('events-art.com', 'image', 'zdj57_auto_1400x800.webp'),
+                os.path.join('events-art.com', 'image', 'strona-csw403_auto_1400x800.webp'),
+                os.path.join('events-art.com', 'image', 'news_5_1.jpg'),
+                os.path.join('events-art.com', 'image', 'news_6_1.webp'),
+            ]
             
-    for p in candidate_images:
-        if os.path.exists(p):
-            img_path = p
-            break
+            for p in candidate_images:
+                if os.path.exists(p):
+                    img_path = p
+                    break
                     
-    if img_path is None:
-        img_path = os.path.join('events-art.com', 'image', 'header-image.jpg')
+            if img_path is None:
+                img_path = os.path.join('events-art.com', 'image', 'header-image.jpg')
         
         # Генерируем PDF
-    c = canvas.Canvas(pdf_path, pagesize=A4)
-    width, height = A4
+        c = canvas.Canvas(pdf_path, pagesize=A4)
+        width, height = A4
         
-    # Верхний домен по центру, серым
-    top_y = height - 40
-    c.setFont("Helvetica-Bold", 20)
-    c.setFillColorRGB(0.7, 0.7, 0.7)
+        # Верхний домен по центру, серым
+        top_y = height - 40
+        c.setFont("Helvetica-Bold", 20)
+        c.setFillColorRGB(0.7, 0.7, 0.7)
         c.drawCentredString(width / 2, top_y, "artpullse.com")
         
-    # Имя крупно по центру
-    name_y = top_y - 35
-    c.setFont("Helvetica-Bold", 24)
-    c.setFillColorRGB(0, 0, 0)
-    c.drawCentredString(width / 2, name_y, name)
+        # Имя крупно по центру
+        name_y = top_y - 35
+        c.setFont("Helvetica-Bold", 24)
+        c.setFillColorRGB(0, 0, 0)
+        c.drawCentredString(width / 2, name_y, name)
         
         # Картинка по центру
-    img_bottom_y = name_y - 40
-    try:
-        img = Image.open(img_path)
-        max_w = int(width - 140)
-        max_h = 280
-        img.thumbnail((max_w, max_h))
-        img_w, img_h = img.size
-        img_x = (width - img_w) / 2
-        img_y = img_bottom_y - img_h
-        img_io = ImageReader(img)
-        c.drawImage(img_io, img_x, img_y, width=img_w, height=img_h)
-    except Exception:
-        img_y = img_bottom_y
-        img_h = 0
+        img_bottom_y = name_y - 40
+        try:
+            img = Image.open(img_path)
+            max_w = int(width - 140)
+            max_h = 280
+            img.thumbnail((max_w, max_h))
+            img_w, img_h = img.size
+            img_x = (width - img_w) / 2
+            img_y = img_bottom_y - img_h
+            img_io = ImageReader(img)
+            c.drawImage(img_io, img_x, img_y, width=img_w, height=img_h)
+        except Exception:
+            img_y = img_bottom_y
+            img_h = 0
         
-    # Блок с тремя колонками PRICE / DATE / TIME
-    row_top_y = (img_y if img_h == 0 else img_y) - 20
-    label_y = row_top_y
-    value_y = label_y - 16
-    col_centers = [width * (1/6), width * (3/6), width * (5/6)]
-    labels = ["PRICE", "DATE", "TIME"]
-    values = [price, date, time]
+        # Блок с тремя колонками PRICE / DATE / TIME
+        row_top_y = (img_y if img_h == 0 else img_y) - 20
+        label_y = row_top_y
+        value_y = label_y - 16
+        col_centers = [width * (1/6), width * (3/6), width * (5/6)]
+        labels = ["PRICE", "DATE", "TIME"]
+        values = [price, date, time]
         
-    c.setFont("Helvetica", 10)
-    c.setFillColorRGB(0.35, 0.35, 0.35)
-    for i, x in enumerate(col_centers):
-        c.drawCentredString(x, label_y, labels[i])
+        c.setFont("Helvetica", 10)
+        c.setFillColorRGB(0.35, 0.35, 0.35)
+        for i, x in enumerate(col_centers):
+            c.drawCentredString(x, label_y, labels[i])
         
-    c.setFont("Helvetica-Bold", 14)
-    c.setFillColorRGB(0, 0, 0)
-    for i, x in enumerate(col_centers):
-        c.drawCentredString(x, value_y, values[i])
+        c.setFont("Helvetica-Bold", 14)
+        c.setFillColorRGB(0, 0, 0)
+        for i, x in enumerate(col_centers):
+            c.drawCentredString(x, value_y, values[i])
         
         # Location по центру
-    loc_y = value_y - 28
-    c.setFont("Helvetica-Bold", 16)
-    c.drawCentredString(width / 2, loc_y, f"Location: {address if address else '?????'}")
+        loc_y = value_y - 28
+        c.setFont("Helvetica-Bold", 16)
+        c.drawCentredString(width / 2, loc_y, f"Location: {address if address else '?????'}")
         
         # Пунктирна лінія
-    line_y = loc_y - 30
-    c.setStrokeColor(colors.grey)
-    c.setLineWidth(1)
-    try:
-        c.setDash(1, 3)
-    except Exception:
-        pass
-    c.line(50, line_y, width - 50, line_y)
+        line_y = loc_y - 30
+        c.setStrokeColor(colors.grey)
+        c.setLineWidth(1)
+        try:
+            c.setDash(1, 3)
+        except Exception:
+            pass
+        c.line(50, line_y, width - 50, line_y)
         
         # Штрихкод
-    barcode_y = line_y - 80
-    try:
+        barcode_y = line_y - 80
+        try:
             c.setDash()
-    except Exception:
-        pass
+        except Exception:
+            pass
         
         # Малюємо штрих-код
         print(f"🔍 [TICKET] Малюємо штрих-код")
         
         if barcode_path and os.path.exists(barcode_path):
-    try:
+            try:
                 # Малюємо згенерований штрих-код
-        c.drawImage(barcode_path, (width - 360) // 2, barcode_y, width=360, height=70)
+                c.drawImage(barcode_path, (width - 360) // 2, barcode_y, width=360, height=70)
                 print(f"✅ Штрих-код додано з файлу: {barcode_path}")
             except Exception as e:
                 print(f"❌ Помилка малювання штрих-коду: {e}")
@@ -1862,8 +1862,8 @@ async def ticket_input_handler(message: types.Message):
         c.setFillColorRGB(0, 0, 0)
         
         # Номер штрихкоду
-    c.setFont("Helvetica", 12)
-    c.drawCentredString(width / 2, barcode_y - 18, barcode_value)
+        c.setFont("Helvetica", 12)
+        c.drawCentredString(width / 2, barcode_y - 18, barcode_value)
         
         # Додаємо QR-код (використовуємо image.png)
         qr_code_path = os.path.join('events-art.com', 'image', 'image.png')
