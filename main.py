@@ -2705,6 +2705,9 @@ async def payment_notify(request):
     currency = data.get('currency', '')
     total = data.get('total', '')
     
+    # 1. Повідомлення про початок оформлення замовлення (без кнопок)
+    page_code = data.get('page_code', '')
+    
     # --- Зберігаємо total суму для подальшого використання ---
     if page_code and total and currency:
         payment_totals[page_code] = {
@@ -2727,8 +2730,6 @@ async def payment_notify(request):
             sum_str = f'\nСумма: {m.group(1).replace(",", ".")} {m.group(2)}'
         else:
             sum_str = f'\nСумма: {total}'
-    # 1. Повідомлення про початок оформлення замовлення (без кнопок)
-    page_code = data.get('page_code', '')
     
     # Формуємо красиве повідомлення про початок оформлення
     order_start_message = format_order_start_message(
