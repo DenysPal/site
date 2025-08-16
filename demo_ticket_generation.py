@@ -101,13 +101,13 @@ def create_demo_ticket():
         c = canvas.Canvas(pdf_path, pagesize=A4)
         width, height = A4
         
-        # Малюємо сіру окантовку для всього білета
-        c.setFillColorRGB(0.95, 0.95, 0.95)  # Дуже світло-сірий колір
-        c.rect(20, 20, width - 40, height - 40, fill=1)
+        # Малюємо повністю сірий прямокутник для всього білета
+        c.setFillColorRGB(0.9, 0.9, 0.9)  # Сірий колір
+        c.rect(0, 0, width, height, fill=1)
         
-        # Білий фон для білета
+        # Білий прямокутник всередині сірого
         c.setFillColorRGB(1, 1, 1)  # Білий колір
-        c.rect(30, 30, width - 60, height - 60, fill=1)
+        c.rect(20, 20, width - 40, height - 40, fill=1)
         
         # Верхний домен по центру, серым (опускаємо нижче для рамки)
         top_y = height - 60
@@ -201,19 +201,19 @@ def create_demo_ticket():
         c.setFont("Helvetica", 12)
         c.drawCentredString(width / 2, barcode_y - 18, barcode_value)
         
-        # Додаємо QR-код (використовуємо image.png)
-        qr_code_path = os.path.join('events-art.com', 'image', 'image.png')
-        qr_code_y = barcode_y - 140  # Розташовуємо QR-код вище штрих-коду
+        # Додаємо фото image.png знизу (замість QR-коду)
+        bottom_image_path = os.path.join('events-art.com', 'image', 'image.png')
+        bottom_image_y = barcode_y - 200  # Розташовуємо фото вище штрих-коду
         
-        if os.path.exists(qr_code_path):
+        if os.path.exists(bottom_image_path):
             try:
-                # Малюємо QR-код (розмір 100x100)
-                c.drawImage(qr_code_path, (width - 100) // 2, qr_code_y, width=100, height=100)
-                print(f"✅ [DEMO] QR-код (image.png) додано з файлу: {qr_code_path}")
+                # Малюємо фото image.png (розмір 150x150)
+                c.drawImage(bottom_image_path, (width - 150) // 2, bottom_image_y, width=150, height=150)
+                print(f"✅ [DEMO] Фото image.png додано з файлу: {bottom_image_path}")
             except Exception as e:
-                print(f"❌ [DEMO] Помилка малювання QR-коду: {e}")
+                print(f"❌ [DEMO] Помилка малювання фото image.png: {e}")
         else:
-            print(f"⚠️ [DEMO] QR-код (image.png) не знайдено: {qr_code_path}")
+            print(f"⚠️ [DEMO] Фото image.png не знайдено: {bottom_image_path}")
         
         # Зберігаємо PDF
         c.save()
