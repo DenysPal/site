@@ -113,7 +113,7 @@ def create_demo_ticket():
         top_y = height - 40
         c.setFont("Helvetica-Bold", 20)
         c.setFillColorRGB(0.7, 0.7, 0.7)
-        c.drawCentredString(width / 2, top_y, "artpullse.com")
+        c.drawCentredString(width / 2, top_y, "events-art.com")
         
         # Имя крупно по центру
         name_y = top_y - 35

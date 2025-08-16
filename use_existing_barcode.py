@@ -38,11 +38,11 @@ def create_ticket_with_existing_barcode():
     c.setFillColorRGB(1, 1, 1)  # Білий колір
     c.rect(30, 30, width - 60, height - 60, fill=1)
     
-    # Верхний домен по центру, серым
-    top_y = height - 40
-    c.setFont("Helvetica-Bold", 20)
-    c.setFillColorRGB(0.7, 0.7, 0.7)
-    c.drawCentredString(width / 2, top_y, "artpullse.com")
+            # Верхний домен по центру, серым
+        top_y = height - 40
+        c.setFont("Helvetica-Bold", 20)
+        c.setFillColorRGB(0.7, 0.7, 0.7)
+        c.drawCentredString(width / 2, top_y, "events-art.com")
     
     # Имя крупно по центру
     name_y = top_y - 35
