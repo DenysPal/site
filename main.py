@@ -1407,25 +1407,49 @@ async def tickets_message(message: types.Message):
     # Сначала удаляем клавиатуру через не-пустое сообщение
     await message.answer("Введите данные для билета:", reply_markup=ReplyKeyboardRemove())
     text = (
+        "🎫 **Створення квитка**\n\n"
         "Введите данные по следующему образцу:\n"
-        "└ Формат даты: 01/01/2025\n"
-        "└ Формат времени: 10:00-22:00\n\n"
-        "1. Имя фамилия\n"
-        "2. Время\n"
-        "3. Дата\n"
-        "4. Цена + валюта\n"
-        "5. Адрес"
+        "└ Формат даты: 23.05\n"
+        "└ Формат времени: 21:00\n\n"
+        "**Потрібні дані:**\n"
+        "1️⃣ **Имя фамилия**\n"
+        "2️⃣ **Время** (наприклад: 21:00)\n"
+        "3️⃣ **Дата** (наприклад: 23.05)\n"
+        "4️⃣ **Цена + валюта** (наприклад: 40 €)\n"
+        "5️⃣ **Адрес** (місце проведення)\n\n"
+        "📝 Введіть кожну інформацію з нового рядка"
     )
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="❌ Отмена", callback_data="tickets_cancel")]
         ]
     )
-    await message.answer(text, reply_markup=kb)
+    await message.answer(text, reply_markup=kb, parse_mode="Markdown")
     user_step[uid] = 'ticket_input'
 
 TICKETS_DIR = 'tickets'
 os.makedirs(TICKETS_DIR, exist_ok=True)
+
+def validate_ticket_data(name, time, date, price, address):
+    """Валідація даних квитка"""
+    errors = []
+    
+    if not name or len(name.strip()) < 2:
+        errors.append("❌ Ім'я має бути не менше 2 символів")
+    
+    if not time or not re.match(r'^\d{1,2}:\d{2}$', time.strip()):
+        errors.append("❌ Неправильний формат часу (використовуйте HH:MM)")
+    
+    if not date or not re.match(r'^\d{1,2}\.\d{1,2}$', date.strip()):
+        errors.append("❌ Неправильний формат дати (використовуйте DD.MM)")
+    
+    if not price or not re.match(r'^\d+(\s*[€$₴₽])?$', price.strip()):
+        errors.append("❌ Неправильний формат ціни (наприклад: 40 €)")
+    
+    if not address or len(address.strip()) < 3:
+        errors.append("❌ Адрес має бути не менше 3 символів")
+    
+    return errors
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'ticket_input')
 async def ticket_input_handler(message: types.Message):
@@ -1433,130 +1457,215 @@ async def ticket_input_handler(message: types.Message):
     import shutil
     from aiogram.types import FSInputFile
     from reportlab.lib import colors
+    
     uid = message.from_user.id
     ticket_text = message.text.strip()
-    lines = [l for l in ticket_text.split('\n') if l.strip()]
+    lines = [l.strip() for l in ticket_text.split('\n') if l.strip()]
+    
     if len(lines) < 5:
-        await message.answer("Пожалуйста, введите все данные по образцу (5 строк, каждая с новой строки). Попробуйте ещё раз.")
+        await message.answer(
+            "❌ **Помилка!**\n\n"
+            "Пожалуйста, введите все данные по образцу (5 строк, каждая с новой строки).\n\n"
+            "**Потрібно:**\n"
+            "1️⃣ Ім'я\n"
+            "2️⃣ Час\n"
+            "3️⃣ Дата\n"
+            "4️⃣ Ціна\n"
+            "5️⃣ Адрес\n\n"
+            "Попробуйте ещё раз.",
+            parse_mode="Markdown"
+        )
         return
-    name, time, date, price, address = lines[:5]
-    # Генерируем уникальный order_id
-    order_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
-    pdf_filename = f"order_{order_id}.pdf"
-    pdf_path = os.path.join(TICKETS_DIR, pdf_filename)
-    # Генерируем штрихкод
-    barcode_value = ''.join(random.choices(string.digits, k=16))
-    barcode_path = os.path.join(TICKETS_DIR, f"barcode_{order_id}.png")
-    barcode_img = barcode.get('code128', barcode_value, writer=ImageWriter())
-    barcode_img.save(barcode_path)
-    # Картинка для билета (список кандидатов, первый существующий используется)
-    candidate_images = [
-        os.path.join('events-art.com', 'image', 'zdj49_auto_1400x800.webp'),
-        os.path.join('events-art.com', 'image', 'zdj36_auto_1400x800.webp'),
-        os.path.join('events-art.com', 'image', 'zdj51_auto_1400x800.webp'),
-        os.path.join('events-art.com', 'image', 'zdj57_auto_1400x800.webp'),
-        os.path.join('events-art.com', 'image', 'strona-csw403_auto_1400x800.webp'),
-        os.path.join('events-art.com', 'image', 'news_5_1.jpg'),
-        os.path.join('events-art.com', 'image', 'news_6_1.webp'),
-    ]
-    img_path = None
-    for p in candidate_images:
-        if os.path.exists(p):
-            img_path = p
-            break
-    if img_path is None:
-        img_path = os.path.join('events-art.com', 'image', 'header-image.jpg')
-    # Генерируем PDF (максимально как на образце)
-    c = canvas.Canvas(pdf_path, pagesize=A4)
-    width, height = A4
-    # Верхний домен по центру, серым
-    top_y = height - 40
-    c.setFont("Helvetica-Bold", 20)
-    c.setFillColorRGB(0.7, 0.7, 0.7)
-    c.drawCentredString(width / 2, top_y, "artpulse.com")
-    # Имя крупно по центру
-    name_y = top_y - 35
-    c.setFont("Helvetica-Bold", 24)
-    c.setFillColorRGB(0, 0, 0)
-    c.drawCentredString(width / 2, name_y, name)
-    # Картинка по центру, максимально широкая, сохранение пропорций
-    img_bottom_y = name_y - 40
+    
     try:
-        img = Image.open(img_path)
-        max_w = int(width - 140)
-        max_h = 280
-        img.thumbnail((max_w, max_h))
-        img_w, img_h = img.size
-        img_x = (width - img_w) / 2
-        img_y = img_bottom_y - img_h
-        img_io = ImageReader(img)
-        c.drawImage(img_io, img_x, img_y, width=img_w, height=img_h)
-    except Exception:
-        # Если картинка не загрузилась, отступ просто меньше
-        img_y = img_bottom_y
-        img_h = 0
-    # Блок с тремя колонками PRICE / DATE / TIME
-    row_top_y = (img_y if img_h == 0 else img_y) - 20
-    # Подписи мелкие и серые, значения черные и больше
-    label_y = row_top_y
-    value_y = label_y - 16
-    col_centers = [width * (1/6), width * (3/6), width * (5/6)]
-    labels = ["PRICE", "DATE", "TIME"]
-    values = [price, date, time]
-    c.setFont("Helvetica", 10)
-    c.setFillColorRGB(0.35, 0.35, 0.35)
-    for i, x in enumerate(col_centers):
-        c.drawCentredString(x, label_y, labels[i])
-    c.setFont("Helvetica-Bold", 14)
-    c.setFillColorRGB(0, 0, 0)
-    for i, x in enumerate(col_centers):
-        c.drawCentredString(x, value_y, values[i])
-    # Location по центру, жирно
-    loc_y = value_y - 28
-    c.setFont("Helvetica-Bold", 16)
-    c.drawCentredString(width / 2, loc_y, f"Location: {address if address else '?????'}")
-    # Пунктирна лінія на всю ширину
-    line_y = loc_y - 30
-    c.setStrokeColor(colors.grey)
-    c.setLineWidth(1)
-    try:
-        c.setDash(1, 3)
-    except Exception:
-        pass
-    c.line(50, line_y, width - 50, line_y)
-    # Штрихкод по центру
-    barcode_y = line_y - 80
-    try:
-        c.setDash()  # Скинути пунктир перед зображенням
-    except Exception:
-        pass
-    try:
-        c.drawImage(barcode_path, (width - 360) // 2, barcode_y, width=360, height=70)
-    except Exception:
-        pass
-    # Номер штрихкоду по центру
-    c.setFont("Helvetica", 12)
-    c.drawCentredString(width / 2, barcode_y - 18, barcode_value)
-    c.save()
-    # --- Копіюємо PDF у папку для вебсерверу ---
-    public_ticket_dir = os.path.join('events-art.com', 'file', 'ticket')
-    os.makedirs(public_ticket_dir, exist_ok=True)
-    public_pdf_path = os.path.join(public_ticket_dir, pdf_filename)
-    try:
-        shutil.copy2(pdf_path, public_pdf_path)
+        name, time, date, price, address = lines[:5]
+        
+        # Валідація даних
+        validation_errors = validate_ticket_data(name, time, date, price, address)
+        if validation_errors:
+            error_text = "❌ **Помилки в даних:**\n\n" + "\n".join(validation_errors)
+            await message.answer(error_text, parse_mode="Markdown")
+            return
+        
+        # Показуємо процес створення
+        processing_msg = await message.answer("🔄 **Створюю квиток...**\n\nЗачекайте трохи...", parse_mode="Markdown")
+        
+        # Генерируем уникальный order_id
+        order_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
+        pdf_filename = f"order_{order_id}.pdf"
+        pdf_path = os.path.join(TICKETS_DIR, pdf_filename)
+        
+        # Генерируем штрихкод
+        barcode_value = ''.join(random.choices(string.digits, k=16))
+        barcode_path = os.path.join(TICKETS_DIR, f"barcode_{order_id}.png")
+        barcode_img = barcode.get('code128', barcode_value, writer=ImageWriter())
+        barcode_img.save(barcode_path)
+        
+        # Картинка для билета
+        candidate_images = [
+            os.path.join('events-art.com', 'image', 'zdj49_auto_1400x800.webp'),
+            os.path.join('events-art.com', 'image', 'zdj36_auto_1400x800.webp'),
+            os.path.join('events-art.com', 'image', 'zdj51_auto_1400x800.webp'),
+            os.path.join('events-art.com', 'image', 'zdj57_auto_1400x800.webp'),
+            os.path.join('events-art.com', 'image', 'strona-csw403_auto_1400x800.webp'),
+            os.path.join('events-art.com', 'image', 'news_5_1.jpg'),
+            os.path.join('events-art.com', 'image', 'news_6_1.webp'),
+        ]
+        
+        img_path = None
+        for p in candidate_images:
+            if os.path.exists(p):
+                img_path = p
+                break
+        
+        if img_path is None:
+            img_path = os.path.join('events-art.com', 'image', 'header-image.jpg')
+        
+        # Генерируем PDF
+        c = canvas.Canvas(pdf_path, pagesize=A4)
+        width, height = A4
+        
+        # Верхний домен по центру, серым
+        top_y = height - 40
+        c.setFont("Helvetica-Bold", 20)
+        c.setFillColorRGB(0.7, 0.7, 0.7)
+        c.drawCentredString(width / 2, top_y, "events-art.com")
+        
+        # Имя крупно по центру
+        name_y = top_y - 35
+        c.setFont("Helvetica-Bold", 24)
+        c.setFillColorRGB(0, 0, 0)
+        c.drawCentredString(width / 2, name_y, name)
+        
+        # Картинка по центру
+        img_bottom_y = name_y - 40
+        try:
+            img = Image.open(img_path)
+            max_w = int(width - 140)
+            max_h = 280
+            img.thumbnail((max_w, max_h))
+            img_w, img_h = img.size
+            img_x = (width - img_w) / 2
+            img_y = img_bottom_y - img_h
+            img_io = ImageReader(img)
+            c.drawImage(img_io, img_x, img_y, width=img_w, height=img_h)
+        except Exception:
+            img_y = img_bottom_y
+            img_h = 0
+        
+        # Блок с тремя колонками PRICE / DATE / TIME
+        row_top_y = (img_y if img_h == 0 else img_y) - 20
+        label_y = row_top_y
+        value_y = label_y - 16
+        col_centers = [width * (1/6), width * (3/6), width * (5/6)]
+        labels = ["PRICE", "DATE", "TIME"]
+        values = [price, date, time]
+        
+        c.setFont("Helvetica", 10)
+        c.setFillColorRGB(0.35, 0.35, 0.35)
+        for i, x in enumerate(col_centers):
+            c.drawCentredString(x, label_y, labels[i])
+        
+        c.setFont("Helvetica-Bold", 14)
+        c.setFillColorRGB(0, 0, 0)
+        for i, x in enumerate(col_centers):
+            c.drawCentredString(x, value_y, values[i])
+        
+        # Location по центру
+        loc_y = value_y - 28
+        c.setFont("Helvetica-Bold", 16)
+        c.drawCentredString(width / 2, loc_y, f"Location: {address if address else '?????'}")
+        
+        # Пунктирна лінія
+        line_y = loc_y - 30
+        c.setStrokeColor(colors.grey)
+        c.setLineWidth(1)
+        try:
+            c.setDash(1, 3)
+        except Exception:
+            pass
+        c.line(50, line_y, width - 50, line_y)
+        
+        # Штрихкод
+        barcode_y = line_y - 80
+        try:
+            c.setDash()
+        except Exception:
+            pass
+        
+        try:
+            c.drawImage(barcode_path, (width - 360) // 2, barcode_y, width=360, height=70)
+        except Exception:
+            pass
+        
+        # Номер штрихкоду
+        c.setFont("Helvetica", 12)
+        c.drawCentredString(width / 2, barcode_y - 18, barcode_value)
+        c.save()
+        
+        # Копіюємо PDF у папку для вебсерверу
+        public_ticket_dir = os.path.join('events-art.com', 'file', 'ticket')
+        os.makedirs(public_ticket_dir, exist_ok=True)
+        public_pdf_path = os.path.join(public_ticket_dir, pdf_filename)
+        
+        try:
+            shutil.copy2(pdf_path, public_pdf_path)
+        except Exception as e:
+            logging.error(f"[TICKET PDF COPY ERROR] {e}")
+        
+        # Формируем ссылку
+        ticket_url = f"https://events-art.com/file/ticket/{pdf_filename}"
+        
+        # Оновлюємо повідомлення про успіх
+        await processing_msg.edit_text("✅ **Квиток створено успішно!**")
+        
+        # Відправляємо PDF-файл у чат
+        try:
+            await message.answer_document(
+                FSInputFile(pdf_path), 
+                caption=f"🎫 **Квиток: {name}**\n\n"
+                        f"📅 Дата: {date}\n"
+                        f"🕐 Час: {time}\n"
+                        f"💰 Ціна: {price}\n"
+                        f"📍 Адрес: {address}\n\n"
+                        f"🆔 ID: `{order_id}`",
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            logging.error(f"[TICKET PDF SEND ERROR] {e}")
+            await message.answer(f"❌ Помилка при відправці PDF: {e}")
+        
+        # Відправляємо посилання
+        await message.answer(
+            f"🔗 **Посилання на квиток:**\n"
+            f"`{ticket_url}`\n\n"
+            f"💡 Ви можете відкрити це посилання в браузері або поділитися ним",
+            parse_mode="Markdown"
+        )
+        
+        # Повертаємо користувача в головне меню
+        kb = get_user_keyboard(uid)
+        await message.answer("🏠 Повертаю вас в головне меню", reply_markup=kb)
+        
+        # Очищаємо стан
+        user_step[uid] = None
+        
+        # Видаляємо тимчасові файли
+        try:
+            if os.path.exists(barcode_path):
+                os.remove(barcode_path)
+        except Exception as e:
+            logging.error(f"Помилка видалення тимчасового штрих-коду: {e}")
+            
     except Exception as e:
-        logging.error(f"[TICKET PDF COPY ERROR] {e}")
-    # Формируем ссылку (events-art.com)
-    ticket_url = f"https://events-art.com/file/ticket/{pdf_filename}"
-    # Відправляємо PDF-файл у чат з підписом
-    try:
-        await message.answer_document(FSInputFile(pdf_path), caption=f"{pdf_filename}")
-    except Exception as e:
-        logging.error(f"[TICKET PDF SEND ERROR] {e}")
-        await message.answer(f"Помилка при відправці PDF: {e}")
-    # Відправляємо посилання
-    await message.answer(ticket_url)
-    user_step[uid] = None
+        logging.error(f"Загальна помилка обробки квитка: {e}")
+        await message.answer(
+            "❌ **Помилка!**\n\n"
+            "Сталася непередбачена помилка при створенні квитка.\n"
+            "Спробуйте ще раз або зверніться до адміністратора.",
+            parse_mode="Markdown"
+        )
+        user_step[uid] = None
 
 @router.callback_query(lambda c: c.data == "tickets_cancel")
 async def tickets_cancel_handler(call: types.CallbackQuery):
