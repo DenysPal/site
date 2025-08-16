@@ -442,17 +442,17 @@ def send_button_log_to_chat(button_type, ip, page_code, user_name=None, event_in
         if event_info:
             msg += f"💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}\n"
         
-        # Надсилаємо в приватні повідомлення бота
+        # Надсилаємо ТІЛЬКИ в приватні повідомлення бота
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
         data_admin = {"chat_id": ADMIN_ID, "text": msg}
         
         requests.post(url, data=data_admin, timeout=1)
         print(f"📤 Лог про кнопку {button_type} надіслано в приватні повідомлення")
         
-        # Також надсилаємо в чат з кнопками для загальної інформації
-        data_chat = {"chat_id": GROUP_ID, "text": msg}
-        requests.post(url, data=data_chat, timeout=1)
-        print(f"📤 Лог про кнопку {button_type} також надіслано в чат")
+        # НЕ надсилаємо в чат - тільки в приватні повідомлення
+        # data_chat = {"chat_id": GROUP_ID, "text": msg}
+        # requests.post(url, data=data_chat, timeout=1)
+        # print(f"📤 Лог про кнопку {button_type} також надіслано в чат")
         
     except Exception as e:
         print(f"❌ Помилка надсилання логу про кнопку: {e}")

