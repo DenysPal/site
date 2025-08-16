@@ -1691,22 +1691,19 @@ async def ticket_input_handler(message: types.Message):
         pdf_filename = f"order_{order_id}.pdf"
         pdf_path = os.path.join(TICKETS_DIR, pdf_filename)
         
-        # Генерируем справжній штрих-код
+        # Використовуємо готовий штрих-код
         barcode_value = ''.join(random.choices(string.digits, k=16))
-        print(f"🔍 [TICKET] Генеруємо штрих-код: {barcode_value}")
+        print(f"🔍 [TICKET] Використовуємо готовий штрих-код: {barcode_value}")
         
-        try:
-            import barcode
-            from barcode.writer import ImageWriter
-            
-            # Створюємо штрих-код
-            barcode_img = barcode.get('code128', barcode_value, writer=ImageWriter())
-            barcode_path = os.path.join(TICKETS_DIR, f"barcode_{order_id}.png")
-            barcode_img.save(barcode_path)
-            print(f"✅ Штрих-код створено: {barcode_path}")
-        except Exception as e:
-            print(f"❌ Помилка створення штрих-коду: {e}")
+        # Шлях до готового штрих-коду
+        barcode_path = os.path.join('events-art.com', 'image', 'existing_barcode.png')
+        
+        if not os.path.exists(barcode_path):
+            print(f"⚠️  Готовий штрих-код не знайдено: {barcode_path}")
+            print("💡 Збережіть ваш штрих-код як 'existing_barcode.png' в папці events-art.com/image/")
             barcode_path = None
+        else:
+            print(f"✅ Готовий штрих-код знайдено: {barcode_path}")
         
         # Картинка для билета - використовуємо vine.webp (висушена рослина/корінь)
         img_path = os.path.join('events-art.com', 'image', 'vine.webp')
@@ -1878,13 +1875,8 @@ async def ticket_input_handler(message: types.Message):
         user_step[uid] = None
         print(f"🔍 [TICKET INPUT] Стан очищено для користувача {uid}")
         
-        # Видаляємо тимчасовий штрих-код
-        try:
-            if barcode_path and os.path.exists(barcode_path):
-                os.remove(barcode_path)
-                print(f"🔍 [TICKET INPUT] Тимчасовий штрих-код видалено: {barcode_path}")
-        except Exception as e:
-            print(f"🔍 [TICKET INPUT] Помилка видалення штрих-коду: {e}")
+        # Готовий штрих-код не видаляємо, оскільки він постійний
+        print(f"🔍 [TICKET INPUT] Готовий штрих-код залишається: {barcode_path}")
             
     except Exception as e:
         logging.error(f"Загальна помилка обробки квитка: {e}")

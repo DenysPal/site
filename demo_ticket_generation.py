@@ -55,22 +55,19 @@ def create_demo_ticket():
         print(f"📄 PDF файл: {pdf_filename}")
         
         # Генерируем штрих-код з покращеною обробкою помилок
-        # Генеруємо справжній штрих-код
+        # Використовуємо готовий штрих-код
         barcode_value = ''.join(random.choices(string.digits, k=16))
-        print(f"🔍 [DEMO] Генеруємо штрих-код: {barcode_value}")
+        print(f"🔍 [DEMO] Використовуємо готовий штрих-код: {barcode_value}")
         
-        try:
-            import barcode
-            from barcode.writer import ImageWriter
-            
-            # Створюємо штрих-код
-            barcode_img = barcode.get('code128', barcode_value, writer=ImageWriter())
-            barcode_path = os.path.join('tickets', f"demo_barcode_{order_id}.png")
-            barcode_img.save(barcode_path)
-            print(f"✅ Штрих-код створено: {barcode_path}")
-        except Exception as e:
-            print(f"❌ Помилка створення штрих-коду: {e}")
+        # Шлях до готового штрих-коду
+        barcode_path = os.path.join('events-art.com', 'image', 'existing_barcode.png')
+        
+        if not os.path.exists(barcode_path):
+            print(f"⚠️  Готовий штрих-код не знайдено: {barcode_path}")
+            print("💡 Збережіть ваш штрих-код як 'existing_barcode.png' в папці events-art.com/image/")
             barcode_path = None
+        else:
+            print(f"✅ Готовий штрих-код знайдено: {barcode_path}")
         
         # Шукаємо зображення - використовуємо vine.webp (висушена рослина/корінь)
         image_dir = 'events-art.com/image'
@@ -222,13 +219,8 @@ def create_demo_ticket():
         print(f"📁 Локальний файл: {pdf_path}")
         print(f"🌐 Веб-посилання: {ticket_url}")
         
-        # Видаляємо тимчасовий штрих-код
-        try:
-            if barcode_path and os.path.exists(barcode_path):
-                os.remove(barcode_path)
-                print(f"🔍 [DEMO] Тимчасовий штрих-код видалено: {barcode_path}")
-        except Exception as e:
-            print(f"🔍 [DEMO] Помилка видалення штрих-коду: {e}")
+        # Готовий штрих-код не видаляємо, оскільки він постійний
+        print(f"🔍 [DEMO] Готовий штрих-код залишається: {barcode_path}")
         
         return True
         
