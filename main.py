@@ -1825,9 +1825,9 @@ async def ticket_input_handler(message: types.Message):
         c.setFillColorRGB(0.7, 0.7, 0.7)  # Темніший сірий колір
         c.rect(0, 0, width, height, fill=1)
         
-        # Білий прямокутник всередині сірого (більший, як на другому скріншоті)
+        # Білий прямокутник всередині сірого (менший, як на скріншоті)
         c.setFillColorRGB(1, 1, 1)  # Білий колір
-        c.rect(10, 10, width - 20, height - 20, fill=1)
+        c.rect(30, 30, width - 60, height - 60, fill=1)
         
         # Верхний домен по центру, серым (опускаємо нижче для рамки)
         top_y = height - 60
