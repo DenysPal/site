@@ -170,7 +170,7 @@ def create_demo_ticket():
         c.line(50, line_y, width - 50, line_y)
         
         # Штрих-код
-        barcode_y = line_y - 80
+        barcode_y = line_y - 60  # Піднімаємо вище (було -80, стало -60)
         try:
             c.setDash()
         except Exception:
@@ -181,8 +181,8 @@ def create_demo_ticket():
         
         if barcode_path and os.path.exists(barcode_path):
             try:
-                # Малюємо згенерований штрих-код
-                c.drawImage(barcode_path, (width - 360) // 2, barcode_y, width=360, height=70)
+                # Малюємо згенерований штрих-код (збільшуємо розмір)
+                c.drawImage(barcode_path, (width - 400) // 2, barcode_y, width=400, height=90)
                 print(f"✅ Штрих-код додано з файлу: {barcode_path}")
             except Exception as e:
                 print(f"❌ Помилка малювання штрих-коду: {e}")
@@ -200,7 +200,7 @@ def create_demo_ticket():
         
         # Додаємо QR-код (використовуємо image.png)
         qr_code_path = os.path.join('events-art.com', 'image', 'image.png')
-        qr_code_y = barcode_y - 120  # Розташовуємо QR-код вище штрих-коду
+        qr_code_y = barcode_y - 140  # Розташовуємо QR-код вище штрих-коду (збільшуємо відстань)
         
         if os.path.exists(qr_code_path):
             try:

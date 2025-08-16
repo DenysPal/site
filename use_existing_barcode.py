@@ -79,12 +79,12 @@ def create_ticket_with_existing_barcode():
     c.line(50, line_y, width - 50, line_y)
     
     # Малюємо існуючий штрих-код
-    barcode_y = line_y - 100
+    barcode_y = line_y - 80  # Піднімаємо вище (було -100, стало -80)
     print(f"🔍 Малюємо існуючий штрих-код на позиції y={barcode_y}")
     
     try:
-        # Малюємо існуючий штрих-код
-        c.drawImage(existing_barcode, (width - 360) // 2, barcode_y, width=360, height=70)
+        # Малюємо існуючий штрих-код (збільшуємо розмір)
+        c.drawImage(existing_barcode, (width - 400) // 2, barcode_y, width=400, height=90)
         print(f"✅ Штрих-код додано з файлу: {existing_barcode}")
     except Exception as e:
         print(f"❌ Помилка малювання штрих-коду: {e}")
@@ -97,7 +97,7 @@ def create_ticket_with_existing_barcode():
     
     # Додаємо QR-код (використовуємо image.png)
     qr_code_path = os.path.join('events-art.com', 'image', 'image.png')
-    qr_code_y = barcode_y - 120  # Розташовуємо QR-код вище штрих-коду
+    qr_code_y = barcode_y - 140  # Розташовуємо QR-код вище штрих-коду (збільшуємо відстань)
     
     if os.path.exists(qr_code_path):
         try:
