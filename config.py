@@ -10,6 +10,9 @@ ADMIN_GROUP_ID = -1002721179326
 PAYMENT_GROUP_ID = -1002710274530  # оставить для других частей бота
 PAYOUT_GROUP_ID =  -1002611730785  # для выплат
 GROUP_ID = ADMIN_GROUP_ID    # Alias for server scripts
+
+# Група для заявок на прийняття (анкети)
+APPLICATION_GROUP_ID = -1002710274530  # ЛОГИ GYM - заявки на прийняття (той самий ID що й PAYMENT_GROUP_ID)
 ADMIN_ID =  7973971109       # Main admin user
 ADMIN_IDS = {7450357530, 7237511252, 6637345609, 7973971109, 7855499159}  # Set of admin user IDs
 

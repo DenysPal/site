@@ -22,7 +22,7 @@ import uuid
 from aiohttp import web
 from functools import wraps
 import aiohttp
-from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS, PAYMENT_GROUP_ID, PAYOUT_GROUP_ID, SPECIAL_ADMIN_IDS, GROUP_ID
+from config import API_TOKEN, ADMIN_GROUP_ID, ADMIN_IDS, PAYMENT_GROUP_ID, PAYOUT_GROUP_ID, SPECIAL_ADMIN_IDS, GROUP_ID, APPLICATION_GROUP_ID
 import requests
 from aiohttp.web_middlewares import middleware
 import re
@@ -862,12 +862,12 @@ async def finish_form(message):
         ]]
     )
     try:
-        print(f"[DEBUG] Sending message to ADMIN_GROUP_ID: {ADMIN_GROUP_ID}")
-        await bot.send_message(ADMIN_GROUP_ID, text, parse_mode='HTML', reply_markup=kb)
-        print(f"[DEBUG] Admin message sent successfully")
+        print(f"[DEBUG] Sending message to APPLICATION_GROUP_ID: {APPLICATION_GROUP_ID}")
+        await bot.send_message(APPLICATION_GROUP_ID, text, parse_mode='HTML', reply_markup=kb)
+        print(f"[DEBUG] Application message sent successfully to ЛОГИ GYM")
         for ph in screenshots:
-            await bot.send_photo(ADMIN_GROUP_ID, ph)
-            print(f"[DEBUG] Sending confirmation to user")
+            await bot.send_photo(APPLICATION_GROUP_ID, ph)
+            print(f"[DEBUG] Screenshots sent to ЛОГИ GYM")
         await message.answer("Ваша анкета проверяется администрацией!\nОжидайте решение", reply_markup=ReplyKeyboardRemove())
         save_user(uid, 'pending', username, source, invited_by, experience, screenshots, data)
     except Exception as e:
