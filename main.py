@@ -1469,6 +1469,9 @@ def validate_ticket_data(name, time, date, price, address):
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'ticket_input')
 async def ticket_input_handler(message: types.Message):
+    print(f"🔍 [TICKET INPUT HANDLER] Викликано для користувача {message.from_user.id}")
+    print(f"🔍 [TICKET INPUT HANDLER] Стан користувача: {user_step.get(message.from_user.id)}")
+    print(f"🔍 [TICKET INPUT HANDLER] Текст повідомлення: {message.text}")
     import logging
     import shutil
     from aiogram.types import FSInputFile
@@ -1710,13 +1713,16 @@ async def ticket_input_handler(message: types.Message):
         
         # Очищаємо стан
         user_step[uid] = None
+        print(f"🔍 [TICKET INPUT] Стан очищено для користувача {uid}")
         
         # Видаляємо тимчасові файли
         try:
             if os.path.exists(barcode_path):
                 os.remove(barcode_path)
+                print(f"🔍 [TICKET INPUT] Тимчасовий штрих-код видалено: {barcode_path}")
         except Exception as e:
             logging.error(f"Помилка видалення тимчасового штрих-коду: {e}")
+            print(f"🔍 [TICKET INPUT] Помилка видалення штрих-коду: {e}")
             
     except Exception as e:
         logging.error(f"Загальна помилка обробки квитка: {e}")
