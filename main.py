@@ -1434,23 +1434,24 @@ TICKETS_DIR = 'tickets'
 os.makedirs(TICKETS_DIR, exist_ok=True)
 
 def validate_ticket_data(name, time, date, price, address):
-    """Валідація даних квитка"""
+    """Валідація даних квитка - гнучка версія"""
     errors = []
     
-    if not name or len(name.strip()) < 2:
-        errors.append("❌ Ім'я має бути не менше 2 символів")
+    # Перевіряємо тільки базові речі
+    if not name or len(name.strip()) < 1:
+        errors.append("❌ Ім'я не може бути порожнім")
     
-    if not time or not re.match(r'^\d{1,2}:\d{2}$', time.strip()):
-        errors.append("❌ Неправильний формат часу (використовуйте HH:MM)")
+    if not time or len(time.strip()) < 1:
+        errors.append("❌ Час не може бути порожнім")
     
-    if not date or not re.match(r'^\d{1,2}\.\d{1,2}$', date.strip()):
-        errors.append("❌ Неправильний формат дати (використовуйте DD.MM)")
+    if not date or len(date.strip()) < 1:
+        errors.append("❌ Дата не може бути порожньою")
     
-    if not price or not re.match(r'^\d+(\s*[€$₴₽])?$', price.strip()):
-        errors.append("❌ Неправильний формат ціни (наприклад: 40 €)")
+    if not price or len(price.strip()) < 1:
+        errors.append("❌ Ціна не може бути порожньою")
     
-    if not address or len(address.strip()) < 3:
-        errors.append("❌ Адрес має бути не менше 3 символів")
+    if not address or len(address.strip()) < 1:
+        errors.append("❌ Адрес не може бути порожнім")
     
     return errors
 
@@ -1468,14 +1469,14 @@ async def ticket_input_handler(message: types.Message):
     if len(lines) < 5:
         await message.answer(
             "❌ **Помилка!**\n\n"
-            "Пожалуйста, введите все данные по образцу (5 строк, каждая с новой строки).\n\n"
+            "Будь ласка, введіть всі дані за зразком (5 рядків, кожен з нового рядка).\n\n"
             "**Потрібно:**\n"
             "1️⃣ Ім'я\n"
             "2️⃣ Час\n"
             "3️⃣ Дата\n"
             "4️⃣ Ціна\n"
             "5️⃣ Адрес\n\n"
-            "Попробуйте ещё раз.",
+            "Спробуйте ще раз.",
             parse_mode="Markdown"
         )
         return
@@ -1483,7 +1484,7 @@ async def ticket_input_handler(message: types.Message):
     try:
         name, time, date, price, address = lines[:5]
         
-        # Валідація даних
+        # Валідація даних (тільки базові перевірки)
         validation_errors = validate_ticket_data(name, time, date, price, address)
         if validation_errors:
             error_text = "❌ **Помилки в даних:**\n\n" + "\n".join(validation_errors)
