@@ -1894,11 +1894,11 @@ async def ticket_input_handler(message: types.Message):
                         f"🆔 ID: `{order_id}`",
                 parse_mode="Markdown"
             )
-    except Exception as e:
-        logging.error(f"[TICKET PDF SEND ERROR] {e}")
+        except Exception as e:
+            logging.error(f"[TICKET PDF SEND ERROR] {e}")
             await message.answer(f"❌ Помилка при відправці PDF: {e}")
         
-    # Відправляємо посилання
+        # Відправляємо посилання
         await message.answer(
             f"🔗 **Посилання на квиток:**\n"
             f"`{ticket_url}`\n\n"
@@ -1916,7 +1916,7 @@ async def ticket_input_handler(message: types.Message):
         
         # Готовий штрих-код не видаляємо, оскільки він постійний
         print(f"🔍 [TICKET INPUT] Готовий штрих-код залишається: {barcode_path}")
-            
+        
     except Exception as e:
         logging.error(f"Загальна помилка обробки квитка: {e}")
         await message.answer(
@@ -1925,7 +1925,7 @@ async def ticket_input_handler(message: types.Message):
             "Спробуйте ще раз або зверніться до адміністратора.",
             parse_mode="Markdown"
         )
-    user_step[uid] = None
+        user_step[uid] = None
 
 @router.callback_query(lambda c: c.data == "tickets_cancel")
 async def tickets_cancel_handler(call: types.CallbackQuery):
