@@ -413,7 +413,7 @@ admin_panel_kb = ReplyKeyboardMarkup(
 special_admin_panel_kb = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="➕ Добавить админа")],
-        [KeyboardButton(text="👥 Переглянути адмінів")],
+        [KeyboardButton(text="👥 Просмотреть админов")],
         [KeyboardButton(text="⬅️ Назад")]
     ],
     resize_keyboard=True
@@ -843,7 +843,7 @@ async def special_admin_panel_action(message: types.Message):
         ])
         await message.answer("Введите ID пользователя, которого нужно сделать админом:", reply_markup=ReplyKeyboardRemove())
         await message.answer("Для возврата в админ-панель нажмите кнопку ниже:", reply_markup=back_kb)
-    elif message.text == "👥 Переглянути адмінів":
+    elif message.text == "👥 Просмотреть админов":
         await show_admins_list(message)
     else:
         await message.answer("Неизвестная команда. Выберите действие из меню.")
