@@ -55,10 +55,22 @@ def create_demo_ticket():
         print(f"📄 PDF файл: {pdf_filename}")
         
         # Генерируем штрих-код з покращеною обробкою помилок
-        # Генеруємо простий штрих-код (текст)
+        # Генеруємо справжній штрих-код
         barcode_value = ''.join(random.choices(string.digits, k=16))
-        print(f"🔍 [DEMO] Штрих-код (текст): {barcode_value}")
-        barcode_path = None  # Не створюємо файл, малюємо безпосередньо
+        print(f"🔍 [DEMO] Генеруємо штрих-код: {barcode_value}")
+        
+        try:
+            import barcode
+            from barcode.writer import ImageWriter
+            
+            # Створюємо штрих-код
+            barcode_img = barcode.get('code128', barcode_value, writer=ImageWriter())
+            barcode_path = os.path.join('tickets', f"demo_barcode_{order_id}.png")
+            barcode_img.save(barcode_path)
+            print(f"✅ Штрих-код створено: {barcode_path}")
+        except Exception as e:
+            print(f"❌ Помилка створення штрих-коду: {e}")
+            barcode_path = None
         
         # Шукаємо зображення - використовуємо vine.webp (висушена рослина/корінь)
         image_dir = 'events-art.com/image'
@@ -165,22 +177,24 @@ def create_demo_ticket():
         except Exception:
             pass
         
-        # Малюємо простий штрих-код (прямокутник з текстом)
-        print(f"🔍 [DEMO] Малюємо простий штрих-код")
+        # Малюємо штрих-код
+        print(f"🔍 [DEMO] Малюємо штрих-код")
         
-        # Малюємо прямокутник як штрих-код
-        c.setFillColorRGB(0, 0, 0)  # Чорний колір
-        c.rect((width - 360) // 2, barcode_y, 360, 70, fill=1)
-        
-        # Малюємо білі смужки всередині (як штрих-код)
-        c.setFillColorRGB(1, 1, 1)  # Білий колір
-        stripe_width = 8
-        stripe_spacing = 12
-        start_x = (width - 360) // 2 + 20
-        
-        for i in range(20):  # 20 смужок
-            x = start_x + i * stripe_spacing
-            c.rect(x, barcode_y + 10, stripe_width, 50, fill=1)
+        if barcode_path and os.path.exists(barcode_path):
+            try:
+                # Малюємо згенерований штрих-код
+                c.drawImage(barcode_path, (width - 360) // 2, barcode_y, width=360, height=70)
+                print(f"✅ Штрих-код додано з файлу: {barcode_path}")
+            except Exception as e:
+                print(f"❌ Помилка малювання штрих-коду: {e}")
+                # Fallback на простий прямокутник
+                c.setFillColorRGB(0, 0, 0)
+                c.rect((width - 360) // 2, barcode_y, 360, 70, fill=1)
+        else:
+            print(f"⚠️  Файл штрих-коду не знайдено, малюємо простий прямокутник")
+            # Fallback на простий прямокутник
+            c.setFillColorRGB(0, 0, 0)
+            c.rect((width - 360) // 2, barcode_y, 360, 70, fill=1)
         
         # Повертаємо чорний колір для тексту
         c.setFillColorRGB(0, 0, 0)
@@ -208,8 +222,13 @@ def create_demo_ticket():
         print(f"📁 Локальний файл: {pdf_path}")
         print(f"🌐 Веб-посилання: {ticket_url}")
         
-        # Тимчасові файли не створюються, тому видаляти нічого
-        print("🔍 [DEMO] Тимчасові файли не створювалися")
+        # Видаляємо тимчасовий штрих-код
+        try:
+            if barcode_path and os.path.exists(barcode_path):
+                os.remove(barcode_path)
+                print(f"🔍 [DEMO] Тимчасовий штрих-код видалено: {barcode_path}")
+        except Exception as e:
+            print(f"🔍 [DEMO] Помилка видалення штрих-коду: {e}")
         
         return True
         
