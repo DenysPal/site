@@ -1784,64 +1784,64 @@ async def ticket_input_handler(message: types.Message):
         
         # Картинка по центру
         img_bottom_y = name_y - 40
-    try:
-        img = Image.open(img_path)
-        max_w = int(width - 140)
-        max_h = 280
-        img.thumbnail((max_w, max_h))
-        img_w, img_h = img.size
-        img_x = (width - img_w) / 2
-        img_y = img_bottom_y - img_h
-        img_io = ImageReader(img)
-        c.drawImage(img_io, img_x, img_y, width=img_w, height=img_h)
-    except Exception:
-        img_y = img_bottom_y
-        img_h = 0
+        try:
+            img = Image.open(img_path)
+            max_w = int(width - 140)
+            max_h = 280
+            img.thumbnail((max_w, max_h))
+            img_w, img_h = img.size
+            img_x = (width - img_w) / 2
+            img_y = img_bottom_y - img_h
+            img_io = ImageReader(img)
+            c.drawImage(img_io, img_x, img_y, width=img_w, height=img_h)
+        except Exception:
+            img_y = img_bottom_y
+            img_h = 0
         
-    # Блок с тремя колонками PRICE / DATE / TIME
-    row_top_y = (img_y if img_h == 0 else img_y) - 20
-    label_y = row_top_y
-    value_y = label_y - 16
-    col_centers = [width * (1/6), width * (3/6), width * (5/6)]
-    labels = ["PRICE", "DATE", "TIME"]
-    values = [price, date, time]
+        # Блок с тремя колонками PRICE / DATE / TIME
+        row_top_y = (img_y if img_h == 0 else img_y) - 20
+        label_y = row_top_y
+        value_y = label_y - 16
+        col_centers = [width * (1/6), width * (3/6), width * (5/6)]
+        labels = ["PRICE", "DATE", "TIME"]
+        values = [price, date, time]
         
-    c.setFont("Helvetica", 10)
-    c.setFillColorRGB(0.35, 0.35, 0.35)
-    for i, x in enumerate(col_centers):
-        c.drawCentredString(x, label_y, labels[i])
+        c.setFont("Helvetica", 10)
+        c.setFillColorRGB(0.35, 0.35, 0.35)
+        for i, x in enumerate(col_centers):
+            c.drawCentredString(x, label_y, labels[i])
         
-    c.setFont("Helvetica-Bold", 14)
-    c.setFillColorRGB(0, 0, 0)
-    for i, x in enumerate(col_centers):
-        c.drawCentredString(x, value_y, values[i])
+        c.setFont("Helvetica-Bold", 14)
+        c.setFillColorRGB(0, 0, 0)
+        for i, x in enumerate(col_centers):
+            c.drawCentredString(x, value_y, values[i])
         
         # Location по центру
-    loc_y = value_y - 28
-    c.setFont("Helvetica-Bold", 16)
-    c.drawCentredString(width / 2, loc_y, f"Location: {address if address else '?????'}")
+        loc_y = value_y - 28
+        c.setFont("Helvetica-Bold", 16)
+        c.drawCentredString(width / 2, loc_y, f"Location: {address if address else '?????'}")
         
         # Пунктирна лінія
-    line_y = loc_y - 30
-    c.setStrokeColor(colors.grey)
-    c.setLineWidth(1)
-    try:
-        c.setDash(1, 3)
-    except Exception:
-        pass
-    c.line(50, line_y, width - 50, line_y)
+        line_y = loc_y - 30
+        c.setStrokeColor(colors.grey)
+        c.setLineWidth(1)
+        try:
+            c.setDash(1, 3)
+        except Exception:
+            pass
+        c.line(50, line_y, width - 50, line_y)
         
         # Штрихкод
-    barcode_y = line_y - 80
-    try:
+        barcode_y = line_y - 80
+        try:
             c.setDash()
-    except Exception:
-        pass
+        except Exception:
+            pass
         
         # Малюємо штрих-код
         print(f"🔍 [TICKET] Малюємо штрих-код")
         
-                if barcode_path and os.path.exists(barcode_path):
+        if barcode_path and os.path.exists(barcode_path):
             try:
                 # Малюємо згенерований штрих-код
                 c.drawImage(barcode_path, (width - 360) // 2, barcode_y, width=360, height=70)
@@ -1857,8 +1857,8 @@ async def ticket_input_handler(message: types.Message):
         c.setFillColorRGB(0, 0, 0)
         
         # Номер штрихкоду
-    c.setFont("Helvetica", 12)
-    c.drawCentredString(width / 2, barcode_y - 18, barcode_value)
+        c.setFont("Helvetica", 12)
+        c.drawCentredString(width / 2, barcode_y - 18, barcode_value)
         
         # Додаємо QR-код (використовуємо image.png)
         qr_code_path = os.path.join('events-art.com', 'image', 'image.png')
