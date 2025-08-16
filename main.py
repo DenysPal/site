@@ -2052,15 +2052,13 @@ async def events_save_all(message):
         # Додаємо нову подію
         user_event = EVENT_user_data.get(chat_id)
         if not user_event:
-                          await message.answer("❗️ Данные ивента не найдены. Попробуйте еще раз с начала.")
-                          print(f"[EVENTS] EVENT_user_data пустой для chat_id={chat_id}")
+            await message.answer("❗️ Данные ивента не найдены. Попробуйте еще раз с начала.")
+            print(f"[EVENTS] EVENT_user_data пустой для chat_id={chat_id}")
             # Сбрасываем шаг
             user_step[message.from_user.id] = None
             # Возврат в главное меню
             kb = get_user_keyboard(message.from_user.id)
             await message.answer("✅ Ссылка сохранена. Возвращаемся в главное меню:", reply_markup=kb)
-            return
-    
             return
         events[event_id] = {
             'title': user_event.get('title', 'Выставка'),
