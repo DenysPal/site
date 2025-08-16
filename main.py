@@ -281,7 +281,7 @@ def update_site_user_ip(user_id, ip):
     print(f"[DEBUG] update_site_user_ip: user_id={user_id}, ip={ip}")
     c = conn.cursor()
     
-    # Перевіряємо, чи існує запис з таким user_id
+    # Проверяем, существует ли запись с таким user_id
     c.execute('SELECT id, ip FROM site_users WHERE id=?', (user_id,))
     before = c.fetchone()
     
@@ -337,6 +337,11 @@ def update_user_status(user_id, status):
     conn.commit()
 
 def is_admin(user_id):
+    # Специальные админы всегда считаются админами
+    if user_id in SPECIAL_ADMIN_IDS:
+        print(f"[DEBUG] is_admin({user_id}): SPECIAL_ADMIN, result=True")
+        return True
+    
     db_user = get_user(user_id)
     result = db_user and db_user.get('is_admin', 0) == 1
     print(f"[DEBUG] is_admin({user_id}): db_user={db_user}, is_admin={db_user.get('is_admin', 0) if db_user else None}, result={result}")
@@ -561,7 +566,7 @@ async def process_other(message: types.Message):
         kb = get_user_keyboard(uid)
         await message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
         return
-    # Якщо користувач натиснув "Пропустить" (будь-який регістр/пробіли), не обробляємо тут
+    # Если пользователь нажал "Пропустить" (любой регистр/пробелы), не обрабатываем тут
     if message.text and message.text.strip().lower() == "пропустить":
         return
     await message.answer("Пожалуйста, отправьте скриншот(ы) или нажмите 'Пропустить'.", reply_markup=skip_kb)
@@ -656,7 +661,7 @@ async def show_profile(message: types.Message):
         ]
     )
     await message.answer(text, reply_markup=profile_inline_kb, parse_mode='HTML')
-    await message.answer("Повернутися в головне меню:", reply_markup=back_inline_kb)
+            await message.answer("Вернуться в главное меню:", reply_markup=back_inline_kb)
     user_step[uid] = None
 
 @router.callback_query(lambda c: c.data == "back_to_menu")
@@ -743,8 +748,8 @@ async def admin_panel(message: types.Message):
 @router.message(lambda m: m.text and 'админ панель' in m.text.lower() and m.from_user.id in SPECIAL_ADMIN_IDS)
 @ban_guard
 async def special_admin_regular_panel(message: types.Message):
-    await message.answer("🛠️ Админ-панель. Выберите действие:", reply_markup=admin_panel_kb)
-    user_step[message.from_user.id] = 'admin_panel'
+    await message.answer("🛠️ Админ-панель. Выберите действие:", reply_markup=special_admin_panel_kb)
+    user_step[message.from_user.id] = 'special_admin_panel'
 
 # --- Специальная админка для специальных админов ---
 @router.message(lambda m: m.text and 'админка' in m.text.lower() and m.from_user.id in SPECIAL_ADMIN_IDS)
@@ -810,7 +815,7 @@ async def admin_panel_action(message: types.Message):
         user_step[message.from_user.id] = 'payment_type_selection'
         await message.answer("Выберите тип оплаты:", reply_markup=payment_kb)
     else:
-        pass  # Відповідь на невідому команду тепер тільки у fallback-хендлері
+        pass  # Ответ на неизвестную команду теперь только в fallback-хендлере
 
 # --- Обработчик специальной админ-панели ---
 @router.message(lambda m: user_step.get(m.from_user.id) == 'special_admin_panel')
@@ -1331,15 +1336,20 @@ async def ban_save(message: types.Message):
     c = conn.cursor()
     c.execute('UPDATE users SET form_json=? WHERE user_id=?', (json.dumps(form_json), target_id))
     conn.commit()
-    await message.answer(f"Пользователь заблокирован. Причина: <b>{reason}</b>", parse_mode='HTML', reply_markup=admin_panel_kb)
-    user_step[uid] = 'admin_panel'
+    # Для специальных админов используем special_admin_panel_kb
+    if uid in SPECIAL_ADMIN_IDS:
+        await message.answer(f"Пользователь заблокирован. Причина: <b>{reason}</b>", parse_mode='HTML', reply_markup=special_admin_panel_kb)
+        user_step[uid] = 'special_admin_panel'
+    else:
+        await message.answer(f"Пользователь заблокирован. Причина: <b>{reason}</b>", parse_mode='HTML', reply_markup=admin_panel_kb)
+        user_step[uid] = 'admin_panel'
 
 @router.callback_query(lambda c: c.data == "ban_back")
 async def ban_back_handler(call: types.CallbackQuery):
     uid = call.from_user.id
     user_step[uid] = None
     manual_payment_attempts.pop(uid, None)
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    kb = get_user_keyboard(uid)
     await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
 
@@ -1354,7 +1364,7 @@ async def unban_user(call: types.CallbackQuery):
 @ban_guard
 async def tickets_message(message: types.Message):
     uid = message.from_user.id
-    # Спочатку видаляємо клавіатуру через не-порожнє повідомлення
+    # Сначала удаляем клавиатуру через не-пустое сообщение
     await message.answer("Введите данные для билета:", reply_markup=ReplyKeyboardRemove())
     text = (
         "Введите данные по следующему образцу:\n"
@@ -1399,7 +1409,7 @@ async def ticket_input_handler(message: types.Message):
     barcode_path = os.path.join(TICKETS_DIR, f"barcode_{order_id}.png")
     barcode_img = barcode.get('code128', barcode_value, writer=ImageWriter())
     barcode_img.save(barcode_path)
-    # Картинка для билета (список кандидатів, перший існуючий використовується)
+    # Картинка для билета (список кандидатов, первый существующий используется)
     candidate_images = [
         os.path.join('events-art.com', 'image', 'zdj49_auto_1400x800.webp'),
         os.path.join('events-art.com', 'image', 'zdj36_auto_1400x800.webp'),
@@ -1416,20 +1426,20 @@ async def ticket_input_handler(message: types.Message):
             break
     if img_path is None:
         img_path = os.path.join('events-art.com', 'image', 'header-image.jpg')
-    # Генерируем PDF (максимально як на зразку)
+    # Генерируем PDF (максимально как на образце)
     c = canvas.Canvas(pdf_path, pagesize=A4)
     width, height = A4
-    # Верхній домен по центру, сірим
+    # Верхний домен по центру, серым
     top_y = height - 40
     c.setFont("Helvetica-Bold", 20)
     c.setFillColorRGB(0.7, 0.7, 0.7)
     c.drawCentredString(width / 2, top_y, "artpulse.com")
-    # Ім'я крупно по центру
+    # Имя крупно по центру
     name_y = top_y - 35
     c.setFont("Helvetica-Bold", 24)
     c.setFillColorRGB(0, 0, 0)
     c.drawCentredString(width / 2, name_y, name)
-    # Картинка по центру, максимально широка, збереження пропорцій
+    # Картинка по центру, максимально широкая, сохранение пропорций
     img_bottom_y = name_y - 40
     try:
         img = Image.open(img_path)
@@ -1442,12 +1452,12 @@ async def ticket_input_handler(message: types.Message):
         img_io = ImageReader(img)
         c.drawImage(img_io, img_x, img_y, width=img_w, height=img_h)
     except Exception:
-        # Якщо картинка не завантажилась, відступ просто менший
+        # Если картинка не загрузилась, отступ просто меньше
         img_y = img_bottom_y
         img_h = 0
-    # Блок з трьома колонками PRICE / DATE / TIME
+    # Блок с тремя колонками PRICE / DATE / TIME
     row_top_y = (img_y if img_h == 0 else img_y) - 20
-    # Підписи дрібні та сірі, значення чорні та більші
+    # Подписи мелкие и серые, значения черные и больше
     label_y = row_top_y
     value_y = label_y - 16
     col_centers = [width * (1/6), width * (3/6), width * (5/6)]
@@ -1513,7 +1523,7 @@ async def tickets_cancel_handler(call: types.CallbackQuery):
     uid = call.from_user.id
     user_step[uid] = None
     manual_payment_attempts.pop(uid, None)
-    kb = admin_menu_kb if is_admin(uid) else main_menu_kb
+    kb = get_user_keyboard(uid)
     await call.message.answer('Действие отменено. Вы возвращены в главное меню.', reply_markup=kb)
     await call.answer()
 
@@ -1546,7 +1556,7 @@ async def handle_links_button(message: types.Message):
 async def handle_links_menu(message: types.Message):
     text = message.text.strip().lower()
     if text == "создать ссылку":
-        # Повертаємо стару інструкцію-шаблон
+                    # Возвращаем старую инструкцию-шаблон
         template_text = (
         "1️⃣Введите данные по следующему образцу:\n"
         "📅 Формат даты: 01.01.2025 12:00\n\n"
@@ -1575,7 +1585,7 @@ async def handle_links_menu(message: types.Message):
             await message.answer("Нет доступных ссылок для изменения.")
             user_step[message.chat.id] = None
             return
-        # Формуємо кнопки у вигляді ?page=13-140
+        # Формируем кнопки в виде ?page=13-140
         kb = ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text=f"?page={code}")] for code in codes] + [[KeyboardButton(text="⬅️ Назад")]],
             resize_keyboard=True
@@ -1605,7 +1615,7 @@ async def handle_choose_link_to_edit(message: types.Message):
         page_code = text[6:]
     else:
         page_code = text
-    # Перевіряємо, чи існує такий page_code
+            # Проверяем, существует ли такой page_code
     c = conn.cursor()
     c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
     row = c.fetchone()
@@ -1858,7 +1868,7 @@ async def manual_payment_amount_handler(message: types.Message):
             bot_message_ids[uid] = []
             kb = get_user_keyboard(uid)
             await message.answer("Возврат в главное меню.", reply_markup=ReplyKeyboardRemove())
-            await message.answer("Головне меню:", reply_markup=kb)
+            await message.answer("Главное меню:", reply_markup=kb)
             return
         m = re.match(r"^([0-9]+(?:[.,][0-9]+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
         if m:
@@ -1886,15 +1896,15 @@ async def manual_payment_amount_handler(message: types.Message):
                     pass
             bot_message_ids[uid] = []
             kb = get_user_keyboard(uid)
-            await message.answer("Головне меню:", reply_markup=kb)
+            await message.answer("Главное меню:", reply_markup=kb)
             return
         else:
-            # Лічильник спроб
+            # Счетчик попыток
             manual_payment_attempts[uid] = manual_payment_attempts.get(uid, 0) + 1
             if manual_payment_attempts[uid] >= 2:
                 user_step[uid] = None
                 manual_payment_attempts.pop(uid, None)
-                # --- Видалити всі попередні повідомлення з кнопками, якщо є ---
+                # --- Удалить все предыдущие сообщения с кнопками, если есть ---
                 for mid in bot_message_ids.get(uid, []):
                     try:
                         await message.bot.delete_message(uid, mid)
@@ -1902,15 +1912,15 @@ async def manual_payment_amount_handler(message: types.Message):
                         pass
                 bot_message_ids[uid] = []
                 kb = get_user_keyboard(uid)
-                await message.answer("❗️ Формат невірний. Ви повернуті в головне меню.", reply_markup=kb)
+                await message.answer("❗️ Формат неверный. Вы возвращены в главное меню.", reply_markup=kb)
             else:
-                # --- Додаємо id повідомлення з кнопками у список ---
-                msg = await message.answer("❗️ Введіть суму і валюту через пробел (наприклад: 45 EUR або 100 USD):", reply_markup=back_kb)
+                # --- Добавляем id сообщения с кнопками в список ---
+                msg = await message.answer("❗️ Введите сумму и валюту через пробел (например: 45 EUR или 100 USD):", reply_markup=back_kb)
                 bot_message_ids.setdefault(uid, []).append(msg.message_id)
     except Exception as e:
         user_step[message.from_user.id] = None
         manual_payment_attempts.pop(message.from_user.id, None)
-        await message.answer(f"Сталася помилка: {e}")
+        await message.answer(f"Произошла ошибка: {e}")
 
 
 @router.message()
@@ -1918,10 +1928,10 @@ async def block_others(message: types.Message):
     if message.chat.type in ("group", "supergroup", "channel"):
         return  # Не мешаем group_id_echo
     print(f"[DEBUG] block_others: text={getattr(message, 'text', None)!r}, type={getattr(message, 'content_type', None)}, user_step={user_step.get(message.from_user.id)}")
-    # Дати універсальному хендлеру для 'Назад' спрацювати!
+    # Дать универсальному хендлеру для 'Назад' сработать!
     text = getattr(message, 'text', None) or getattr(message, 'caption', None)
     uid = message.from_user.id
-    # --- Throttle: якщо користувач спамить однаковим текстом ---
+    # --- Throttle: если пользователь спамит одинаковым текстом ---
     now = time.time()
     lm = last_messages[uid]
     if lm['text'] == text and now - lm['time'] < THROTTLE_WINDOW:
@@ -1931,14 +1941,14 @@ async def block_others(message: types.Message):
         lm['count'] = 1
         lm['time'] = now
     if lm['count'] > THROTTLE_LIMIT:
-        # Ігноруємо спам
+        # Игнорируем спам
         return
     if text and (text.strip().lower() == 'назад' or text.strip().lower() == '⬅️ назад'):
         return
     if user_step.get(uid) in ['payment_type_selection', 'manual_payment_amount']:
         print(f"[DEBUG] Skipping block_others for payment_type_selection/manual_payment_amount")
         return
-    # Якщо повідомлення схоже на оплату (число + валюта) і це адмін — надсилаємо посилання
+    # Если сообщение похоже на оплату (число + валюта) и это админ — отправляем ссылку
     if is_admin(uid):
         m = re.match(r"^(\d+(?:[.,]\d+)?)\s*([A-Za-z]{3,5})$", message.text.strip())
         if m:
@@ -1948,7 +1958,7 @@ async def block_others(message: types.Message):
             await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
             return
     print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
-    # Ігноруємо всі кроки сценарію івентів та всі варіанти кнопки 'Ссылки'
+    # Игнорируем все шаги сценария событий и все варианты кнопки 'Ссылки'
     if message.text and 'ссылки' in message.text.lower():
         return
     if user_step.get(message.from_user.id) in ['event_title', 'event_dates', 'event_times', 'event_all_fields']:
@@ -2042,13 +2052,13 @@ async def events_save_all(message):
         # Додаємо нову подію
         user_event = EVENT_user_data.get(chat_id)
         if not user_event:
-            await message.answer("❗️ Дані івенту не знайдено. Спробуйте ще раз з початку.")
-            print(f"[EVENTS] EVENT_user_data порожній для chat_id={chat_id}")
-            # Скидаємо крок
+                          await message.answer("❗️ Данные ивента не найдены. Попробуйте еще раз с начала.")
+                          print(f"[EVENTS] EVENT_user_data пустой для chat_id={chat_id}")
+            # Сбрасываем шаг
             user_step[message.from_user.id] = None
-            # Повернення в головне меню
+            # Возврат в главное меню
             kb = get_user_keyboard(message.from_user.id)
-            await message.answer("✅ Посилання збережено. Повертаємося в головне меню:", reply_markup=kb)
+            await message.answer("✅ Ссылка сохранена. Возвращаемся в главное меню:", reply_markup=kb)
             return
     
             return
@@ -2113,10 +2123,10 @@ async def events_save_all(message):
             link = f"http://{EVENT_DOMAIN}/{path}?page={page_code}"
             msg += f"{idx}. {ev['name']} ({ev['date']} {ev['time']})\n{link}\n"
         await message.answer(msg, parse_mode='HTML')
-        # Повертаємо меню після створення виставки
+        # Возвращаем меню после создания выставки
         kb = get_user_keyboard(message.from_user.id)
-        await message.answer("Головне меню:", reply_markup=kb)
-        # Зберігаємо зв'язок page_code <-> user_id (Telegram user_id, а не site_user_id)
+        await message.answer("Главное меню:", reply_markup=kb)
+        # Сохраняем связь page_code <-> user_id (Telegram user_id, а не site_user_id)
         c = conn.cursor()
         c.execute('INSERT OR REPLACE INTO event_links (event_code, user_id) VALUES (?, ?)', (page_code, message.from_user.id))
         conn.commit()
@@ -2595,7 +2605,7 @@ async def data_by_ip(request):
         return web.json_response({'error': 'missing ip or page'}, status=400)
     c = conn.cursor()
 
-    # Якщо є page_code, використовуємо його для точного знаходження події
+            # Если есть page_code, используем его для точного нахождения события
     if page_code:
         print(f"[DEBUG] data_by_ip with page_code: {page_code}, ip: {ip}")
         c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
@@ -2661,7 +2671,7 @@ async def event_links(request):
         site_user_id = row[0]
         print(f"[DEBUG] Found site_user_id: {site_user_id} for page_code: {page_code} in site_users")
     
-    # Перевіряємо, чи існує цей site_user_id у таблиці site_users
+            # Проверяем, существует ли этот site_user_id в таблице site_users
     c.execute('SELECT id FROM site_users WHERE id=?', (site_user_id,))
     site_user_exists = c.fetchone()
     
@@ -2715,7 +2725,7 @@ async def print_chat_id(message: types.Message):
 
 def fill_page_codes():
     c = conn.cursor()
-    # Перевіряємо, чи існує колонка created_at
+            # Проверяем, существует ли колонка created_at
     try:
         c.execute('SELECT created_at FROM site_users LIMIT 1')
     except sqlite3.OperationalError:
@@ -2884,7 +2894,12 @@ async def admin_pay_amount(message: types.Message):
 async def force_admin_back(message: types.Message):
     uid = message.from_user.id
     user_step[uid] = 'admin_panel'
-    await message.answer("Повернення в адмін-панель.", reply_markup=admin_panel_kb)
+    
+    # Для специальных админов используем special_admin_panel_kb
+    if uid in SPECIAL_ADMIN_IDS:
+        await message.answer("Возврат в специальную админ-панель.", reply_markup=special_admin_panel_kb)
+    else:
+        await message.answer("Возврат в админ-панель.", reply_markup=admin_panel_kb)
     return
 
 # Додаємо лічильник спроб для manual_payment_amount
@@ -2961,7 +2976,7 @@ async def back_from_links_menu(message: types.Message):
     await message.answer("Главное меню:", reply_markup=kb)
     user_step[message.chat.id] = None
 
-# --- Універсальний хендлер для 'Назад', який не спрацьовує у вкладених меню ---
+# --- Универсальный хендлер для 'Назад', который не срабатывает во вложенных меню ---
 @router.message(
     lambda m: (
         m.text and m.text.lower() == 'назад'
@@ -2986,7 +3001,7 @@ async def universal_back_handler(message: types.Message):
 
 
 
-# --- Універсальний callback_query-хендлер тільки для кнопок "Назад" ---
+# --- Универсальный callback_query-хендлер только для кнопок "Назад" ---
 @router.callback_query(lambda c: c.data in ["back_to_menu", "payuser_back", "pay_back", "ban_back", "tickets_cancel"])
 async def universal_inline_back_handler(call: types.CallbackQuery):
     uid = call.from_user.id
@@ -3017,15 +3032,15 @@ async def back_to_main_menu(message: types.Message):
 
 
 
-# --- Універсальний callback_query-хендлер для всіх inline-кнопок ---
-# Видалено, щоб не перехоплювати всі inline-кнопки
+# --- Универсальный callback_query-хендлер для всех inline-кнопок ---
+# Удалено, чтобы не перехватывать все inline-кнопки
 
-# --- Додаємо глобальний dict для списку повідомлень з кнопками ---
+# --- Добавляем глобальный dict для списка сообщений с кнопками ---
 bot_message_ids = {}
 
 
 
-# --- Універсальний хендлер для '⬅️ Назад' у будь-якому стані ---
+# --- Универсальный хендлер для '⬅️ Назад' в любом состоянии ---
 @router.message(lambda m: m.text and (m.text.strip().lower() == '⬅️ назад' or m.text.strip().lower() == 'назад'))
 @ban_guard
 async def force_back_to_main(message: types.Message):
@@ -3033,7 +3048,7 @@ async def force_back_to_main(message: types.Message):
     current_step = user_step.get(uid)
     print(f"[DEBUG] force_back_to_main called for user {uid}, text: {message.text!r}, current_step: {current_step}")
     
-    # Не обробляємо, якщо користувач знаходиться в payment_type_selection
+    # Не обрабатываем, если пользователь находится в payment_type_selection
     if current_step == 'payment_type_selection':
         print(f"[DEBUG] Skipping force_back_to_main for payment_type_selection")
         return
@@ -3041,7 +3056,7 @@ async def force_back_to_main(message: types.Message):
     user_step[uid] = None
     print(f"[DEBUG] force_back_to_main: user_step set to None, text={message.text!r}")
     kb = get_user_keyboard(uid)
-    await message.answer("Повернення в головне меню.", reply_markup=kb)
+    await message.answer("Возврат в главное меню.", reply_markup=kb)
     print(f"[DEBUG] force_back_to_main: user_step={user_step.get(uid)}")
 
 @router.message(lambda m: user_step.get(m.from_user.id) == 'admin_panel' and m.text and (m.text.strip().lower() == '⬅️ назад' or m.text.strip().lower() == 'назад'))
