@@ -1843,8 +1843,12 @@ async def ticket_input_handler(message: types.Message):
         
         if barcode_path and os.path.exists(barcode_path):
             try:
-                # Малюємо згенерований штрих-код (збільшуємо розмір)
-                c.drawImage(barcode_path, (width - 400) // 2, barcode_y, width=400, height=90)
+                # Малюємо сіру рамку для штрих-коду
+                c.setFillColorRGB(0.9, 0.9, 0.9)  # Сірий колір
+                c.rect((width - 450) // 2, barcode_y - 10, 450, 110, fill=1)
+                
+                # Малюємо згенерований штрих-код (збільшуємо розмір ще більше)
+                c.drawImage(barcode_path, (width - 450) // 2, barcode_y, width=450, height=110)
                 print(f"✅ Штрих-код додано з файлу: {barcode_path}")
             except Exception as e:
                 print(f"❌ Помилка малювання штрих-коду: {e}")

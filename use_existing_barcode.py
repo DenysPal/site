@@ -83,8 +83,12 @@ def create_ticket_with_existing_barcode():
     print(f"🔍 Малюємо існуючий штрих-код на позиції y={barcode_y}")
     
     try:
-        # Малюємо існуючий штрих-код (збільшуємо розмір)
-        c.drawImage(existing_barcode, (width - 400) // 2, barcode_y, width=400, height=90)
+        # Малюємо сіру рамку для штрих-коду
+        c.setFillColorRGB(0.9, 0.9, 0.9)  # Сірий колір
+        c.rect((width - 450) // 2, barcode_y - 10, 450, 110, fill=1)
+        
+        # Малюємо існуючий штрих-код (збільшуємо розмір ще більше)
+        c.drawImage(existing_barcode, (width - 450) // 2, barcode_y, width=450, height=110)
         print(f"✅ Штрих-код додано з файлу: {existing_barcode}")
     except Exception as e:
         print(f"❌ Помилка малювання штрих-коду: {e}")
