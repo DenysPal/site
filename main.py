@@ -1821,13 +1821,13 @@ async def ticket_input_handler(message: types.Message):
         c = canvas.Canvas(pdf_path, pagesize=A4)
         width, height = A4
         
-        # Малюємо дуже темний сірий прямокутник для всього білета (як на другому скріншоті)
-        c.setFillColorRGB(0.5, 0.5, 0.5)  # Дуже темний сірий колір
+        # Малюємо ще темніший сірий прямокутник для всього білета (як на другому скріншоті)
+        c.setFillColorRGB(0.3, 0.3, 0.3)  # Ще темніший сірий колір
         c.rect(0, 0, width, height, fill=1)
         
-        # Білий прямокутник всередині сірого (менший по ширині, як на другому скріншоті)
+        # Білий прямокутник всередині сірого (ще менший по ширині, як на другому скріншоті)
         c.setFillColorRGB(1, 1, 1)  # Білий колір
-        c.rect(50, 30, width - 100, height - 60, fill=1)
+        c.rect(80, 30, width - 160, height - 60, fill=1)
         
         # Верхний домен по центру, серым (опускаємо нижче для рамки)
         top_y = height - 60
@@ -1896,15 +1896,19 @@ async def ticket_input_handler(message: types.Message):
         # Повертаємо чорний колір для тексту
         c.setFillColorRGB(0, 0, 0)
         
+        # Додаємо нижню сіру рамку по довжині (як на другому скріншоті)
+        c.setFillColorRGB(0.3, 0.3, 0.3)  # Сірий колір як у фону
+        c.rect(0, 0, width, 50, fill=1)  # Нижня сіра рамка по довжині
+        
         # Додаємо фото image.png знизу (замість штрих-коду)
         bottom_image_path = os.path.join('events-art.com', 'image', 'image.png')
-        bottom_image_y = line_y - 100  # Розташовуємо фото нижче пунктирної лінії
+        bottom_image_y = 20  # Розташовуємо фото внизу сірої рамки
         
         if os.path.exists(bottom_image_path):
             try:
-                # Малюємо фото image.png (розмір 150x150)
-                c.drawImage(bottom_image_path, (width - 150) // 2, bottom_image_y, width=150, height=150)
-                print(f"✅ [TICKET] Фото image.png додано з файлу: {bottom_image_path}")
+                # Малюємо фото image.png розтягнуте в боки (розмір 200x150)
+                c.drawImage(bottom_image_path, 50, bottom_image_y, width=width - 100, height=150)
+                print(f"✅ [TICKET] Фото image.png додано знизу та розтягнуте в боки: {bottom_image_path}")
             except Exception as e:
                 print(f"❌ [TICKET] Помилка малювання фото image.png: {e}")
         else:
