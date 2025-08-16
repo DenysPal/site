@@ -49,6 +49,22 @@ except Exception as e:
 # --- Глобальні змінні ---
 WEBHOOK_PORT = 8081  # Початковий порт для webhook
 
+# --- Зберігання total сум для кожного payment session ---
+payment_totals = {}  # {page_code: {'total': amount, 'currency': currency, 'timestamp': time}}
+
+def cleanup_old_payment_totals():
+    """Видаляє старі записи total сум (старіше 1 години)"""
+    current_time = time.time()
+    expired_keys = []
+    for page_code, data in payment_totals.items():
+        if current_time - data['timestamp'] > 3600:  # 1 година
+            expired_keys.append(page_code)
+    
+    for key in expired_keys:
+        del payment_totals[key]
+        print(f'[DEBUG] Cleaned up expired total amount for {key}')
+    
+    return len(expired_keys)
 
 payment_type_by_uid = {}
 
@@ -2688,8 +2704,21 @@ async def payment_notify(request):
     price = data.get('price', '')
     currency = data.get('currency', '')
     total = data.get('total', '')
+    
+    # --- Зберігаємо total суму для подальшого використання ---
+    if page_code and total and currency:
+        payment_totals[page_code] = {
+            'total': total,
+            'currency': currency,
+            'timestamp': time.time()
+        }
+        print(f'[DEBUG] Stored total amount for {page_code}: {total} {currency}')
+    
     sum_str = ''
-    if price and currency:
+    if total and currency:
+        # Використовуємо total як основну суму
+        sum_str = f'\nСумма: {total} {currency}'
+    elif price and currency:
         sum_str = f'\nСумма: {price} {currency}'
     elif total:
         import re
@@ -2913,6 +2942,9 @@ async def admin_action_handler(call: types.CallbackQuery):
         await call.answer("❌ Помилка обробки callback")
         return
     
+    # --- Очищаємо старі записи total сум ---
+    cleanup_old_payment_totals()
+    
     # Отримуємо інформацію про користувача та подію
     user_name = None
     event_price = None
@@ -2941,6 +2973,16 @@ async def admin_action_handler(call: types.CallbackQuery):
         if event_info:
             event_price = event_info.get('price')
             event_currency = event_info.get('currency')
+        
+        # --- Перевіряємо чи є збережена total сума для цього page_code ---
+        if page_code in payment_totals:
+            stored_total = payment_totals[page_code]
+            # Використовуємо збережену total суму замість базової ціни
+            event_price = stored_total['total']
+            event_currency = stored_total['currency']
+            print(f'[DEBUG] Using stored total amount for {page_code}: {event_price} {event_currency}')
+        else:
+            print(f'[DEBUG] No stored total amount for {page_code}, using base price: {event_price} {event_currency}')
     
     if action == 'push':
         print(f'[DEBUG] Processing PUSH action for page_code={page_code}, ip={ip}')
