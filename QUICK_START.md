@@ -43,7 +43,9 @@ python demo_ticket_generation.py
    ```
 
 ### Результат:
-- ✅ PDF квиток створено
+- ✅ PDF квиток створено з доменом `artpullse.com`
+- 🖼️ Зображення `vine.webp` (висушена рослина/корінь)
+- 📊 Штрих-код з покращеною генерацією
 - 🔗 Посилання на квиток
 - 📱 Файл відправлено в чат
 
@@ -55,10 +57,12 @@ python demo_ticket_generation.py
 ├── start_bot.py              # Розширений запуск
 ├── test_ticket_system.py     # Тестування
 ├── demo_ticket_generation.py # Демонстрація
+├── TICKET_IMPROVEMENTS.md    # Покращення квитків
 ├── tickets/                  # Локальні квитки
 └── events-art.com/           # Веб-файли
     ├── file/ticket/          # Веб-доступні квитки
     └── image/                # Зображення для квитків
+        └── vine.webp         # 🎯 Основне зображення (висушена рослина)
 ```
 
 ## 🔧 Якщо щось не працює

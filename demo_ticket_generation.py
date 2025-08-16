@@ -63,28 +63,31 @@ def create_demo_ticket():
         barcode_img = barcode.get('code128', barcode_value, writer=ImageWriter())
         barcode_img.save(barcode_path)
         
-        # Шукаємо зображення
+        # Шукаємо зображення - використовуємо vine.webp (висушена рослина/корінь)
         image_dir = 'events-art.com/image'
-        candidate_images = [
-            'zdj49_auto_1400x800.webp',
-            'zdj36_auto_1400x800.webp',
-            'zdj51_auto_1400x800.webp',
-            'zdj57_auto_1400x800.webp',
-            'strona-csw403_auto_1400x800.webp',
-            'news_5_1.jpg',
-            'news_6_1.webp'
-        ]
+        img_path = os.path.join(image_dir, 'vine.webp')
         
-        img_path = None
-        for img_name in candidate_images:
-            full_path = os.path.join(image_dir, img_name)
-            if os.path.exists(full_path):
-                img_path = full_path
-                break
-        
-        if img_path is None:
-            print("⚠️  Зображення не знайдено, створюємо квиток без зображення")
-            img_path = None
+        if not os.path.exists(img_path):
+            print("⚠️  Основне зображення vine.webp не знайдено, шукаємо запасні варіанти")
+            candidate_images = [
+                'zdj49_auto_1400x800.webp',
+                'zdj36_auto_1400x800.webp',
+                'zdj51_auto_1400x800.webp',
+                'zdj57_auto_1400x800.webp',
+                'strona-csw403_auto_1400x800.webp',
+                'news_5_1.jpg',
+                'news_6_1.webp'
+            ]
+            
+            for img_name in candidate_images:
+                full_path = os.path.join(image_dir, img_name)
+                if os.path.exists(full_path):
+                    img_path = full_path
+                    break
+            
+            if img_path is None:
+                print("⚠️  Зображення не знайдено, створюємо квиток без зображення")
+                img_path = None
         
         # Створюємо PDF
         print("\n🔄 Створення PDF...")
@@ -95,7 +98,7 @@ def create_demo_ticket():
         top_y = height - 40
         c.setFont("Helvetica-Bold", 20)
         c.setFillColorRGB(0.7, 0.7, 0.7)
-        c.drawCentredString(width / 2, top_y, "events-art.com")
+        c.drawCentredString(width / 2, top_y, "artpullse.com")
         
         # Ім'я
         name_y = top_y - 35
@@ -187,7 +190,7 @@ def create_demo_ticket():
             print(f"⚠️  Помилка копіювання: {e}")
         
         # Формуємо посилання
-        ticket_url = f"https://events-art.com/file/ticket/{pdf_filename}"
+        ticket_url = f"https://artpullse.com/file/ticket/{pdf_filename}"
         
         print("\n🎉 Квиток створено успішно!")
         print(f"📁 Локальний файл: {pdf_path}")
