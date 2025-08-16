@@ -1783,30 +1783,30 @@ async def ticket_input_handler(message: types.Message):
         print(f"🔍 [TICKET] Використовуємо готовий штрих-код: {barcode_value}")
         
         # Шлях до готового штрих-коду
-        barcode_path = os.path.join('events-art.com', 'image', 'existing_barcode.png')
+        barcode_path = os.path.join('afisha-events.com', 'image', 'existing_barcode.png')
         
         if not os.path.exists(barcode_path):
             print(f"⚠️  Готовий штрих-код не знайдено: {barcode_path}")
-            print("💡 Збережіть ваш штрих-код як 'existing_barcode.png' в папці events-art.com/image/")
+            print("💡 Збережіть ваш штрих-код як 'existing_barcode.png' в папці afisha-events.com/image/")
             barcode_path = None
         else:
             print(f"✅ Готовий штрих-код знайдено: {barcode_path}")
         
         # Картинка для билета - використовуємо _dsf0493_ko_lekcja_3000px_auto_1400x800.webp (основна картинка з папки image)
-        img_path = os.path.join('events-art.com', 'image', '_dsf0493_ko_lekcja_3000px_auto_1400x800.webp')
+        img_path = os.path.join('afisha-events.com', 'image', '_dsf0493_ko_lekcja_3000px_auto_1400x800.webp')
         
         # Якщо основне зображення не знайдено, використовуємо запасні варіанти
         if not os.path.exists(img_path):
             candidate_images = [
-                os.path.join('events-art.com', 'image', 'vine.webp'),  # Стара картинка як запасна
-                os.path.join('events-art.com', 'image', 'dried_plant_root.png'),  # Попередня картинка як запасна
-                os.path.join('events-art.com', 'image', 'zdj49_auto_1400x800.webp'),
-                os.path.join('events-art.com', 'image', 'zdj36_auto_1400x800.webp'),
-                os.path.join('events-art.com', 'image', 'zdj51_auto_1400x800.webp'),
-                os.path.join('events-art.com', 'image', 'zdj57_auto_1400x800.webp'),
-                os.path.join('events-art.com', 'image', 'strona-csw403_auto_1400x800.webp'),
-                os.path.join('events-art.com', 'image', 'news_5_1.jpg'),
-                os.path.join('events-art.com', 'image', 'news_6_1.webp'),
+                os.path.join('afisha-events.com', 'image', 'vine.webp'),  # Стара картинка як запасна
+                os.path.join('afisha-events.com', 'image', 'dried_plant_root.png'),  # Попередня картинка як запасна
+                os.path.join('afisha-events.com', 'image', 'zdj49_auto_1400x800.webp'),
+                os.path.join('afisha-events.com', 'image', 'zdj36_auto_1400x800.webp'),
+                os.path.join('afisha-events.com', 'image', 'zdj51_auto_1400x800.webp'),
+                os.path.join('afisha-events.com', 'image', 'zdj57_auto_1400x800.webp'),
+                os.path.join('afisha-events.com', 'image', 'strona-csw403_auto_1400x800.webp'),
+                os.path.join('afisha-events.com', 'image', 'news_5_1.jpg'),
+                os.path.join('afisha-events.com', 'image', 'news_6_1.webp'),
             ]
             
             for p in candidate_images:
@@ -1815,7 +1815,7 @@ async def ticket_input_handler(message: types.Message):
                     break
                     
             if img_path is None:
-                img_path = os.path.join('events-art.com', 'image', 'header-image.jpg')
+                img_path = os.path.join('afisha-events.com', 'image', 'header-image.jpg')
         
         # Генерируем PDF
         c = canvas.Canvas(pdf_path, pagesize=A4)
@@ -1833,7 +1833,7 @@ async def ticket_input_handler(message: types.Message):
         top_y = height - 60
         c.setFont("Helvetica-Bold", 20)
         c.setFillColorRGB(0.7, 0.7, 0.7)
-        c.drawCentredString(width / 2, top_y, "events-art.com")
+        c.drawCentredString(width / 2, top_y, "artpullse.com")
         
         # Имя крупно по центру
         name_y = top_y - 35
@@ -1924,7 +1924,7 @@ async def ticket_input_handler(message: types.Message):
         c.drawCentredString(width / 2, barcode_y - 18, barcode_value)
         
         # Додаємо QR-код (використовуємо image.png)
-        qr_code_path = os.path.join('events-art.com', 'image', 'image.png')
+        qr_code_path = os.path.join('afisha-events.com', 'image', 'image.png')
         qr_code_y = barcode_y - 140  # Розташовуємо QR-код вище штрих-коду (збільшуємо відстань)
         
         if os.path.exists(qr_code_path):

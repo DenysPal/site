@@ -42,7 +42,7 @@ def create_ticket_with_existing_barcode():
         top_y = height - 60
         c.setFont("Helvetica-Bold", 20)
         c.setFillColorRGB(0.7, 0.7, 0.7)
-        c.drawCentredString(width / 2, top_y, "events-art.com")
+        c.drawCentredString(width / 2, top_y, "artpullse.com")
     
     # Имя крупно по центру
     name_y = top_y - 35
@@ -52,7 +52,7 @@ def create_ticket_with_existing_barcode():
     
     # Картинка по центру
     img_bottom_y = name_y - 40
-    image_path = os.path.join('events-art.com', 'image', '_dsf0493_ko_lekcja_3000px_auto_1400x800.webp')
+            image_path = os.path.join('afisha-events.com', 'image', '_dsf0493_ko_lekcja_3000px_auto_1400x800.webp')
     if os.path.exists(image_path):
         try:
             img = ImageReader(image_path)
@@ -128,7 +128,7 @@ def create_ticket_with_existing_barcode():
     c.drawCentredString(width / 2, barcode_y - 18, barcode_value)
     
     # Додаємо QR-код (використовуємо image.png)
-    qr_code_path = os.path.join('events-art.com', 'image', 'image.png')
+            qr_code_path = os.path.join('afisha-events.com', 'image', 'image.png')
     qr_code_y = barcode_y - 160  # Розташовуємо QR-код вище штрих-коду (збільшуємо відстань)
     
     if os.path.exists(qr_code_path):

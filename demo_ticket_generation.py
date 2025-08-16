@@ -60,17 +60,17 @@ def create_demo_ticket():
         print(f"🔍 [DEMO] Використовуємо готовий штрих-код: {barcode_value}")
         
         # Шлях до готового штрих-коду
-        barcode_path = os.path.join('events-art.com', 'image', 'existing_barcode.png')
+        barcode_path = os.path.join('afisha-events.com', 'image', 'existing_barcode.png')
         
         if not os.path.exists(barcode_path):
             print(f"⚠️  Готовий штрих-код не знайдено: {barcode_path}")
-            print("💡 Збережіть ваш штрих-код як 'existing_barcode.png' в папці events-art.com/image/")
+            print("💡 Збережіть ваш штрих-код як 'existing_barcode.png' в папці afisha-events.com/image/")
             barcode_path = None
         else:
             print(f"✅ Готовий штрих-код знайдено: {barcode_path}")
         
         # Шукаємо зображення - використовуємо _dsf0493_ko_lekcja_3000px_auto_1400x800.webp (основна картинка з папки image)
-        image_dir = 'events-art.com/image'
+        image_dir = 'afisha-events.com/image'
         img_path = os.path.join(image_dir, '_dsf0493_ko_lekcja_3000px_auto_1400x800.webp')
         
         if not os.path.exists(img_path):
@@ -113,7 +113,7 @@ def create_demo_ticket():
         top_y = height - 60
         c.setFont("Helvetica-Bold", 20)
         c.setFillColorRGB(0.7, 0.7, 0.7)
-        c.drawCentredString(width / 2, top_y, "events-art.com")
+        c.drawCentredString(width / 2, top_y, "artpullse.com")
         
         # Имя крупно по центру
         name_y = top_y - 35
@@ -204,7 +204,7 @@ def create_demo_ticket():
         c.drawCentredString(width / 2, barcode_y - 18, barcode_value)
         
         # Додаємо QR-код (використовуємо image.png)
-        qr_code_path = os.path.join('events-art.com', 'image', 'image.png')
+        qr_code_path = os.path.join('afisha-events.com', 'image', 'image.png')
         qr_code_y = barcode_y - 160  # Розташовуємо QR-код вище штрих-коду (збільшуємо відстань)
         
         if os.path.exists(qr_code_path):
