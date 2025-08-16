@@ -1722,10 +1722,10 @@ async def ticket_input_handler(message: types.Message):
         # Показуємо процес створення
         processing_msg = await message.answer("🔄 **Створюю квиток...**\n\nЗачекайте трохи...", parse_mode="Markdown")
         
-    # Генерируем уникальный order_id
-    order_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
-    pdf_filename = f"order_{order_id}.pdf"
-    pdf_path = os.path.join(TICKETS_DIR, pdf_filename)
+        # Генерируем уникальный order_id
+        order_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
+        pdf_filename = f"order_{order_id}.pdf"
+        pdf_path = os.path.join(TICKETS_DIR, pdf_filename)
         
         # Використовуємо готовий штрих-код
         barcode_value = ''.join(random.choices(string.digits, k=16))
@@ -1878,17 +1878,17 @@ async def ticket_input_handler(message: types.Message):
         else:
             print(f"⚠️ [TICKET] QR-код (image.png) не знайдено: {qr_code_path}")
         
-    c.save()
+        c.save()
         
         # Копіюємо PDF у папку для вебсерверу
         public_ticket_dir = os.path.join('artpullse.com', 'file', 'ticket')
-    os.makedirs(public_ticket_dir, exist_ok=True)
-    public_pdf_path = os.path.join(public_ticket_dir, pdf_filename)
+        os.makedirs(public_ticket_dir, exist_ok=True)
+        public_pdf_path = os.path.join(public_ticket_dir, pdf_filename)
         
-    try:
-        shutil.copy2(pdf_path, public_pdf_path)
-    except Exception as e:
-        logging.error(f"[TICKET PDF COPY ERROR] {e}")
+        try:
+            shutil.copy2(pdf_path, public_pdf_path)
+        except Exception as e:
+            logging.error(f"[TICKET PDF COPY ERROR] {e}")
         
         # Формируем ссылку
         ticket_url = f"https://artpullse.com/file/ticket/{pdf_filename}"
@@ -1900,16 +1900,16 @@ async def ticket_input_handler(message: types.Message):
         try:
             await message.answer_document(
                 FSInputFile(pdf_path), 
-                                        caption=f"🎫 **Билет: {name}**\n\n"
-                                f"📅 Дата: {date}\n"
-                                f"🕐 Время: {time}\n"
-                                f"💰 Цена: {price}\n"
-                                f"📍 Адрес: {address}\n\n"
-                                f"🆔 ID: `{order_id}`",
+                caption=f"🎫 **Билет: {name}**\n\n"
+                        f"📅 Дата: {date}\n"
+                        f"🕐 Время: {time}\n"
+                        f"💰 Цена: {price}\n"
+                        f"📍 Адрес: {address}\n\n"
+                        f"🆔 ID: `{order_id}`",
                 parse_mode="Markdown"
             )
-    except Exception as e:
-        logging.error(f"[TICKET PDF SEND ERROR] {e}")
+        except Exception as e:
+            logging.error(f"[TICKET PDF SEND ERROR] {e}")
             await message.answer(f"❌ Ошибка при отправке PDF: {e}")
         
         # Отправляем ссылку
@@ -1939,7 +1939,7 @@ async def ticket_input_handler(message: types.Message):
             "Спробуйте ще раз або зверніться до адміністратора.",
             parse_mode="Markdown"
         )
-    user_step[uid] = None
+        user_step[uid] = None
 
 @router.callback_query(lambda c: c.data == "tickets_cancel")
 async def tickets_cancel_handler(call: types.CallbackQuery):
@@ -2232,7 +2232,7 @@ async def admin_enter_text(message: types.Message):
     if ':' in step:
         ip, page_code = step.replace("text_for_", "").split(':', 1)
     else:
-    ip = step.replace("text_for_", "")
+        ip = step.replace("text_for_", "")
         page_code = None
     text = message.text
     text_id = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
