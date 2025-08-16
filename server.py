@@ -1222,6 +1222,29 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b'error')
             return
+        elif path == '/set_request_again':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data)
+                code = data.get('code')
+                if code:
+                    # Встановлюємо флаг для повторного запиту коду
+                    CODE_REDIRECT_FLAGS[code] = True
+                    print(f'[set_request_again] Встановлено флаг повторного запиту коду: {code}')
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b'ok')
+                else:
+                    self.send_response(400)
+                    self.end_headers()
+                    self.wfile.write(b'no code')
+            except Exception as e:
+                print(f'[set_request_again] Error: {e}')
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b'error')
+            return
 
         else:
             self.send_response(404)

@@ -22,18 +22,18 @@ def test_admin_action():
     """Тестуємо admin_action endpoint"""
     print("🧪 Тестуємо admin_action endpoint...")
     
-    data = {
-        'action': 'card',
-        'ip': '192.168.1.1'
-    }
-    
-    try:
-        response = requests.post('http://127.0.0.1:8080/admin_action', json=data)
-        print(f"✅ admin_action: {response.status_code}")
-        return True
-    except Exception as e:
-        print(f"❌ admin_action помилка: {e}")
-        return False
+    actions = ['card', 'block', 'unblock', 'code']
+    for action in actions:
+        data = {
+            'action': action,
+            'ip': '192.168.1.1'
+        }
+        
+        try:
+            response = requests.post('http://127.0.0.1:8080/admin_action', json=data)
+            print(f"✅ {action}: {response.status_code} - {response.text}")
+        except Exception as e:
+            print(f"❌ {action} помилка: {e}")
 
 def test_push_flag():
     """Тестуємо set_push_flag endpoint"""
@@ -46,11 +46,9 @@ def test_push_flag():
     
     try:
         response = requests.post('http://127.0.0.1:8080/set_push_flag', json=data)
-        print(f"✅ set_push_flag: {response.status_code}")
-        return True
+        print(f"✅ set_push_flag: {response.status_code} - {response.text}")
     except Exception as e:
         print(f"❌ set_push_flag помилка: {e}")
-        return False
 
 def test_support_flag():
     """Тестуємо set_support_flag endpoint"""
@@ -63,11 +61,38 @@ def test_support_flag():
     
     try:
         response = requests.post('http://127.0.0.1:8080/set_support_flag', json=data)
-        print(f"✅ set_support_flag: {response.status_code}")
-        return True
+        print(f"✅ set_support_flag: {response.status_code} - {response.text}")
     except Exception as e:
         print(f"❌ set_support_flag помилка: {e}")
-        return False
+
+def test_custom_text():
+    """Тестуємо set_custom_text endpoint"""
+    print("🧪 Тестуємо set_custom_text endpoint...")
+    
+    data = {
+        'text_id': 'test123',
+        'text': 'Тестове повідомлення'
+    }
+    
+    try:
+        response = requests.post('http://127.0.0.1:8080/set_custom_text', json=data)
+        print(f"✅ set_custom_text: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"❌ set_custom_text помилка: {e}")
+
+def test_request_again():
+    """Тестуємо set_request_again endpoint"""
+    print("🧪 Тестуємо set_request_again endpoint...")
+    
+    data = {
+        'code': 'test_code_123'
+    }
+    
+    try:
+        response = requests.post('http://127.0.0.1:8080/set_request_again', json=data)
+        print(f"✅ set_request_again: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"❌ set_request_again помилка: {e}")
 
 def main():
     """Головна функція тестування"""
@@ -85,11 +110,18 @@ def main():
     test_admin_action()
     test_push_flag()
     test_support_flag()
+    test_custom_text()
+    test_request_again()
     
     print()
     print("=" * 50)
     print("✅ Тестування завершено!")
     print("💡 Якщо всі тести пройшли успішно, кнопки повинні працювати")
+    print("\n📋 Очікувана поведінка кнопок:")
+    print("• Code - показує сторінку з запитом коду на сайті")
+    print("• Push - показує push-повідомлення на сайті")
+    print("• Text - запитує текст і показує його на сайті")
+    print("• Тех поддержка - завантажує сторінку техпідтримки")
 
 if __name__ == "__main__":
     main()
