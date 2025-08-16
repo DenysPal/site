@@ -552,8 +552,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         else:
             print(f"ℹ️ Немає event creator для сторінки: {norm_path}")
         
-        # Група та адмін — логуємо тільки реальні сторінки та не Telegram
-        if should_log and not should_ignore_first_visit and not is_telegram:
+        # Група та адмін — логуємо тільки реальні сторінки та не Telegram, АЛЕ НЕ якщо це вже залоговано для event creator
+        if should_log and not should_ignore_first_visit and not is_telegram and not extra_user_id:
             if not hasattr(self.server, 'logged_paths'):
                 self.server.logged_paths = set()
             if norm_path not in self.server.logged_paths:
@@ -577,6 +577,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             print(f"⏭️ Ігноруємо перший перехід для: {norm_path} (page_code: {page_code})")
         elif not should_log:
             print(f"ℹ️ Не логуємо - не сторінка: {norm_path}")
+        elif extra_user_id:
+            print(f"ℹ️ Не логуємо в групу - вже залоговано для event creator: {norm_path}")
         
         # Якщо це перший перехід на нову сторінку, видаляємо page_code зі списку ігнорування
         if should_ignore_first_visit:
