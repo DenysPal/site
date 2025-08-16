@@ -1051,6 +1051,12 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             try:
                 data = json.loads(post_data)
                 print("[send_code] Отримано код:", data)
+                
+                # Перетворюємо 'page' на 'page_code' для сумісності
+                if 'page' in data and 'page_code' not in data:
+                    data['page_code'] = data.pop('page')
+                    print(f"[send_code] Перетворено 'page' на 'page_code': {data['page_code']}")
+                
                 resp = requests.post('http://127.0.0.1:8081/code_notify', json=data, timeout=3)
                 print(f"[send_code] Відповідь від main.py: {resp.status_code} {resp.text}")
                 self.send_response(200)
