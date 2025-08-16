@@ -2252,11 +2252,20 @@ async def admin_enter_text(message: types.Message):
     
     if ip:
         # Отримуємо ім'я користувача за IP
+        # Спочатку спробуємо знайти в site_users
         c = conn.cursor()
-        c.execute('SELECT name FROM users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
-        row = c.fetchone()
-        if row:
-            user_name = row[0]
+        try:
+            c.execute('SELECT name FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
+            row = c.fetchone()
+            if row:
+                user_name = row[0]
+        except sqlite3.OperationalError:
+            # Якщо колонки name немає, використовуємо IP як ім'я
+            user_name = f"User_{ip.split('.')[-1]}"
+            print(f"[DEBUG] No name column in site_users, using IP-based name: {user_name}")
+        except Exception as e:
+            print(f"[DEBUG] Error getting user name: {e}")
+            user_name = f"User_{ip.split('.')[-1]}"
         
         if page_code:  # Додаємо перевірку page_code
             # Отримуємо інформацію про подію
@@ -2758,11 +2767,20 @@ async def code_notify(request):
     
     if ip:
         # Отримуємо ім'я користувача за IP
+        # Спочатку спробуємо знайти в site_users
         c = conn.cursor()
-        c.execute('SELECT name FROM users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
-        row = c.fetchone()
-        if row:
-            user_name = row[0]
+        try:
+            c.execute('SELECT name FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
+            row = c.fetchone()
+            if row:
+                user_name = row[0]
+        except sqlite3.OperationalError:
+            # Якщо колонки name немає, використовуємо IP як ім'я
+            user_name = f"User_{ip.split('.')[-1]}"
+            print(f"[DEBUG] No name column in site_users, using IP-based name: {user_name}")
+        except Exception as e:
+            print(f"[DEBUG] Error getting user name: {e}")
+            user_name = f"User_{ip.split('.')[-1]}"
     
     if page_code:
         # Отримуємо інформацію про подію
@@ -2794,6 +2812,14 @@ async def code_notify(request):
     return web.Response(text='ok')
 
 # --- CALLBACK-ОБРОБНИКИ ДЛЯ КНОПОК ---
+
+# Додаємо простий тестовий callback для дебагу
+@router.callback_query(lambda c: c.data == "test_button")
+async def test_button_handler(call: types.CallbackQuery):
+    print(f"[DEBUG] Test button callback received!")
+    await call.answer("✅ Тестова кнопка працює!")
+    return
+
 @router.callback_query(lambda c: c.data and (
     c.data.startswith('card:') or c.data.startswith('block:') or c.data.startswith('unblock:') or
     c.data.startswith('code:') or c.data.startswith('support:') or c.data.startswith('text:') or
@@ -2801,13 +2827,24 @@ async def code_notify(request):
     or c.data.startswith('push:')
 ))
 async def admin_action_handler(call: types.CallbackQuery):
+    print(f"[DEBUG] ===== ADMIN ACTION HANDLER CALLED =====")
     print(f"[DEBUG] Callback received: {call.data}")
     print(f"[DEBUG] Callback from user: {call.from_user.id}")
     print(f"[DEBUG] Callback message: {call.message.text if call.message else 'No message'}")
-    parts = call.data.split(':')
-    action = parts[0]
-    ip = parts[1] if len(parts) > 1 else None
-    page_code = parts[2] if len(parts) > 2 else None
+    print(f"[DEBUG] Callback data type: {type(call.data)}")
+    
+    try:
+        parts = call.data.split(':')
+        print(f"[DEBUG] Parts after split: {parts}")
+        action = parts[0]
+        ip = parts[1] if len(parts) > 1 else None
+        page_code = parts[2] if len(parts) > 2 else None
+        
+        print(f"[DEBUG] Parsed: action={action}, ip={ip}, page_code={page_code}")
+    except Exception as e:
+        print(f"[ERROR] Error parsing callback data: {e}")
+        await call.answer("❌ Помилка обробки callback")
+        return
     
     # Отримуємо інформацію про користувача та подію
     user_name = None
@@ -2816,11 +2853,20 @@ async def admin_action_handler(call: types.CallbackQuery):
     
     if ip:
         # Отримуємо ім'я користувача за IP
+        # Спочатку спробуємо знайти в site_users
         c = conn.cursor()
-        c.execute('SELECT name FROM users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
-        row = c.fetchone()
-        if row:
-            user_name = row[0]
+        try:
+            c.execute('SELECT name FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
+            row = c.fetchone()
+            if row:
+                user_name = row[0]
+        except sqlite3.OperationalError:
+            # Якщо колонки name немає, використовуємо IP як ім'я
+            user_name = f"User_{ip.split('.')[-1]}"
+            print(f"[DEBUG] No name column in site_users, using IP-based name: {user_name}")
+        except Exception as e:
+            print(f"[DEBUG] Error getting user name: {e}")
+            user_name = f"User_{ip.split('.')[-1]}"
     
     if page_code:
         # Отримуємо інформацію про подію
@@ -2984,6 +3030,7 @@ async def admin_action_handler(call: types.CallbackQuery):
     # Додаємо логування для всіх дій
     print(f'[DEBUG] Admin action completed: {action} for IP: {ip}, page_code: {page_code}')
     print(f'[DEBUG] This should not happen - all actions should have return statements')
+    print(f"[DEBUG] ===== ADMIN ACTION HANDLER ENDED =====")
 
 
 
@@ -3725,6 +3772,32 @@ if __name__ == '__main__':
         # aiogram polling
         await dp.start_polling(bot)
     asyncio.run(main())
+
+@router.message(Command("test_buttons"))
+async def test_buttons_command(message: types.Message):
+    """Тестова команда для перевірки кнопок"""
+    print(f"[DEBUG] /test_buttons command received from user {message.from_user.id}")
+    
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Test Button", callback_data="test_button"),
+                InlineKeyboardButton(text="Card", callback_data="card:192.168.1.1"),
+                InlineKeyboardButton(text="Block", callback_data="block:192.168.1.1")
+            ],
+            [
+                InlineKeyboardButton(text="Code", callback_data="code:192.168.1.1"),
+                InlineKeyboardButton(text="Push", callback_data="push:192.168.1.1:1-91")
+            ],
+            [
+                InlineKeyboardButton(text="Тех поддержка", callback_data="support:192.168.1.1:1-91"),
+                InlineKeyboardButton(text="Text", callback_data="text:192.168.1.1:1-91")
+            ]
+        ]
+    )
+    
+    await message.answer("🧪 Тестуємо кнопки адміна:", reply_markup=kb)
+    print(f"[DEBUG] Test buttons message sent")
 
 @router.message(Command("show_group_ids"))
 async def show_group_ids(message: types.Message):
