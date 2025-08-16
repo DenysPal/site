@@ -377,6 +377,10 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             not orig_path.startswith('/file/')       # Не логуємо файли
         )
         
+        # Перевіряємо User-Agent для фільтрації Telegram
+        user_agent = self.headers.get('User-Agent', '')
+        is_telegram = is_telegram_request(user_agent)
+        
         if not is_telegram and is_real_page:
             ip = get_real_ip(self)
             print(f"📝 Запит на сторінку: {orig_path} від IP: {ip}")
