@@ -88,9 +88,7 @@ def create_ticket_with_existing_barcode():
         print(f"✅ Штрих-код додано з файлу: {existing_barcode}")
     except Exception as e:
         print(f"❌ Помилка малювання штрих-коду: {e}")
-        # Fallback на простий прямокутник
-        c.setFillColorRGB(0, 0, 0)
-        c.rect((width - 360) // 2, barcode_y, 360, 70, fill=1)
+        # Не малюємо fallback - залишаємо пусто
     
     # Номер штрих-коду (можна змінити на будь-який)
     barcode_value = "1234567890123456"

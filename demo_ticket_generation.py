@@ -186,14 +186,10 @@ def create_demo_ticket():
                 print(f"✅ Штрих-код додано з файлу: {barcode_path}")
             except Exception as e:
                 print(f"❌ Помилка малювання штрих-коду: {e}")
-                # Fallback на простий прямокутник
-                c.setFillColorRGB(0, 0, 0)
-                c.rect((width - 360) // 2, barcode_y, 360, 70, fill=1)
+                # Не малюємо fallback - залишаємо пусто
         else:
-            print(f"⚠️  Файл штрих-коду не знайдено, малюємо простий прямокутник")
-            # Fallback на простий прямокутник
-            c.setFillColorRGB(0, 0, 0)
-            c.rect((width - 360) // 2, barcode_y, 360, 70, fill=1)
+            print(f"⚠️  Файл штрих-коду не знайдено")
+            # Не малюємо fallback - залишаємо пусто
         
         # Повертаємо чорний колір для тексту
         c.setFillColorRGB(0, 0, 0)
