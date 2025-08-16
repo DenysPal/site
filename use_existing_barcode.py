@@ -38,8 +38,8 @@ def create_ticket_with_existing_barcode():
     c.setFillColorRGB(1, 1, 1)  # Білий колір
     c.rect(30, 30, width - 60, height - 60, fill=1)
     
-            # Верхний домен по центру, серым
-        top_y = height - 40
+            # Верхний домен по центру, серым (опускаємо нижче для рамки)
+        top_y = height - 60
         c.setFont("Helvetica-Bold", 20)
         c.setFillColorRGB(0.7, 0.7, 0.7)
         c.drawCentredString(width / 2, top_y, "events-art.com")
@@ -113,10 +113,10 @@ def create_ticket_with_existing_barcode():
     try:
         # Малюємо сіру рамку для штрих-коду
         c.setFillColorRGB(0.9, 0.9, 0.9)  # Сірий колір
-        c.rect((width - 500) // 2, barcode_y - 10, 500, 130, fill=1)
+        c.rect((width - 600) // 2, barcode_y - 10, 600, 160, fill=1)
         
         # Малюємо існуючий штрих-код (збільшуємо розмір ще більше)
-        c.drawImage(existing_barcode, (width - 500) // 2, barcode_y, width=500, height=130)
+        c.drawImage(existing_barcode, (width - 600) // 2, barcode_y, width=600, height=160)
         print(f"✅ Штрих-код додано з файлу: {existing_barcode}")
     except Exception as e:
         print(f"❌ Помилка малювання штрих-коду: {e}")
