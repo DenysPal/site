@@ -176,10 +176,18 @@ def generate_short_code(length=3):
 
 def get_page_code_for_user(uid):
    c = conn.cursor()
+   # Спочатку шукаємо в event_links (для зворотної сумісності)
    c.execute('SELECT event_code FROM event_links WHERE user_id=? ORDER BY ROWID DESC LIMIT 1', (uid,))
    row = c.fetchone()
    if row:
        return row[0]
+   
+   # Якщо не знайшли, шукаємо в site_users по tg_id
+   c.execute('SELECT page_code FROM site_users WHERE tg_id=? ORDER BY created_at DESC LIMIT 1', (uid,))
+   row = c.fetchone()
+   if row:
+       return row[0]
+   
    return None
 
 # Додаємо колонку page_code, якщо вона не існує
@@ -192,6 +200,16 @@ except sqlite3.OperationalError:
     conn.commit()
     print("[DB] page_code column added successfully")
 
+# Додаємо колонку tg_id, якщо вона не існує
+try:
+    c.execute('SELECT tg_id FROM site_users LIMIT 1')
+except sqlite3.OperationalError:
+    print("[DB] Adding tg_id column to site_users table")
+    c.execute('ALTER TABLE site_users ADD COLUMN tg_id INTEGER')
+    c.execute('CREATE INDEX IF NOT EXISTS idx_tg_id ON site_users(tg_id)')
+    conn.commit()
+    print("[DB] tg_id column added successfully")
+
 # Заповнюємо page_code для існуючих записів, якщо потрібно
 try:
     c.execute('SELECT COUNT(*) FROM site_users WHERE page_code IS NULL')
@@ -202,6 +220,28 @@ try:
         print("[DB] page_codes filled successfully")
 except Exception as e:
     print(f"[DB] Error checking/filling page_code: {e}")
+
+# Заповнюємо tg_id для існуючих записів, якщо потрібно
+try:
+    c.execute('SELECT COUNT(*) FROM site_users WHERE tg_id IS NULL')
+    null_tg_count = c.fetchone()[0]
+    if null_tg_count > 0:
+        print(f"[DB] Found {null_tg_count} records without tg_id, filling them from event_links...")
+        # Заповнюємо tg_id з таблиці event_links
+        c.execute('''
+            UPDATE site_users 
+            SET tg_id = (
+                SELECT user_id 
+                FROM event_links 
+                WHERE event_links.event_code = site_users.page_code 
+                LIMIT 1
+            )
+            WHERE tg_id IS NULL AND page_code IS NOT NULL
+        ''')
+        conn.commit()
+        print(f"[DB] Updated {c.rowcount} records with tg_id from event_links")
+except Exception as e:
+    print(f"[DB] Error checking/filling tg_id: {e}")
 
 def get_user(user_id):
     c = conn.cursor()
@@ -235,7 +275,7 @@ def generate_page_code():
     number = total % 100 + 1
     return f"{series}-{number}"
 
-def create_site_user(dates, currency, street, price):
+def create_site_user(dates, currency, street, price, tg_id=None):
     """Создает нового пользователя сайта с данными события, гарантуючи унікальний page_code"""
     c = conn.cursor()
     user_id = generate_site_user_id()
@@ -252,9 +292,9 @@ def create_site_user(dates, currency, street, price):
             continue
         try:
             c.execute('''INSERT INTO site_users 
-                         (id, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price, page_code) 
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                      (user_id, dates[0], dates[1], dates[2], dates[3], dates[4], dates[5], dates[6], dates[7], currency, street, price, page_code))
+                         (id, date_1, date_2, date_3, date_4, date_5, date_6, date_7, date_8, currency, street, price, page_code, tg_id) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                      (user_id, dates[0], dates[1], dates[2], dates[3], dates[4], dates[5], dates[6], dates[7], currency, street, price, page_code, tg_id))
             conn.commit()
             # --- Додаємо початкову кількість квитків для кожної події ---
             for event_index in range(8):
@@ -1577,12 +1617,12 @@ async def handle_links_menu(message: types.Message):
         await message.answer(template_text, reply_markup=links_template_kb)
         user_step[message.chat.id] = 'event_all_fields'
     elif text == "изменить ссылки":
-        # --- Показати список останніх 50 page_code з номерами як ?page=13-140 ---
+        # --- Показати список тільки посилань поточного користувача ---
         c = conn.cursor()
-        c.execute('SELECT page_code FROM site_users ORDER BY created_at DESC LIMIT 50')
+        c.execute('SELECT page_code FROM site_users WHERE tg_id=? ORDER BY created_at DESC', (message.from_user.id,))
         codes = [row[0] for row in c.fetchall() if row[0]]
         if not codes:
-            await message.answer("Нет доступных ссылок для изменения.")
+            await message.answer("У вас нет созданных ссылок для изменения.")
             user_step[message.chat.id] = None
             return
         # Формируем кнопки в виде ?page=13-140
@@ -1590,7 +1630,7 @@ async def handle_links_menu(message: types.Message):
             keyboard=[[KeyboardButton(text=f"?page={code}")] for code in codes] + [[KeyboardButton(text="⬅️ Назад")]],
             resize_keyboard=True
         )
-        await message.answer("Последние 50 ссылок. Выберите ссылку:", reply_markup=kb)
+        await message.answer(f"Ваши ссылки ({len(codes)} шт.). Выберите ссылку для изменения:", reply_markup=kb)
         user_step[message.chat.id] = 'choose_link_to_edit'
     elif text == "⬅️ назад":
         kb = get_user_keyboard(message.from_user.id)
@@ -1615,12 +1655,12 @@ async def handle_choose_link_to_edit(message: types.Message):
         page_code = text[6:]
     else:
         page_code = text
-            # Проверяем, существует ли такой page_code
+            # Проверяем, существует ли такой page_code И чи належить він поточному користувачу
     c = conn.cursor()
-    c.execute('SELECT id FROM site_users WHERE page_code=?', (page_code,))
+    c.execute('SELECT id FROM site_users WHERE page_code=? AND tg_id=?', (page_code, message.from_user.id))
     row = c.fetchone()
     if not row:
-        await message.answer("Ссылка не найдена. Попробуйте еще раз.")
+        await message.answer("Ссылка не найдена или у вас нет прав на её изменение. Попробуйте еще раз.")
         return
     # Показуємо меню для цієї ссилки
     kb = ReplyKeyboardMarkup(
@@ -2089,7 +2129,7 @@ async def events_save_all(message):
                 combined_dates.append(f"{dates[i]} {times[i]}")
             else:
                 combined_dates.append(dates[i] if dates[i] else '')
-        site_user_id, page_code = create_site_user(combined_dates, currency, street, price)
+        site_user_id, page_code = create_site_user(combined_dates, currency, street, price, message.from_user.id)
 
         
         # Додаємо page_code до списку для ігнорування першого переходу на всіх серверах
