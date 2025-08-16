@@ -121,12 +121,12 @@ def create_demo_ticket():
         c.setFillColorRGB(0, 0, 0)
         c.drawCentredString(width / 2, name_y, demo_data['name'])
         
-        # Картинка по центру (як на другому скріншоті)
+        # Картинка по центру (як на другому скріншоті) - трохи зменшена
         img_bottom_y = name_y - 40
         try:
             img = Image.open(img_path)
-            max_w = int(width - 140)
-            max_h = 280
+            max_w = int(width - 200)  # Зменшено з 140 на 200
+            max_h = 240  # Зменшено з 280 на 240
             img.thumbnail((max_w, max_h))
             img_w, img_h = img.size
             img_x = (width - img_w) / 2
@@ -176,19 +176,17 @@ def create_demo_ticket():
         # Повертаємо чорний колір для тексту
         c.setFillColorRGB(0, 0, 0)
         
-        # Додаємо нижню сіру рамку по довжині (як на другому скріншоті)
-        c.setFillColorRGB(0.3, 0.3, 0.3)  # Сірий колір як у фону
-        c.rect(0, 0, width, 50, fill=1)  # Нижня сіра рамка по довжині
-        
-        # Додаємо фото image.png знизу (замість штрих-коду)
+        # Додаємо фото image.png знизу (замість штрих-коду) - в межах білого прямокутника
         bottom_image_path = os.path.join('events-art.com', 'image', 'image.png')
-        bottom_image_y = 20  # Розташовуємо фото внизу сірої рамки
+        bottom_image_y = 50  # Розташовуємо фото внизу білого прямокутника
+        bottom_image_width = width - 200  # Ширина в межах білого прямокутника
+        bottom_image_x = 100  # Позиція по центру білого прямокутника
         
         if os.path.exists(bottom_image_path):
             try:
-                # Малюємо фото image.png розтягнуте в боки (розмір 200x150)
-                c.drawImage(bottom_image_path, 50, bottom_image_y, width=width - 100, height=150)
-                print(f"✅ [DEMO] Фото image.png додано знизу та розтягнуте в боки: {bottom_image_path}")
+                # Малюємо фото image.png в межах білого прямокутника
+                c.drawImage(bottom_image_path, bottom_image_x, bottom_image_y, width=bottom_image_width, height=120)
+                print(f"✅ [DEMO] Фото image.png додано внизу білого прямокутника: {bottom_image_path}")
             except Exception as e:
                 print(f"❌ [DEMO] Помилка малювання фото image.png: {e}")
         else:
