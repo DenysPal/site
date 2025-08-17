@@ -3136,9 +3136,9 @@ async def admin_action_handler(call: types.CallbackQuery):
                     except Exception as e:
                         print(f'[ERROR] Failed to send support log to Логи GYM: {e}')
                     
-                        await call.answer("✅ Сторінка техпідтримки завантажена на сайті")
-                    else:
-                        await call.answer("❌ Помилка завантаження сторінки техпідтримки")
+                    await call.answer("✅ Сторінка техпідтримки завантажена на сайті")
+                else:
+                    await call.answer("❌ Помилка завантаження сторінки техпідтримки")
                     
             except Exception as e:
                 print(f'[ERROR] Support request failed: {e}')
