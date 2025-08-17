@@ -3107,26 +3107,6 @@ async def admin_action_handler(call: types.CallbackQuery):
                 print(f'[DEBUG] Support response: {resp.status}')
         
                 if resp.status == 200:
-                    # Надсилаємо красиве повідомлення про технічну підтримку
-                    if ip and page_code:  # Додаємо перевірку page_code
-                        admin_user_id = None
-                        c = conn.cursor()
-                        c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
-                        row = c.fetchone()
-                        if row:
-                            admin_user_id = row[0]
-                        
-                        if admin_user_id:
-                            admin_username = get_admin_username_by_user_id(admin_user_id)
-                            support_message = format_support_notification_message(
-                                admin_username=admin_username,
-                                name=user_name,
-                                price=event_price,
-                                currency=event_currency
-                            )
-                            await bot.send_message(admin_user_id, support_message)
-                            print(f'[DEBUG] Support message sent to admin {admin_user_id}')
-                        
                     # Надсилаємо повідомлення в групу "Логи GYM"
                     support_log_message = f"🔔 Тех поддержка отправлена"
                     
