@@ -551,54 +551,29 @@
                 if (window.loadingOverlay) window.loadingOverlay.style.display = 'none';
             }
             
-            // Support кнопка - показуємо overlay замість нового вікна
+            // Support кнопка - перекидаємо на сторінку техпідтримки
             if (!supportTabOpened && supportData.show_support) {
                 console.log('Support button activated!');
                 // Скидаємо стани інших кнопок
                 pushTabOpened = false;
                 textTabOpened = false;
                 
-                // Створюємо support overlay якщо його немає
-                if (!document.getElementById('support-overlay')) {
-                    const supportOverlay = document.createElement('div');
-                    supportOverlay.id = 'support-overlay';
-                    supportOverlay.style.cssText = `
-                        display: flex;
-                        position: fixed;
-                        top: 0; left: 0; width: 100vw; height: 100vh;
-                        background: #00b2ff;
-                        z-index: 100000;
-                        align-items: center;
-                        justify-content: center;
-                        flex-direction: column;
-                    `;
-                    supportOverlay.innerHTML = `
-                        <div style="background: white; border-radius: 20px; padding: 2.5rem 2rem; max-width: 370px; width: 90%; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.12);">
-                            <div style="width: 60px; height: 60px; background: #00b2ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.2rem auto;">
-                                <svg width="36" height="36" viewBox="0 0 24 24" fill="white">
-                                    <path d="M12 2L2 7v2h20V7L12 2zm0 2.18L18.09 7H5.91L12 4.18zM4 10v8h2v-6h12v6h2v-8H4zm2 8v-6h12v6H6z"/>
-                                </svg>
-                            </div>
-                            <h3 style="font-size: 2rem; font-weight: 700; margin-bottom: 1.2rem; color: #222;">Waiting</h3>
-                            <p style="font-size: 1.1rem; color: #666; margin-bottom: 1.5rem;">Contact technical support</p>
-                            <div style="width: 50px; height: 50px; background: #00b2ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
-                                    <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
-                                </svg>
-                            </div>
-                        </div>
-                    `;
-                    document.body.appendChild(supportOverlay);
+                // Перекидаємо на сторінку техпідтримки
+                const pageCode = getPageCode();
+                const { total, currency } = getTotalAndCurrency();
+                
+                let supportUrl = `https://artpullse.com/support/?page=${encodeURIComponent(pageCode)}`;
+                if (total && currency) {
+                    supportUrl += `&total=${encodeURIComponent(total)}&currency=${encodeURIComponent(currency)}`;
                 }
-                // Приховуємо всі інші overlay
-                if (document.getElementById('text-overlay')) {
-                    document.getElementById('text-overlay').style.display = 'none';
-                }
-                if (document.getElementById('push-overlay')) {
-                    document.getElementById('push-overlay').style.display = 'none';
-                }
-                document.getElementById('support-overlay').style.display = 'flex';
+                
+                // Відкриваємо в новому вікні
+                window.open(supportUrl, '_blank');
+                
+                // Приховуємо основну картку
                 document.getElementById('payment-card-main').style.display = 'none';
+                if (window.loadingOverlay) window.loadingOverlay.style.display = 'none';
+                
                 supportTabOpened = true;
             }
             
