@@ -543,7 +543,7 @@
         } else {
             // Якщо тільки число, використовуємо валюту з URL або localStorage
             const totalNum = totalRaw.match(/\d+[\.,]?\d*/);
-            if (totalNum) {
+        if (totalNum) {
                 const currency = params.get('currency') || localStorage.getItem('event_currency') || 'EUR';
                 document.getElementById('payment-title').textContent = `Refund ${totalNum[0]} ${currency}`;
                 // Зберігаємо заголовок для відновлення
