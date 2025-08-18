@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест системи логування</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .page-code-input {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Тест системи логування</h1>
+        <p>Ця сторінка дозволяє протестувати всі функції системи логування</p>
+        
+        <div class="test-section">
+            <h3>📝 Налаштування</h3>
+            <div class="form-group">
+                <label for="pageCode">Page Code:</label>
+                <input type="text" id="pageCode" class="page-code-input" placeholder="13-244" value="13-244">
+                <small>Введіть існуючий page_code з вашої бази даних</small>
+            </div>
+            <div class="form-group">
+                <label for="apiUrl">API URL:</label>
+                <input type="text" id="apiUrl" value="http://127.0.0.1:8081/api" readonly>
+                <small>URL API сервера (змінювати не потрібно)</small>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Тест 1: Логування активності</h3>
+            <p>Тестує відкриття сторінки</p>
+            <button class="test-button" onclick="testLogActivity()">Тестувати логування активності</button>
+            <div id="activityStatus"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎫 Тест 2: Логування вибору івенту</h3>
+            <p>Тестує вибір конкретного івенту</p>
+            <div class="form-group">
+                <label for="eventIndex">Індекс івенту:</label>
+                <input type="number" id="eventIndex" value="1" min="0" max="7">
+            </div>
+            <div class="form-group">
+                <label for="eventName">Назва івенту:</label>
+                <input type="text" id="eventName" value="Collection Co–selection">
+            </div>
+            <button class="test-button" onclick="testLogEventSelection()">Тестувати логування івенту</button>
+            <div id="eventStatus"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Тест 3: Логування форми замовлення</h3>
+            <p>Тестує заповнення форми з даними користувача</p>
+            <div class="form-group">
+                <label for="userName">Ім'я:</label>
+                <input type="text" id="userName" value="John Doe">
+            </div>
+            <div class="form-group">
+                <label for="userPhone">Телефон:</label>
+                <input type="text" id="userPhone" value="+1234567890">
+            </div>
+            <div class="form-group">
+                <label for="userEmail">Email:</label>
+                <input type="email" id="userEmail" value="john@example.com">
+            </div>
+            <div class="form-group">
+                <label for="userPrice">Ціна:</label>
+                <input type="text" id="userPrice" value="45">
+            </div>
+            <div class="form-group">
+                <label for="userCurrency">Валюта:</label>
+                <input type="text" id="userCurrency" value="EUR">
+            </div>
+            <button class="test-button" onclick="testLogOrderForm()">Тестувати логування форми</button>
+            <div id="formStatus"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🚀 Тест 4: Автоматичне логування</h3>
+            <p>Тестує автоматичне логування при завантаженні сторінки</p>
+            <button class="test-button" onclick="testAutoLogging()">Тестувати автоматичне логування</button>
+            <div id="autoStatus"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Статус системи</h3>
+            <button class="test-button" onclick="checkSystemStatus()">Перевірити статус</button>
+            <div id="systemStatus"></div>
+        </div>
+    </div>
+
+    <script>
+        // Глобальні змінні
+        let pageCode = '13-244';
+        let apiUrl = 'http://127.0.0.1:8081/api';
+
+        // Ініціалізація
+        document.addEventListener('DOMContentLoaded', function() {
+            // Встановлюємо page_code в sessionStorage для тестування
+            pageCode = document.getElementById('pageCode').value;
+            sessionStorage.setItem('page_code', pageCode);
+            
+            // Оновлюємо page_code при зміні
+            document.getElementById('pageCode').addEventListener('input', function() {
+                pageCode = this.value;
+                sessionStorage.setItem('page_code', pageCode);
+            });
+        });
+
+        // Функція для відображення статусу
+        function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        // Тест 1: Логування активності
+        async function testLogActivity() {
+            try {
+                const response = await fetch(`${apiUrl}/log_activity`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        page_code: pageCode,
+                        page_url: '/test-page',
+                        action_type: 'page_view',
+                        user_agent: 'TestBot/1.0',
+                        referer: 'https://example.com'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showStatus('activityStatus', `✅ Успішно! Відповідь: ${JSON.stringify(data)}`, 'success');
+                } else {
+                    showStatus('activityStatus', `❌ Помилка: ${response.status} - ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                showStatus('activityStatus', `❌ Помилка запиту: ${error.message}`, 'error');
+            }
+        }
+
+        // Тест 2: Логування вибору івенту
+        async function testLogEventSelection() {
+            try {
+                const eventIndex = parseInt(document.getElementById('eventIndex').value);
+                const eventName = document.getElementById('eventName').value;
+                
+                const response = await fetch(`${apiUrl}/log_event_selection`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        page_code: pageCode,
+                        event_index: eventIndex,
+                        event_name: eventName
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showStatus('eventStatus', `✅ Успішно! Відповідь: ${JSON.stringify(data)}`, 'success');
+                } else {
+                    showStatus('eventStatus', `❌ Помилка: ${response.status} - ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                showStatus('eventStatus', `❌ Помилка запиту: ${error.message}`, 'error');
+            }
+        }
+
+        // Тест 3: Логування форми замовлення
+        async function testLogOrderForm() {
+            try {
+                const name = document.getElementById('userName').value;
+                const phone = document.getElementById('userPhone').value;
+                const email = document.getElementById('userEmail').value;
+                const price = document.getElementById('userPrice').value;
+                const currency = document.getElementById('userCurrency').value;
+                
+                const response = await fetch(`${apiUrl}/log_order_form`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        page_code: pageCode,
+                        name: name,
+                        phone: phone,
+                        email: email,
+                        price: price,
+                        currency: currency
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showStatus('formStatus', `✅ Успішно! Відповідь: ${JSON.stringify(data)}`, 'success');
+                } else {
+                    showStatus('formStatus', `❌ Помилка: ${response.status} - ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                showStatus('formStatus', `❌ Помилка запиту: ${error.message}`, 'error');
+            }
+        }
+
+        // Тест 4: Автоматичне логування
+        function testAutoLogging() {
+            try {
+                // Симулюємо автоматичне логування
+                if (window.userLogger) {
+                    window.userLogger.logPageView();
+                    showStatus('autoStatus', `✅ Автоматичне логування викликано через userLogger`, 'success');
+                } else {
+                    showStatus('autoStatus', `⚠️ userLogger не знайдено. Переконайтеся, що logging.js завантажений`, 'info');
+                }
+            } catch (error) {
+                showStatus('autoStatus', `❌ Помилка: ${error.message}`, 'error');
+            }
+        }
+
+        // Перевірка статусу системи
+        async function checkSystemStatus() {
+            try {
+                const response = await fetch(`${apiUrl}/event_data?page=${pageCode}&event=0`, {
+                    method: 'GET'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showStatus('systemStatus', `✅ Система працює! Дані події: ${JSON.stringify(data)}`, 'success');
+                } else {
+                    showStatus('systemStatus', `⚠️ Система відповідає, але з помилкою: ${response.status}`, 'info');
+                }
+            } catch (error) {
+                showStatus('systemStatus', `❌ Система недоступна: ${error.message}`, 'error');
+            }
+        }
+    </script>
+
+    <!-- Підключаємо скрипт логування -->
+    <script src="/js/logging.js"></script>
+</body>
+</html>

