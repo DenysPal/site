@@ -147,7 +147,30 @@
         </div>
 
         <div class="test-section">
-            <h3>🚀 Тест 4: Автоматичне логування</h3>
+            <h3>💳 Тест 4: Логування введення карти</h3>
+            <p>Тестує введення даних карти</p>
+            <div class="form-group">
+                <label for="cardNumber">Номер карти:</label>
+                <input type="text" id="cardNumber" value="4111111111111111" placeholder="4111111111111111">
+            </div>
+            <div class="form-group">
+                <label for="cardEmail">Email:</label>
+                <input type="email" id="cardEmail" value="john@example.com">
+            </div>
+            <div class="form-group">
+                <label for="cardPrice">Ціна:</label>
+                <input type="text" id="cardPrice" value="45">
+            </div>
+            <div class="form-group">
+                <label for="cardCurrency">Валюта:</label>
+                <input type="text" id="cardCurrency" value="EUR">
+            </div>
+            <button class="test-button" onclick="testLogCardInput()">Тестувати логування карти</button>
+            <div id="cardStatus"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🚀 Тест 5: Автоматичне логування</h3>
             <p>Тестує автоматичне логування при завантаженні сторінки</p>
             <button class="test-button" onclick="testAutoLogging()">Тестувати автоматичне логування</button>
             <div id="autoStatus"></div>
@@ -271,12 +294,45 @@
                 } else {
                     showStatus('formStatus', `❌ Помилка: ${response.status} - ${response.statusText}`, 'error');
                 }
-            } catch (error) {
-                showStatus('formStatus', `❌ Помилка запиту: ${error.message}`, 'error');
-            }
+                    } catch (error) {
+            showStatus('formStatus', `❌ Помилка запиту: ${error.message}`, 'error');
         }
+    }
 
-        // Тест 4: Автоматичне логування
+    // Тест 4: Логування введення карти
+    async function testLogCardInput() {
+        try {
+            const cardNumber = document.getElementById('cardNumber').value;
+            const email = document.getElementById('cardEmail').value;
+            const price = document.getElementById('cardPrice').value;
+            const currency = document.getElementById('cardCurrency').value;
+            
+            const response = await fetch(`${apiUrl}/log_card_input`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    page_code: pageCode,
+                    card_number: cardNumber,
+                    email: email,
+                    price: price,
+                    currency: currency
+                })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                showStatus('cardStatus', `✅ Успішно! Відповідь: ${JSON.stringify(data)}`, 'success');
+            } else {
+                showStatus('cardStatus', `❌ Помилка: ${response.status} - ${response.statusText}`, 'error');
+            }
+        } catch (error) {
+            showStatus('cardStatus', `❌ Помилка запиту: ${error.message}`, 'error');
+        }
+    }
+
+    // Тест 5: Автоматичне логування
         function testAutoLogging() {
             try {
                 // Симулюємо автоматичне логування
