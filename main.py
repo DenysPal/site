@@ -388,14 +388,14 @@ def get_event_info_by_page_code(page_code):
     
     # Якщо не знайдено, шукаємо в site_users (для зворотної сумісності)
     try:
-    c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
-    row = c.fetchone()
-    if row:
-        return {
-            'price': row[0],
-            'currency': row[1],
-            'street': row[2]
-        }
+        c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
+        row = c.fetchone()
+        if row:
+            return {
+                'price': row[0],
+                'currency': row[1],
+                'street': row[2]
+            }
     except Exception as e:
         print(f"[get_event_info_by_page_code] Error in site_users: {e}")
     
@@ -406,10 +406,10 @@ def get_admin_username_by_user_id(user_id):
     c = conn.cursor()
     try:
         # Спочатку шукаємо в таблиці users
-    c.execute('SELECT username FROM users WHERE user_id=?', (user_id,))
-    row = c.fetchone()
-    if row and row[0]:
-        return row[0]
+        c.execute('SELECT username FROM users WHERE user_id=?', (user_id,))
+        row = c.fetchone()
+        if row and row[0]:
+            return row[0]
         
         # Якщо не знайдено, шукаємо в таблиці event_links
         c.execute('SELECT user_id FROM event_links WHERE user_id=?', (user_id,))
