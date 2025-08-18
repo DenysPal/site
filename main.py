@@ -3113,17 +3113,17 @@ async def admin_action_handler(call: types.CallbackQuery):
     print(f"[DEBUG] Callback data type: {type(call.data)}")
     
     try:
-    parts = call.data.split(':')
+        parts = call.data.split(':')
         print(f"[DEBUG] Parts after split: {parts}")
-    action = parts[0]
+        action = parts[0]
         
         # Спеціальна обробка для code_request_again
         if action == 'code_request_again':
             page_code = parts[1] if len(parts) > 1 else None
             ip = None  # Для code_request_again IP не потрібен
         else:
-    ip = parts[1] if len(parts) > 1 else None
-    page_code = parts[2] if len(parts) > 2 else None
+            ip = parts[1] if len(parts) > 1 else None
+            page_code = parts[2] if len(parts) > 2 else None
         
         print(f"[DEBUG] Parsed: action={action}, ip={ip}, page_code={page_code}")
     except Exception as e:
@@ -3145,9 +3145,9 @@ async def admin_action_handler(call: types.CallbackQuery):
         c = conn.cursor()
         try:
             c.execute('SELECT name FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
-        row = c.fetchone()
-        if row:
-            user_name = row[0]
+            row = c.fetchone()
+            if row:
+                user_name = row[0]
         except sqlite3.OperationalError:
             # Якщо колонки name немає, використовуємо IP як ім'я
             user_name = f"User_{ip.split('.')[-1]}"
