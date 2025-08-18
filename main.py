@@ -818,9 +818,36 @@ def is_admin(user_id):
         print(f"[DEBUG] is_admin({user_id}): SPECIAL_ADMIN, result=True")
         return True
     
+    # Получаем пользователя из базы
     db_user = get_user(user_id)
-    result = db_user and db_user.get('is_admin', 0) == 1
-    print(f"[DEBUG] is_admin({user_id}): db_user={db_user}, is_admin={db_user.get('is_admin', 0) if db_user else None}, result={result}")
+    
+    # Добавляем детальную диагностику
+    if db_user is None:
+        print(f"[DEBUG] is_admin({user_id}): user not found in database, result=False")
+        return False
+    
+    is_admin_value = db_user.get('is_admin', 0)
+    result = is_admin_value == 1
+    
+    print(f"[DEBUG] is_admin({user_id}): db_user={db_user}, is_admin={is_admin_value}, result={result}")
+    
+    # Дополнительная проверка - прямой запрос к базе
+    try:
+        c = conn.cursor()
+        c.execute('SELECT is_admin FROM users WHERE user_id=?', (user_id,))
+        direct_result = c.fetchone()
+        if direct_result:
+            direct_is_admin = direct_result[0] == 1
+            print(f"[DEBUG] is_admin({user_id}): direct DB query result={direct_is_admin}")
+            if direct_is_admin != result:
+                print(f"[WARNING] is_admin({user_id}): MISMATCH! get_user result={result}, direct DB result={direct_is_admin}")
+                # Исправляем результат
+                result = direct_is_admin
+        else:
+            print(f"[DEBUG] is_admin({user_id}): direct DB query returned None")
+    except Exception as e:
+        print(f"[ERROR] is_admin({user_id}): error in direct DB query: {e}")
+    
     return result
 
 def get_user_keyboard(user_id):
@@ -1368,17 +1395,44 @@ async def add_admin_username_step(message: types.Message):
     # Добавляем админа в базу
     try:
         c = conn.cursor()
-        c.execute('INSERT OR IGNORE INTO users (user_id, is_admin, username) VALUES (?, 1, ?)', (admin_id, username))
-        c.execute('UPDATE users SET is_admin=1, username=? WHERE user_id=?', (admin_id, username))
+        
+        # Проверяем, существует ли пользователь
+        c.execute('SELECT * FROM users WHERE user_id=?', (admin_id,))
+        existing_user = c.fetchone()
+        
+        if existing_user:
+            print(f"[DEBUG] add_admin: User {admin_id} already exists: {existing_user}")
+            # Обновляем существующего пользователя
+            c.execute('UPDATE users SET is_admin=1, username=? WHERE user_id=?', (username, admin_id))
+            print(f"[DEBUG] add_admin: Updated existing user {admin_id}")
+        else:
+            print(f"[DEBUG] add_admin: Creating new user {admin_id}")
+            # Создаем нового пользователя
+            c.execute('INSERT INTO users (user_id, is_admin, username, status) VALUES (?, 1, ?, ?)', 
+                     (admin_id, username, 'approved'))
+            print(f"[DEBUG] add_admin: Created new user {admin_id}")
+        
         conn.commit()
         
-        await message.answer(f"✅ Пользователь {username} (ID: {admin_id}) успешно добавлен как администратор!")
+        # Проверяем результат
+        c.execute('SELECT user_id, username, is_admin FROM users WHERE user_id=?', (admin_id,))
+        result = c.fetchone()
+        print(f"[DEBUG] add_admin: Result after adding: {result}")
         
-        # Возвращаемся в специальную админ-панель
-        user_step[uid] = 'special_admin_panel'
-        await message.answer("🔐 Специальная админ-панель. Выберите действие:", reply_markup=special_admin_panel_kb)
+        if result and result[2] == 1:
+            await message.answer(f"✅ Пользователь {username} (ID: {admin_id}) успешно добавлен как администратор!")
+            
+            # Возвращаемся в специальную админ-панель
+            user_step[uid] = 'special_admin_panel'
+            await message.answer("🔐 Специальная админ-панель. Выберите действие:", reply_markup=special_admin_panel_kb)
+        else:
+            await message.answer(f"❌ Ошибка: пользователь добавлен, но права админа не установлены!")
+            user_step[uid] = None
+            kb = get_user_keyboard(uid)
+            await message.answer("Возврат в главное меню.", reply_markup=kb)
         
     except Exception as e:
+        print(f"[ERROR] add_admin: Exception: {e}")
         await message.answer(f"❌ Ошибка при добавлении админа: {e}")
         user_step[uid] = None
         kb = get_user_keyboard(uid)
@@ -1388,7 +1442,7 @@ async def add_admin_username_step(message: types.Message):
 async def show_admins_list(message: types.Message):
     try:
         c = conn.cursor()
-        c.execute('SELECT user_id, username FROM users WHERE is_admin=1 ORDER BY username')
+        c.execute('SELECT user_id, username, is_admin, status FROM users WHERE is_admin=1 ORDER BY username')
         admins = c.fetchall()
         
         if not admins:
@@ -1398,9 +1452,10 @@ async def show_admins_list(message: types.Message):
         text = "👥 Список администраторов:\n\n"
         inline_keyboard = []
         
-        for admin_id, username in admins:
+        for admin_id, username, is_admin_val, status in admins:
             username = username or f"ID: {admin_id}"
-            text += f"• {username}\n"
+            status_text = status or "не указан"
+            text += f"• {username} (ID: {admin_id}, Статус: {status_text})\n"
             inline_keyboard.append([
                 InlineKeyboardButton(
                     text=f"❌ {username}", 
@@ -1413,7 +1468,13 @@ async def show_admins_list(message: types.Message):
         kb = InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
         await message.answer(text, reply_markup=kb)
         
+        # Дополнительная диагностика
+        print(f"[DEBUG] show_admins_list: Found {len(admins)} admins")
+        for admin in admins:
+            print(f"[DEBUG] Admin: {admin}")
+        
     except Exception as e:
+        print(f"[ERROR] show_admins_list: Exception: {e}")
         await message.answer(f"❌ Ошибка при получении списка админов: {e}")
 
 # --- Обработчики для удаления админов ---
