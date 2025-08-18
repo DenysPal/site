@@ -3020,9 +3020,9 @@ async def code_notify(request):
         c = conn.cursor()
         try:
             c.execute('SELECT name FROM site_users WHERE ip=? ORDER BY created_at DESC LIMIT 1', (ip,))
-        row = c.fetchone()
-        if row:
-            user_name = row[0]
+            row = c.fetchone()
+            if row:
+                user_name = row[0]
         except sqlite3.OperationalError:
             # Якщо колонки name немає, використовуємо IP як ім'я
             user_name = f"User_{ip.split('.')[-1]}"
