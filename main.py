@@ -2006,7 +2006,11 @@ async def ticket_input_handler(message: types.Message):
         c.setFillColorRGB(1, 1, 1)  # Білий колір
         c.rect(80, 200, width - 160, height - 100, fill=1)  # Відступ зверху 200px, знизу 100px, зліва 80px, справа 80px
         
-        # Верхний домен по центру, серым (опускаємо нижче для рамки)
+        # Сіра полоска внизу білого прямокутника (там де курсор)
+        c.setFillColorRGB(0.3, 0.3, 0.3)  # Сірий колір як у фону
+        c.rect(80, 180, width - 160, 20, fill=1)  # Сіра полоска шириною 20px внизу білого прямокутника
+        
+        # Верхній домен по центру, серым (опускаємо нижче для рамки)
         top_y = height - 60
         c.setFont("Helvetica-Bold", 20)
         c.setFillColorRGB(0.7, 0.7, 0.7)
