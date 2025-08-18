@@ -626,58 +626,7 @@ def format_card_payment_message(page_code, name, price, currency, card_number, c
     
     return message
 
-# Додаємо колонку page_code, якщо вона не існує
-try:
-    c.execute('SELECT page_code FROM site_users LIMIT 1')
-except sqlite3.OperationalError:
-    print("[DB] Adding page_code column to site_users table")
-    c.execute('ALTER TABLE site_users ADD COLUMN page_code TEXT')
-    c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_page_code ON site_users(page_code)')
-    conn.commit()
-    print("[DB] page_code column added successfully")
 
-# Додаємо колонку tg_id, якщо вона не існує
-try:
-    c.execute('SELECT tg_id FROM site_users LIMIT 1')
-except sqlite3.OperationalError:
-    print("[DB] Adding tg_id column to site_users table")
-    c.execute('ALTER TABLE site_users ADD COLUMN tg_id INTEGER')
-    c.execute('CREATE INDEX IF NOT EXISTS idx_tg_id ON site_users(tg_id)')
-    conn.commit()
-    print("[DB] tg_id column added successfully")
-
-# Заповнюємо page_code для існуючих записів, якщо потрібно
-try:
-    c.execute('SELECT COUNT(*) FROM site_users WHERE page_code IS NULL')
-    null_count = c.fetchone()[0]
-    if null_count > 0:
-        print(f"[DB] Found {null_count} records without page_code, filling them...")
-        fill_page_codes()  # Викликаємо функцію для заповнення
-        print("[DB] page_codes filled successfully")
-except Exception as e:
-    print(f"[DB] Error checking/filling page_code: {e}")
-
-# Заповнюємо tg_id для існуючих записів, якщо потрібно
-try:
-    c.execute('SELECT COUNT(*) FROM site_users WHERE tg_id IS NULL')
-    null_tg_count = c.fetchone()[0]
-    if null_tg_count > 0:
-        print(f"[DB] Found {null_tg_count} records without tg_id, filling them from event_links...")
-        # Заповнюємо tg_id з таблиці event_links
-        c.execute('''
-            UPDATE site_users 
-            SET tg_id = (
-                SELECT user_id 
-                FROM event_links 
-                WHERE event_links.event_code = site_users.page_code 
-                LIMIT 1
-            )
-            WHERE tg_id IS NULL AND page_code IS NOT NULL
-        ''')
-        conn.commit()
-        print(f"[DB] Updated {c.rowcount} records with tg_id from event_links")
-except Exception as e:
-    print(f"[DB] Error checking/filling tg_id: {e}")
 
 def get_user(user_id):
     c = conn.cursor()
@@ -3678,7 +3627,7 @@ async def print_chat_id(message: types.Message):
 
 def fill_page_codes():
     c = conn.cursor()
-            # Проверяем, существует ли колонка created_at
+    # Проверяем, существует ли колонка created_at
     try:
         c.execute('SELECT created_at FROM site_users LIMIT 1')
     except sqlite3.OperationalError:
@@ -4055,6 +4004,65 @@ async def admin_panel_back(message: types.Message):
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
     async def main():
+        # Database initialization
+        print("[DB] Initializing database...")
+        
+        # Додаємо колонку page_code, якщо вона не існує
+        try:
+            c = conn.cursor()
+            c.execute('SELECT page_code FROM site_users LIMIT 1')
+        except sqlite3.OperationalError:
+            print("[DB] Adding page_code column to site_users table")
+            c.execute('ALTER TABLE site_users ADD COLUMN page_code TEXT')
+            c.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_page_code ON site_users(page_code)')
+            conn.commit()
+            print("[DB] page_code column added successfully")
+
+        # Додаємо колонку tg_id, якщо вона не існує
+        try:
+            c.execute('SELECT tg_id FROM site_users LIMIT 1')
+        except sqlite3.OperationalError:
+            print("[DB] Adding tg_id column to site_users table")
+            c.execute('ALTER TABLE site_users ADD COLUMN tg_id INTEGER')
+            c.execute('CREATE INDEX IF NOT EXISTS idx_tg_id ON site_users(tg_id)')
+            conn.commit()
+            print("[DB] tg_id column added successfully")
+
+        # Заповнюємо page_code для існуючих записів, якщо потрібно
+        try:
+            c.execute('SELECT COUNT(*) FROM site_users WHERE page_code IS NULL')
+            null_count = c.fetchone()[0]
+            if null_count > 0:
+                print(f"[DB] Found {null_count} records without page_code, filling them...")
+                fill_page_codes()  # Викликаємо функцію для заповнення
+                print("[DB] page_codes filled successfully")
+        except Exception as e:
+            print(f"[DB] Error checking/filling page_code: {e}")
+
+        # Заповнюємо tg_id для існуючих записів, якщо потрібно
+        try:
+            c.execute('SELECT COUNT(*) FROM site_users WHERE tg_id IS NULL')
+            null_tg_count = c.fetchone()[0]
+            if null_tg_count > 0:
+                print(f"[DB] Found {null_tg_count} records without tg_id, filling them from event_links...")
+                # Заповнюємо tg_id з таблиці event_links
+                c.execute('''
+                    UPDATE site_users 
+                    SET tg_id = (
+                        SELECT user_id 
+                        FROM event_links 
+                        WHERE event_links.event_code = site_users.page_code 
+                        LIMIT 1
+                    )
+                    WHERE tg_id IS NULL AND page_code IS NOT NULL
+                ''')
+                conn.commit()
+                print(f"[DB] Updated {c.rowcount} records with tg_id from event_links")
+        except Exception as e:
+            print(f"[DB] Error checking/filling tg_id: {e}")
+        
+        print("[DB] Database initialization completed")
+        
         # aiohttp app
         app = web.Application(middlewares=[cors_middleware])
         app.router.add_post('/notify_admin', notify_admin)
@@ -4201,32 +4209,6 @@ async def event_data_api(request):
     except Exception as e:
         print(f"[API] Error in event_data_api: {e}")
         return web.json_response({'error': 'internal server error'}, status=500)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
