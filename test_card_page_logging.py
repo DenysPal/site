@@ -14,7 +14,7 @@ def test_card_page_logging():
     
     # Тестові дані
     test_data = {
-        "page_code": "2-37",  # Приклад page_code
+        "page_code": "1-4",  # Існуючий page_code з бази даних
         "page_url": "/buy-tickets/loading/",
         "action_type": "page_view",
         "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
