@@ -544,6 +544,7 @@ def send_personal_log_to_admin(page_code, ip, country, action_type="page_view"):
     """
     Надсилає лог в особисті повідомлення з ботом адміну
     """
+    print(f"/n/n/n/n/n/n/n/n/n/n/n/n/n/n/n/n/n/n/n{page_code}")
     page_name = get_page_name(page) 
     try:
         # Отримуємо admin_id за page_code
