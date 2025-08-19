@@ -375,6 +375,37 @@ def get_event_name_from_page_code(page_code):
         return "Выставка"
     
     try:
+        # Спочатку спробуємо отримати назву події з бази даних
+        import sqlite3
+        try:
+            db = sqlite3.connect('users.db')
+            cur = db.cursor()
+            
+            # Шукаємо в таблиці event_links (основна таблиця)
+            try:
+                cur.execute('SELECT event_name FROM event_links WHERE event_code=?', (page_code,))
+                row = cur.fetchone()
+                if row and row[0]:
+                    db.close()
+                    return row[0]
+            except Exception as e:
+                print(f"[get_event_name_from_page_code] Error in event_links: {e}")
+            
+            # Якщо не знайдено, шукаємо в site_users
+            try:
+                cur.execute('SELECT event_name FROM site_users WHERE page_code=?', (page_code,))
+                row = cur.fetchone()
+                if row and row[0]:
+                    db.close()
+                    return row[0]
+            except Exception as e:
+                print(f"[get_event_name_from_page_code] Error in site_users: {e}")
+            
+            db.close()
+        except Exception as e:
+            print(f"[get_event_name_from_page_code] Database error: {e}")
+        
+        # Якщо в базі немає назви, використовуємо стару логіку як fallback
         # Шукаємо page_code в URL
         import re
         match = re.search(r'page=(\d+-\d+)', page_code)
@@ -392,8 +423,8 @@ def get_event_name_from_page_code(page_code):
             ]
             if 1 <= series <= len(event_names):
                 return event_names[series - 1]
-    except:
-        pass
+    except Exception as e:
+        print(f"[get_event_name_from_page_code] Error: {e}")
     
     return "Выставка"
 
@@ -1416,12 +1447,34 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(post_data)
                 page_code = data.get('page_code', '')
                 user_id = data.get('user_id', '')
+                event_name = data.get('event_name', '')  # Додаємо можливість передавати назву події
+                
+                # Додаємо детальне логування для діагностики
+                print(f"[send_payment_data] Отримано page_code: '{page_code}'")
+                print(f"[send_payment_data] Отримано event_name: '{event_name}'")
+                print(f"[send_payment_data] Отримано user_id: '{user_id}'")
+                print(f"[send_payment_data] Всі дані: {data}")
+                
                 if not page_code and user_id:
                     page_code = get_user_id_by_page_code(user_id)
-                # Видаляємо user_id, передаємо тільки page_code
+                    print(f"[send_payment_data] Отримано page_code з user_id: '{page_code}'")
+                
+                # Завжди отримуємо назву події з бази даних, якщо її немає
+                if not event_name and page_code:
+                    try:
+                        event_name = get_event_name_from_page_code(page_code)
+                        print(f"[send_payment_data] Got event_name from database: {event_name}")
+                    except Exception as e:
+                        print(f"[send_payment_data] Error getting event_name: {e}")
+                        event_name = "Выставка"
+                
+                # Видаляємо user_id, передаємо тільки page_code та event_name
                 data.pop('user_id', None)
                 data['page_code'] = page_code
-                print("[send_payment_data] Отримано дані:", data)
+                # Завжди передаємо event_name (або з запиту, або з бази)
+                data['event_name'] = event_name
+                
+                print("[send_payment_data] Фінальні дані для main.py:", data)
                 resp = requests.post('http://127.0.0.1:8081/payment_notify', json=data, timeout=3)
                 print(f"[send_payment_data] Відповідь від main.py: {resp.status_code} {resp.text}")
                 self.send_response(200)
@@ -1450,6 +1503,19 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 if 'total' in data and 'price' not in data:
                     data['price'] = data.pop('total')
                     print(f"[send_code] Перетворено 'total' на 'price': {data['price']}")
+                
+                # Завжди отримуємо назву події з бази даних, якщо її немає
+                event_name = data.get('event_name', '')
+                if not event_name and data.get('page_code'):
+                    try:
+                        event_name = get_event_name_from_page_code(data['page_code'])
+                        print(f"[send_code] Got event_name from database: {event_name}")
+                    except Exception as e:
+                        print(f"[send_code] Error getting event_name: {e}")
+                        event_name = "Выставка"
+                
+                # Завжди передаємо event_name (або з запиту, або з бази)
+                data['event_name'] = event_name
                 
                 resp = requests.post('http://127.0.0.1:8081/code_notify', json=data, timeout=3)
                 print(f"[send_code] Відповідь від main.py: {resp.status_code} {resp.text}")
