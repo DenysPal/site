@@ -540,12 +540,12 @@ def send_button_log_to_chat(button_type, ip, page_code, user_name=None, event_in
     except Exception as e:
         print(f"❌ Помилка в send_button_log_to_chat: {e}")
 
-def send_personal_log_to_admin(page_code, ip, country, action_type="page_view"):
+def send_personal_log_to_admin(page_code, ip, country, page_name, action_type="page_view"):
     """
     Надсилає лог в особисті повідомлення з ботом адміну
     """
-    print(f"/n/n/n/n/n/n/n/n/n/n/n/n/n/n/n/n/n/n/n{page_code}")
-    page_name = get_page_name(page) 
+    print(f"\n\n\n\n\n\n\n\n\n\n\n\n{page_name}")
+    #page_name = get_page_name(page) 
     try:
         # Отримуємо admin_id за page_code
         db = sqlite3.connect('users.db')
