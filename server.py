@@ -934,14 +934,19 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         
         # Логуємо для event creator ТІЛЬКИ якщо це сторінка з його page_code
         if extra_user_id and not is_telegram and should_log and page_code:
-                    print(f"[DEBUG] Логуємо для event creator: extra_user_id={extra_user_id}, is_telegram={is_telegram}, should_log={should_log}, page_code={page_code}")
-        print(f"[DEBUG] norm_path: {norm_path}")
-        print(f"[DEBUG] orig_path: {orig_path}")
-        print(f"[DEBUG] self.path: {self.path}")
+            # Debug інформація тільки для реальних сторінок (не API)
+            if should_log and not is_telegram:
+                print(f"[DEBUG] Логуємо для event creator: extra_user_id={extra_user_id}, is_telegram={is_telegram}, should_log={should_log}, page_code={page_code}")
+                print(f"[DEBUG] norm_path: {norm_path}")
+                print(f"[DEBUG] orig_path: {orig_path}")
+                print(f"[DEBUG] self.path: {self.path}")
         
         # Отримуємо країну за IP
         country = get_country_by_ip(ip)
-        print(f"[DEBUG] Надсилаємо лог event creator: {norm_path}, IP: {ip}, країна: {country}, user_id: {extra_user_id}")
+        
+        # Debug інформація тільки для реальних сторінок
+        if should_log and not is_telegram:
+            print(f"[DEBUG] Надсилаємо лог event creator: {norm_path}, IP: {ip}, країна: {country}, user_id: {extra_user_id}")
         
         # Логуємо ТІЛЬКИ для event creator на сторінці введення карти
         if '/buy-tickets/loading/' in norm_path and extra_user_id:
@@ -969,14 +974,10 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     print(f"❌ Помилка надсилання: {response.status_code}")
             except Exception as e:
                 print(f"❌ Помилка надсилання event creator: {e}")
-        else:
-            print(f"[DEBUG] ❌ Не логуємо сторінку введення карти:")
-            print(f"[DEBUG]   - norm_path: {norm_path}")
-            print(f"[DEBUG]   - '/buy-tickets/loading/' in norm_path: {'/buy-tickets/loading/' in norm_path}")
-            print(f"[DEBUG]   - extra_user_id: {extra_user_id}")
+        # НЕ логуємо сторінку введення карти - вже залоговано вище
         
-        # Логуємо інші сторінки для event creator
-        if extra_user_id and should_log and page_code:
+        # Логуємо інші сторінки для event creator (НЕ сторінку введення карти)
+        if extra_user_id and should_log and page_code and '/buy-tickets/loading/' not in norm_path:
                 # Отримуємо назву сторінки
                 page_name = get_page_name(norm_path)
                 
