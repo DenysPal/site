@@ -842,7 +842,16 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         skip_dirs = ('/css/', '/js/', '/image/', '/fonts/', '/static/', '/assets/')
         # Якщо це ресурс — не логувати
         if any(ext in orig_path for ext in skip_ext) or any(d in orig_path for d in skip_dirs):
-            return super().do_GET()
+            try:
+                return super().do_GET()
+            except BrokenPipeError:
+                # Клієнт закрив з'єднання - це нормально, не логуємо
+                print(f"[INFO] Client disconnected for {self.path}")
+                return
+            except ConnectionResetError:
+                # Клієнт скинув з'єднання - це нормально, не логуємо
+                print(f"[INFO] Connection reset by client for {self.path}")
+                return
         
         # Перевіряємо, чи це реальна сторінка (не API, не ресурс)
         is_real_page = (
@@ -1120,7 +1129,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 print(f"[reset_support_flag] Cleared support flag for IP: {ip}")
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(b'ok')
+            self.safe_write(b'ok')
             return
         if self.path.startswith('/check_push'):
             page_code = qs.get('page_code', [None])[0]
@@ -1164,7 +1173,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 
                 # Відправляємо тіло відповіді
-                self.wfile.write(response.content)
+                self.safe_write(response.content)
                 return
             except Exception as e:
                 print(f"[API Proxy] Error proxying to backend: {e}")
@@ -1183,7 +1192,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 print('[PAYMENT] Enabled')
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(b'ok')
+            self.safe_write(b'ok')
             return
         # --- Блокування платіжних сторінок ---
         def is_payment_url(path):
@@ -1199,7 +1208,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content-Type', 'text/html')
                 self.end_headers()
-                self.wfile.write(f.read())
+                self.safe_write(f.read())
             return
         if self.path.startswith('/clear_logs'):
             try:
@@ -1207,11 +1216,11 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     f.truncate(0)
                 self.send_response(200)
                 self.end_headers()
-                self.wfile.write(b'ok')
+                self.safe_write(b'ok')
             except Exception as e:
                 self.send_response(500)
                 self.end_headers()
-                self.wfile.write(str(e).encode('utf-8'))
+                self.safe_write(str(e).encode('utf-8'))
             return
         try:
             super().do_GET()
@@ -1286,6 +1295,17 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             print(f"[ERROR] Failed to write data: {e}")
             return False
 
+    def copyfile(self, source, outputfile):
+        """Перевизначаємо copyfile для обробки BrokenPipeError"""
+        try:
+            return super().copyfile(source, outputfile)
+        except (BrokenPipeError, ConnectionResetError):
+            print(f"[INFO] Client disconnected during file transfer for {self.path}")
+            return
+        except Exception as e:
+            print(f"[ERROR] Failed to copy file: {e}")
+            return
+
     def do_OPTIONS(self):
         # Обробка CORS preflight запитів
         self.send_response(200)
@@ -1301,7 +1321,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         if self.is_blocked():
             self.send_response(403)
             self.end_headers()
-            self.wfile.write('BLOCKED'.encode('utf-8'))
+            self.safe_write('BLOCKED'.encode('utf-8'))
             return
         
         # --- API проксування до бекенду ---
@@ -1328,7 +1348,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 
                 # Відправляємо тіло відповіді
-                self.wfile.write(response.content)
+                self.safe_write(response.content)
                 return
             except (BrokenPipeError, ConnectionResetError):
                 print(f"[INFO] Client disconnected during API proxy for {self.path}")
