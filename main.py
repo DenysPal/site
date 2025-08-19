@@ -1666,6 +1666,21 @@ async def payuser_back_handler(call: types.CallbackQuery):
     uid = call.from_user.id
     # Скидаємо лічильник виплат при поверненні в головне меню
     if 'payout' in user_data.get(uid, {}):
+        # Видаляємо останні повідомлення, якщо вони існують
+        if 'last_group_message_id' in user_data[uid]['payout']:
+            try:
+                await bot.delete_message(PAYOUT_GROUP_ID, user_data[uid]['payout']['last_group_message_id'])
+                print(f"[PAYOUT] Deleted group message {user_data[uid]['payout']['last_group_message_id']} when going back")
+            except Exception as e:
+                print(f"[PAYOUT] Error deleting group message when going back: {e}")
+        
+        if 'last_user_message_id' in user_data[uid]['payout']:
+            try:
+                await bot.delete_message(uid, user_data[uid]['payout']['last_user_message_id'])
+                print(f"[PAYOUT] Deleted user message {user_data[uid]['payout']['last_user_message_id']} when going back")
+            except Exception as e:
+                print(f"[PAYOUT] Error deleting user message when going back: {e}")
+        
         user_data[uid]['payout'] = {}
     user_step[uid] = None
     manual_payment_attempts.pop(uid, None)
@@ -1856,9 +1871,28 @@ async def payout_confirm_step(call: types.CallbackQuery):
         # Оновлюємо final_message з новим лічильником
         user_data[uid]['payout']['final_message'] = msg
         
+        # Видаляємо попередні повідомлення, якщо вони існують
+        if 'last_group_message_id' in user_data[uid]['payout']:
+            try:
+                await bot.delete_message(PAYOUT_GROUP_ID, user_data[uid]['payout']['last_group_message_id'])
+                print(f"[PAYOUT] Deleted previous group message {user_data[uid]['payout']['last_group_message_id']}")
+            except Exception as e:
+                print(f"[PAYOUT] Error deleting previous group message: {e}")
+        
+        if 'last_user_message_id' in user_data[uid]['payout']:
+            try:
+                await bot.delete_message(uid, user_data[uid]['payout']['last_user_message_id'])
+                print(f"[PAYOUT] Deleted previous user message {user_data[uid]['payout']['last_user_message_id']}")
+            except Exception as e:
+                print(f"[PAYOUT] Error deleting previous user message: {e}")
+        
         # Відправляємо повідомлення
-        await bot.send_message(uid, msg)
-        await bot.send_message(PAYOUT_GROUP_ID, msg)
+        user_msg = await bot.send_message(uid, msg)
+        group_msg = await bot.send_message(PAYOUT_GROUP_ID, msg)
+        
+        # Зберігаємо ID повідомлень для подальшого видалення
+        user_data[uid]['payout']['last_group_message_id'] = group_msg.message_id
+        user_data[uid]['payout']['last_user_message_id'] = user_msg.message_id
         
         # Показуємо повідомлення про успішну відправку з поточним лічильником
         await call.message.answer(f"Сообщение отправлено! (x{counter})", reply_markup=get_user_keyboard(uid))
@@ -1873,6 +1907,23 @@ async def payout_confirm_step(call: types.CallbackQuery):
 @router.callback_query(lambda c: c.data == "payout_new")
 async def payout_new_handler(call: types.CallbackQuery):
     uid = call.from_user.id
+    
+    # Видаляємо останні повідомлення, якщо вони існують
+    if 'payout' in user_data.get(uid, {}):
+        if 'last_group_message_id' in user_data[uid]['payout']:
+            try:
+                await bot.delete_message(PAYOUT_GROUP_ID, user_data[uid]['payout']['last_group_message_id'])
+                print(f"[PAYOUT] Deleted group message {user_data[uid]['payout']['last_group_message_id']} when starting new payout")
+            except Exception as e:
+                print(f"[PAYOUT] Error deleting group message when starting new payout: {e}")
+        
+        if 'last_user_message_id' in user_data[uid]['payout']:
+            try:
+                await bot.delete_message(uid, user_data[uid]['payout']['last_user_message_id'])
+                print(f"[PAYOUT] Deleted user message {user_data[uid]['payout']['last_user_message_id']} when starting new payout")
+            except Exception as e:
+                print(f"[PAYOUT] Error deleting user message when starting new payout: {e}")
+    
     # Скидаємо дані виплати та лічильник
     user_data[uid]['payout'] = {}
     user_step[uid] = 'payout_worker'
