@@ -8,7 +8,7 @@ BOT_TOKEN = API_TOKEN  # Alias for server scripts
 ADMIN_GROUP_ID = -1002721179326
   # <-- ВСТАВ СВІЙ АКТУАЛЬНИЙ CHAT_ID СУПЕРГРУПИ
 PAYMENT_GROUP_ID = -1002710274530  # оставить для других частей бота
-PAYOUT_GROUP_ID =  -1002611730785  # для выплат
+PAYOUT_GROUP_ID =  -1002964511313  # для выплат
 GROUP_ID = ADMIN_GROUP_ID    # Alias for server scripts
 
 # Група для заявок на прийняття (анкети)
