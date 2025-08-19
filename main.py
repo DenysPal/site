@@ -1638,11 +1638,30 @@ async def back_to_special_admin_handler(call: types.CallbackQuery):
 @router.callback_query(lambda c: c.data == "payuser_back")
 async def payuser_back_handler(call: types.CallbackQuery):
     uid = call.from_user.id
+    # Скидаємо лічильник виплат при поверненні в головне меню
+    if 'payout' in user_data.get(uid, {}):
+        user_data[uid]['payout'] = {}
     user_step[uid] = None
     manual_payment_attempts.pop(uid, None)
     kb = get_user_keyboard(uid)
     await call.message.answer("Возврат в главное меню.", reply_markup=kb)
     await call.answer()
+
+# --- Функція для створення повідомлення з лічильником ---
+def create_payout_message(payout_data, counter=1):
+    """Створює повідомлення для виплати з поточним лічильником"""
+    type_str = payout_data.get('type', 'Оплата')
+    if type_str == 'Оплата':
+        msg = f"Новая {type_str} x{counter}\n\n"
+    else:
+        msg = f"Новый {type_str} x{counter}\n\n"
+    msg += f"🧑‍🏭Воркер: #{payout_data.get('worker', '')}\n" \
+           f"💰Сумма: {payout_data.get('amount', '')}$\n" \
+           f"👨‍💻Вбивер: #{payout_data.get('vbiver', '')}\n" \
+           f"👨‍💻Саппорт: #{payout_data.get('support', '')}\n"
+    if type_str == 'Возврат с прозвоном':
+        msg += "☎️Использован прозвон"
+    return msg
 
 # --- Выплаты ---
 @router.message(lambda m: user_step.get(m.from_user.id) == 'payout_worker')
@@ -1653,21 +1672,15 @@ async def payout_worker_step(message: types.Message):
     if user_data[uid].get('edit_mode'):
         user_step[uid] = 'payout_confirm'
         payout = user_data[uid]['payout']
-        type_str = payout.get('type', 'Оплата')
-        if type_str == 'Оплата':
-            msg = f"Новая {type_str} x1\n\n"
-        else:
-            msg = f"Новый {type_str} x1\n\n"
-        msg += f"🧑‍🏭Воркер: #{payout.get('worker', '')}\n" \
-               f"💰Сумма: {payout.get('amount', '')}$\n" \
-               f"👨‍💻Вбивер: #{payout.get('vbiver', '')}\n" \
-               f"👨‍💻Саппорт: #{payout.get('support', '')}\n"
-        if type_str == 'Возврат с прозвоном':
-            msg += "☎️Использован прозвон"
+        # Ініціалізуємо лічильник, якщо його ще немає
+        if 'counter' not in payout:
+            payout['counter'] = 1
+        msg = create_payout_message(payout, payout['counter'])
         user_data[uid]['payout']['final_message'] = msg
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="Изменить", callback_data="payout_edit")],
-            [InlineKeyboardButton(text="Отправить", callback_data="payout_send")]
+            [InlineKeyboardButton(text="Отправить", callback_data="payout_send")],
+            [InlineKeyboardButton(text="🆕 Новая выплата", callback_data="payout_new")]
         ])
         await message.answer(msg, reply_markup=kb)
         user_data[uid]['edit_mode'] = False
@@ -1688,21 +1701,15 @@ async def payout_amount_step(message: types.Message):
     if user_data[uid].get('edit_mode'):
         user_step[uid] = 'payout_confirm'
         payout = user_data[uid]['payout']
-        type_str = payout.get('type', 'Оплата')
-        if type_str == 'Оплата':
-            msg = f"Новая {type_str} x1\n\n"
-        else:
-            msg = f"Новый {type_str} x1\n\n"
-        msg += f"🧑‍🏭Воркер: #{payout.get('worker', '')}\n" \
-               f"💰Сумма: {payout.get('amount', '')}$\n" \
-               f"👨‍💻Вбивер: #{payout.get('vbiver', '')}\n" \
-               f"👨‍💻Саппорт: #{payout.get('support', '')}\n"
-        if type_str == 'Возврат с прозвоном':
-            msg += "☎️Использован прозвон"
+        # Ініціалізуємо лічильник, якщо його ще немає
+        if 'counter' not in payout:
+            payout['counter'] = 1
+        msg = create_payout_message(payout, payout['counter'])
         user_data[uid]['payout']['final_message'] = msg
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="Изменить", callback_data="payout_edit")],
-            [InlineKeyboardButton(text="Отправить", callback_data="payout_send")]
+            [InlineKeyboardButton(text="Отправить", callback_data="payout_send")],
+            [InlineKeyboardButton(text="🆕 Новая выплата", callback_data="payout_new")]
         ])
         await message.answer(msg, reply_markup=kb)
         user_data[uid]['edit_mode'] = False
@@ -1718,21 +1725,15 @@ async def payout_vbiver_step(message: types.Message):
     if user_data[uid].get('edit_mode'):
         user_step[uid] = 'payout_confirm'
         payout = user_data[uid]['payout']
-        type_str = payout.get('type', 'Оплата')
-        if type_str == 'Оплата':
-            msg = f"Новая {type_str} x1\n\n"
-        else:
-            msg = f"Новый {type_str} x1\n\n"
-        msg += f"🧑‍🏭Воркер: #{payout.get('worker', '')}\n" \
-               f"💰Сумма: {payout.get('amount', '')}$\n" \
-               f"👨‍💻Вбивер: #{payout.get('vbiver', '')}\n" \
-               f"👨‍💻Саппорт: #{payout.get('support', '')}\n"
-        if type_str == 'Возврат с прозвоном':
-            msg += "☎️Использован прозвон"
+        # Ініціалізуємо лічильник, якщо його ще немає
+        if 'counter' not in payout:
+            payout['counter'] = 1
+        msg = create_payout_message(payout, payout['counter'])
         user_data[uid]['payout']['final_message'] = msg
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="Изменить", callback_data="payout_edit")],
-            [InlineKeyboardButton(text="Отправить", callback_data="payout_send")]
+            [InlineKeyboardButton(text="Отправить", callback_data="payout_send")],
+            [InlineKeyboardButton(text="🆕 Новая выплата", callback_data="payout_new")]
         ])
         await message.answer(msg, reply_markup=kb)
         user_data[uid]['edit_mode'] = False
@@ -1748,21 +1749,15 @@ async def payout_support_step(message: types.Message):
     if user_data[uid].get('edit_mode'):
         user_step[uid] = 'payout_confirm'
         payout = user_data[uid]['payout']
-        type_str = payout.get('type', 'Оплата')
-        if type_str == 'Оплата':
-            msg = f"Новая {type_str} x1\n\n"
-        else:
-            msg = f"Новый {type_str} x1\n\n"
-        msg += f"🧑‍🏭Воркер: #{payout.get('worker', '')}\n" \
-               f"💰Сумма: {payout.get('amount', '')}$\n" \
-               f"👨‍💻Вбивер: #{payout.get('vbiver', '')}\n" \
-               f"👨‍💻Саппорт: #{payout.get('support', '')}\n"
-        if type_str == 'Возврат с прозвоном':
-            msg += "☎️Использован прозвон"
+        # Ініціалізуємо лічильник, якщо його ще немає
+        if 'counter' not in payout:
+            payout['counter'] = 1
+        msg = create_payout_message(payout, payout['counter'])
         user_data[uid]['payout']['final_message'] = msg
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="Изменить", callback_data="payout_edit")],
-            [InlineKeyboardButton(text="Отправить", callback_data="payout_send")]
+            [InlineKeyboardButton(text="Отправить", callback_data="payout_send")],
+            [InlineKeyboardButton(text="🆕 Новая выплата", callback_data="payout_new")]
         ])
         await message.answer(msg, reply_markup=kb)
         user_data[uid]['edit_mode'] = False
@@ -1785,21 +1780,17 @@ async def payout_type_step(call: types.CallbackQuery):
     }
     payout = user_data[uid]['payout']
     payout['type'] = type_map[call.data]
-    type_str = payout['type']
-    if type_str == 'Оплата':
-        msg = f"Новая {type_str} x1\n\n"
-    else:
-        msg = f"Новый {type_str} x1\n\n"
-    msg += f"🧑‍🏭Воркер: #{payout['worker']}\n" \
-           f"💰Сумма: {payout['amount']}$\n" \
-           f"👨‍💻Вбивер: #{payout['vbiver']}\n" \
-           f"👨‍💻Саппорт: #{payout['support']}\n"
-    if call.data == 'payout_type_return_call':
-        msg += "☎️Использован прозвон"
+    
+    # Ініціалізуємо лічильник, якщо його ще немає
+    if 'counter' not in payout:
+        payout['counter'] = 1
+    
+    msg = create_payout_message(payout, payout['counter'])
     user_data[uid]['payout']['final_message'] = msg
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Изменить", callback_data="payout_edit")],
-        [InlineKeyboardButton(text="Отправить", callback_data="payout_send")]
+        [InlineKeyboardButton(text="Отправить", callback_data="payout_send")],
+        [InlineKeyboardButton(text="🆕 Новая выплата", callback_data="payout_new")]
     ])
     user_step[uid] = 'payout_confirm'
     await call.message.answer(msg, reply_markup=kb)
@@ -1820,13 +1811,47 @@ async def payout_confirm_step(call: types.CallbackQuery):
         await call.message.answer("Что хотите изменить?", reply_markup=kb)
         await call.answer()
     elif call.data == "payout_send":
-        msg = user_data[uid]['payout']['final_message']
+        # Ініціалізуємо лічильник, якщо його ще немає
+        if 'counter' not in user_data[uid]['payout']:
+            user_data[uid]['payout']['counter'] = 1
+        else:
+            user_data[uid]['payout']['counter'] += 1
+        
+        # Отримуємо поточний лічильник
+        counter = user_data[uid]['payout']['counter']
+        
+        # Логуємо для діагностики
+        print(f"[PAYOUT] User {uid} sending payout #{counter}")
+        
+        # Створюємо повідомлення з поточним лічильником
+        payout = user_data[uid]['payout']
+        msg = create_payout_message(payout, counter)
+        
+        # Оновлюємо final_message з новим лічильником
+        user_data[uid]['payout']['final_message'] = msg
+        
+        # Відправляємо повідомлення
         await bot.send_message(uid, msg)
         await bot.send_message(PAYOUT_GROUP_ID, msg)
-        await call.message.answer("Сообщение отправлено!", reply_markup=get_user_keyboard(uid))
-        user_step[uid] = None
-        user_data[uid] = {}
+        
+        # Показуємо повідомлення про успішну відправку з поточним лічильником
+        await call.message.answer(f"Сообщение отправлено! (x{counter})", reply_markup=get_user_keyboard(uid))
+        
+        # НЕ очищаємо user_step та user_data - залишаємо кнопку активною
+        # user_step[uid] = None
+        # user_data[uid] = {}
+        
         await call.answer()
+
+# --- Обробник для нової виплати ---
+@router.callback_query(lambda c: c.data == "payout_new")
+async def payout_new_handler(call: types.CallbackQuery):
+    uid = call.from_user.id
+    # Скидаємо дані виплати та лічильник
+    user_data[uid]['payout'] = {}
+    user_step[uid] = 'payout_worker'
+    await call.message.answer("Введите псевдоним воркера:")
+    await call.answer()
 
 # Редактирование отдельных полей
 @router.callback_query(lambda c: user_step.get(c.from_user.id) == 'payout_confirm' and c.data.startswith('edit_'))
