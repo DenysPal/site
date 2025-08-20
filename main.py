@@ -345,6 +345,43 @@ except Exception:
 def generate_short_code(length=3):
     return ''.join(random.choices(string.ascii_uppercase, k=length))
 
+# --- Таблица для зарплати воркерів ---
+c.execute("""
+CREATE TABLE IF NOT EXISTS worker_salary (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nickname TEXT UNIQUE NOT NULL,
+    total_earned DECIMAL(10,2) DEFAULT 0.0,
+    current_month_earned DECIMAL(10,2) DEFAULT 0.0,
+    wallet TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+""")
+conn.commit()
+
+# --- Таблица для логування нарахувань ---
+c.execute("""
+CREATE TABLE IF NOT EXISTS salary_transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nickname TEXT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    transaction_type TEXT NOT NULL,
+    multiplier INTEGER DEFAULT 1,
+    original_amount DECIMAL(10,2) NOT NULL,
+    percentage INTEGER NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+""")
+conn.commit()
+
+# Створюємо індекси для зарплати
+try:
+    conn.execute('CREATE INDEX IF NOT EXISTS idx_worker_nickname ON worker_salary(nickname)')
+    conn.execute('CREATE INDEX IF NOT EXISTS idx_transactions_nickname ON salary_transactions(nickname)')
+    conn.execute('CREATE INDEX IF NOT EXISTS idx_transactions_timestamp ON salary_transactions(timestamp)')
+except Exception:
+    pass
+
 def get_country_by_ip(ip):
     """Отримує країну за IP з кешу або API"""
     if not ip or ip in ['127.0.0.1', 'localhost', '::1']:
@@ -830,6 +867,104 @@ def get_user(user_id):
         }
     return None
 
+# --- Функции для работы с зарплатой воркеров ---
+def get_worker_salary(nickname):
+    """Получает данные о зарплате воркера"""
+    c = conn.cursor()
+    c.execute('SELECT * FROM worker_salary WHERE nickname=?', (nickname,))
+    row = c.fetchone()
+    if row:
+        return {
+            'id': row[0],
+            'nickname': row[1],
+            'total_earned': float(row[2]) if row[2] else 0.0,
+            'current_month_earned': float(row[3]) if row[3] else 0.0,
+            'wallet': row[4],
+            'created_at': row[5],
+            'updated_at': row[6]
+        }
+    return None
+
+def create_worker_salary(nickname, wallet=None):
+    """Создает запись о зарплате воркера"""
+    c = conn.cursor()
+    try:
+        c.execute('''
+            INSERT INTO worker_salary (nickname, wallet) 
+            VALUES (?, ?)
+        ''', (nickname, wallet))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"[SALARY] Error creating worker salary: {e}")
+        return False
+
+def update_worker_salary(nickname, amount, transaction_type, multiplier=1, original_amount=0, percentage=0):
+    """Обновляет зарплату воркера и создает транзакцию"""
+    c = conn.cursor()
+    try:
+        # Получаем или создаем запись воркера
+        worker = get_worker_salary(nickname)
+        if not worker:
+            create_worker_salary(nickname)
+        
+        # Обновляем зарплату
+        c.execute('''
+            UPDATE worker_salary 
+            SET total_earned = total_earned + ?, 
+                current_month_earned = current_month_earned + ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE nickname = ?
+        ''', (amount, amount, nickname))
+        
+        # Создаем запись о транзакции
+        c.execute('''
+            INSERT INTO salary_transactions 
+            (nickname, amount, transaction_type, multiplier, original_amount, percentage)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (nickname, amount, transaction_type, multiplier, original_amount, percentage))
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"[SALARY] Error updating worker salary: {e}")
+        return False
+
+def get_worker_transactions(nickname, limit=10):
+    """Получает последние транзакции воркера"""
+    c = conn.cursor()
+    c.execute('''
+        SELECT * FROM salary_transactions 
+        WHERE nickname = ? 
+        ORDER BY timestamp DESC 
+        LIMIT ?
+    ''', (nickname, limit))
+    rows = c.fetchall()
+    transactions = []
+    for row in rows:
+        transactions.append({
+            'id': row[0],
+            'nickname': row[1],
+            'amount': float(row[2]) if row[2] else 0.0,
+            'transaction_type': row[3],
+            'multiplier': row[4],
+            'original_amount': float(row[5]) if row[5] else 0.0,
+            'percentage': row[6],
+            'timestamp': row[7]
+        })
+    return transactions
+
+def reset_monthly_earnings():
+    """Сбрасывает месячные заработки всех воркеров (вызывается раз в месяц)"""
+    c = conn.cursor()
+    try:
+        c.execute('UPDATE worker_salary SET current_month_earned = 0.0')
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"[SALARY] Error resetting monthly earnings: {e}")
+        return False
+
 # --- Функции для работы с site_users ---
 def generate_site_user_id():
     """Генерирует уникальный ID для пользователя сайта"""
@@ -1276,17 +1411,29 @@ async def show_profile(message: types.Message):
     join_date = db_user['last_submit'][:10] if db_user and db_user['last_submit'] else "-"
     if join_date != "-":
         join_date = datetime.fromisoformat(db_user['last_submit']).strftime('%d-%m-%Y')
-    earned_total = db_user['form_json'].get('earned_total', 0) if db_user else 0
-    earned_june = db_user['form_json'].get('earned_june', 0) if db_user else 0
-    wallet = db_user['form_json'].get('wallet', None) if db_user else None
+    
+    # Отримуємо зарплату з нової таблиці
+    worker_salary = get_worker_salary(nickname)
+    if worker_salary:
+        earned_total = worker_salary['total_earned']
+        current_month_earned = worker_salary['current_month_earned']
+        wallet = worker_salary['wallet']
+    else:
+        earned_total = db_user['form_json'].get('earned_total', 0) if db_user else 0
+        current_month_earned = db_user['form_json'].get('earned_june', 0) if db_user else 0
+        wallet = db_user['form_json'].get('wallet', None) if db_user else None
+    
+    # Форматуємо поточний місяць
+    current_month = datetime.now().strftime('%B').title()
+    
     wallet_str = wallet if wallet else '<b>Не установлен</b> <b>❗️</b>'
     text = (
         '«<b>Ваш профиль:</b>»\n'
         f'<b>Псевдоним:</b> <code>#{nickname}</code>\n'
         f'<b>Дата вступления:</b> <code>{join_date}</code>\n'
         '💰 <b>Заработано:</b>\n'
-        f'├ <b>Всего:</b> <code>{earned_total}$</code>\n'
-        f'└ <b>За июнь:</b> <code>{earned_june}$</code>\n'
+        f'├ <b>Всего:</b> <code>{earned_total:.2f}$</code>\n'
+        f'└ <b>За {current_month}:</b> <code>{current_month_earned:.2f}$</code>\n'
         '💳 <b>USDT BEP-20 кошелек:</b>\n'
         f'└ {wallet_str}'
     )
@@ -1366,8 +1513,22 @@ async def change_wallet_save(message: types.Message):
     db_user = get_user(uid)
     form_json = db_user['form_json'] if db_user else {}
     form_json['wallet'] = new_wallet
+    
+    # Оновлюємо кошелек в основній таблиці
     c = conn.cursor()
     c.execute('UPDATE users SET form_json=? WHERE user_id=?', (json.dumps(form_json), uid))
+    
+    # Оновлюємо кошелек в таблиці зарплати воркера
+    nickname = db_user['username'] or db_user['form_json'].get('username') or f"{uid}"
+    if nickname:
+        worker_salary = get_worker_salary(nickname)
+        if worker_salary:
+            # Оновлюємо існуючу запис
+            c.execute('UPDATE worker_salary SET wallet=? WHERE nickname=?', (new_wallet, nickname))
+        else:
+            # Створюємо нову запис
+            create_worker_salary(nickname, new_wallet)
+    
     conn.commit()
     user_step[uid] = None
     await message.answer(f"Кошелек сохранён: <code>{new_wallet}</code>", parse_mode='HTML', reply_markup=get_user_keyboard(uid))
@@ -1929,6 +2090,91 @@ async def payout_new_handler(call: types.CallbackQuery):
     user_step[uid] = 'payout_worker'
     await call.message.answer("Введите псевдоним воркера:")
     await call.answer()
+
+# --- Функция для обработки сообщений из канала и начисления зарплаты ---
+async def process_channel_message_for_salary(message_text):
+    """Обрабатывает сообщение из канала и начисляет зарплату воркеру"""
+    try:
+        print(f"[SALARY] Processing channel message: {message_text}")
+        
+        # Парсим сообщение
+        lines = message_text.strip().split('\n')
+        if len(lines) < 3:
+            print("[SALARY] Message too short")
+            return False
+        
+        # Определяем тип сообщения и множитель
+        first_line = lines[0].strip()
+        multiplier = 1
+        
+        if "Новая Оплата" in first_line:
+            transaction_type = "Оплата"
+            percentage = 75
+        elif "Новый Возврат" in first_line and "прозвон" in first_line:
+            transaction_type = "Возврат с прозвоном"
+            percentage = 55
+        elif "Новый Возврат" in first_line:
+            transaction_type = "Возврат"
+            percentage = 65
+        else:
+            print(f"[SALARY] Unknown message type: {first_line}")
+            return False
+        
+        # Извлекаем множитель (x1, x2, x10 и т.д.)
+        if 'x' in first_line:
+            try:
+                multiplier_str = first_line.split('x')[-1].strip()
+                multiplier = int(multiplier_str)
+                print(f"[SALARY] Multiplier: {multiplier}")
+            except:
+                multiplier = 1
+        
+        # Парсим данные воркера и суммы
+        worker_nickname = None
+        amount = None
+        
+        for line in lines:
+            line = line.strip()
+            if line.startswith('🧑‍🏭Воркер:'):
+                worker_nickname = line.split('#')[-1].strip()
+            elif line.startswith('💰Сумма:'):
+                amount_str = line.split('$')[0].split(':')[-1].strip()
+                try:
+                    amount = float(amount_str)
+                except:
+                    print(f"[SALARY] Error parsing amount: {amount_str}")
+                    return False
+        
+        if not worker_nickname or not amount:
+            print(f"[SALARY] Missing worker or amount: worker={worker_nickname}, amount={amount}")
+            return False
+        
+        # Рассчитываем зарплату
+        original_amount = amount
+        final_amount = (amount * percentage / 100) * multiplier
+        
+        print(f"[SALARY] Worker: {worker_nickname}, Original: {original_amount}$, Multiplier: {multiplier}, Percentage: {percentage}%, Final: {final_amount}$")
+        
+        # Начисляем зарплату
+        success = update_worker_salary(
+            nickname=worker_nickname,
+            amount=final_amount,
+            transaction_type=transaction_type,
+            multiplier=multiplier,
+            original_amount=original_amount,
+            percentage=percentage
+        )
+        
+        if success:
+            print(f"[SALARY] Successfully updated salary for {worker_nickname}: +{final_amount}$")
+            return True
+        else:
+            print(f"[SALARY] Failed to update salary for {worker_nickname}")
+            return False
+            
+    except Exception as e:
+        print(f"[SALARY] Error processing channel message: {e}")
+        return False
 
 # Редактирование отдельных полей
 @router.callback_query(lambda c: user_step.get(c.from_user.id) == 'payout_confirm' and c.data.startswith('edit_'))
@@ -3554,7 +3800,7 @@ async def admin_action_handler(call: types.CallbackQuery):
                     await call.answer("✅ Push-повідомлення встановлено на сайті")
                 else:
                     await call.answer("❌ Помилка встановлення push-повідомлення")
-                
+                    
             except Exception as e:
                 print(f'[ERROR] Push request failed: {e}')
                 await call.answer("❌ Помилка сервера")
@@ -4493,6 +4739,24 @@ async def admin_panel_back(message: types.Message):
 
 
 
+# --- Обробник повідомлень з каналу для нарахування зарплати ---
+@router.message(lambda m: m.chat.id == PAYOUT_GROUP_ID and m.text)
+async def handle_payout_channel_message(message: types.Message):
+    """Обробляє повідомлення з каналу виплат та нараховує зарплату воркерам"""
+    try:
+        print(f"[CHANNEL] Received message from payout channel: {message.text}")
+        
+        # Обробляємо повідомлення для нарахування зарплати
+        success = await process_channel_message_for_salary(message.text)
+        
+        if success:
+            print(f"[CHANNEL] Successfully processed salary from channel message")
+        else:
+            print(f"[CHANNEL] Failed to process salary from channel message")
+            
+    except Exception as e:
+        print(f"[CHANNEL] Error handling channel message: {e}")
+
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
     async def main():
@@ -4576,6 +4840,95 @@ async def show_group_ids(message: types.Message):
     print(f"PAYMENT_GROUP_ID: {PAYMENT_GROUP_ID}")
     print(f"PAYOUT_GROUP_ID: {PAYOUT_GROUP_ID}")
     await message.answer("Группы выведены в терминал сервера.")
+
+@router.message(Command("salary_info"))
+async def show_salary_info(message: types.Message):
+    """Показує інформацію про зарплату користувача"""
+    uid = message.from_user.id
+    db_user = get_user(uid)
+    nickname = db_user['username'] if db_user else f"{uid}"
+    
+    worker_salary = get_worker_salary(nickname)
+    if worker_salary:
+        # Отримуємо останні транзакції
+        transactions = get_worker_transactions(nickname, 5)
+        
+        text = f"💰 <b>Информация о зарплате для #{nickname}</b>\n\n"
+        text += f"💵 <b>Всего заработано:</b> <code>{worker_salary['total_earned']:.2f}$</code>\n"
+        text += f"📅 <b>За текущий месяц:</b> <code>{worker_salary['current_month_earned']:.2f}$</code>\n"
+        text += f"💳 <b>Кошелек:</b> <code>{worker_salary['wallet'] or 'Не установлен'}</code>\n\n"
+        
+        if transactions:
+            text += "📊 <b>Последние транзакции:</b>\n"
+            for i, trans in enumerate(transactions, 1):
+                text += f"{i}. {trans['transaction_type']}: <code>+{trans['amount']:.2f}$</code> "
+                text += f"(x{trans['multiplier']}, {trans['percentage']}%)\n"
+                text += f"   📅 {trans['timestamp'][:19]}\n"
+        else:
+            text += "📊 <b>Транзакций пока нет</b>"
+    else:
+        text = f"❌ <b>Информация о зарплате для #{nickname} не найдена</b>\n\n"
+        text += "Возможно, вы еще не получали зарплату или используете другой псевдоним."
+    
+    await message.answer(text, parse_mode='HTML')
+
+@router.message(Command("test_salary"))
+async def test_salary_system(message: types.Message):
+    """Тестує систему зарплати"""
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ У вас нет прав для выполнения этой команды")
+        return
+    
+    # Тестуємо різні типи повідомлень
+    test_messages = [
+        "Новая Оплата x1\n\n🧑‍🏭Воркер: #testworker\n💰Сумма: 100.0$\n👨‍💻Вбивер: #test1\n👨‍💻Саппорт: #test2",
+        "Новый Возврат x2\n\n🧑‍🏭Воркер: #testworker\n💰Сумма: 50.0$\n👨‍💻Вбивер: #test1\n👨‍💻Саппорт: #test2",
+        "Новый Возврат с прозвоном x1\n\n🧑‍🏭Воркер: #testworker\n💰Сумма: 200.0$\n👨‍💻Вбивер: #test1\n👨‍💻Саппорт: #test2\n☎️Использован прозвон"
+    ]
+    
+    results = []
+    for i, test_msg in enumerate(test_messages, 1):
+        success = await process_channel_message_for_salary(test_msg)
+        results.append(f"{i}. {'✅' if success else '❌'}")
+    
+    await message.answer(f"🧪 <b>Тест системы зарплаты:</b>\n\n" + "\n".join(results), parse_mode='HTML')
+
+@router.message(Command("reset_monthly"))
+async def reset_monthly_earnings_command(message: types.Message):
+    """Скидає місячні заробітки всіх воркерів"""
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ У вас нет прав для выполнения этой команды")
+        return
+    
+    success = reset_monthly_earnings()
+    if success:
+        await message.answer("✅ Місячні заробітки всіх воркерів успішно скинуті")
+    else:
+        await message.answer("❌ Помилка при скиданні місячних заробітків")
+
+@router.message(Command("worker_stats"))
+async def show_worker_stats(message: types.Message):
+    """Показує статистику по всіх воркерах"""
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ У вас нет прав для выполнения этой команды")
+        return
+    
+    c = conn.cursor()
+    c.execute('SELECT nickname, total_earned, current_month_earned, wallet FROM worker_salary ORDER BY total_earned DESC')
+    workers = c.fetchall()
+    
+    if not workers:
+        await message.answer("📊 Воркерів з зарплатою поки немає")
+        return
+    
+    text = "📊 <b>Статистика воркерів:</b>\n\n"
+    for i, (nickname, total, monthly, wallet) in enumerate(workers, 1):
+        text += f"{i}. <b>#{nickname}</b>\n"
+        text += f"   💰 Всього: <code>{total:.2f}$</code>\n"
+        text += f"   📅 Місяць: <code>{monthly:.2f}$</code>\n"
+        text += f"   💳 Кошелек: <code>{wallet or 'Не встановлено'}</code>\n\n"
+    
+    await message.answer(text, parse_mode='HTML')
 
 @router.message()
 async def group_id_echo(message: types.Message):
