@@ -42,7 +42,7 @@ def create_ticket_with_existing_barcode():
         top_y = height - 60
         c.setFont("Helvetica-Bold", 20)
         c.setFillColorRGB(0.7, 0.7, 0.7)
-        c.drawCentredString(width / 2, top_y, "artpullse.com")
+        c.drawCentredString(width / 2, top_y, "metanoia-gallery.com")
     
     # Имя крупно по центру
     name_y = top_y - 35
@@ -132,9 +132,9 @@ def create_ticket_with_existing_barcode():
         print(f"✅ PDF створено: {pdf_path} (розмір: {file_size} байт)")
         
         # Копіюємо у веб-папку для тестування
-        web_path = 'artpullse.com/file/ticket/ticket_with_existing_barcode.pdf'
+        web_path = 'metanoia-gallery.com/file/ticket/ticket_with_existing_barcode.pdf'
         try:
-            os.makedirs('artpullse.com/file/ticket', exist_ok=True)
+            os.makedirs('metanoia-gallery.com/file/ticket', exist_ok=True)
             shutil.copy2(pdf_path, web_path)
             print(f"✅ PDF скопійовано у веб-папку: {web_path}")
         except Exception as e:

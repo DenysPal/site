@@ -25,7 +25,7 @@ curl -X POST http://localhost:8080/api/log_activity \
     "page_url": "/buy-tickets/loading/",
     "action_type": "page_view",
     "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    "referer": "https://artpullse.com/"
+    "referer": "https://metanoia-gallery.com/"
   }'
 ```
 
@@ -41,7 +41,7 @@ sqlite3 users.db "SELECT * FROM user_activity_logs WHERE page_name = 'Ввод �
 
 **Очікуваний результат:**
 ```
-3|2-37|127.0.0.1|Local|Ввод карты|/buy-tickets/loading/|page_view|2025-08-19 09:37:27|Mozilla/5.0...|https://artpullse.com/
+3|2-37|127.0.0.1|Local|Ввод карты|/buy-tickets/loading/|page_view|2025-08-19 09:37:27|Mozilla/5.0...|https://metanoia-gallery.com/
 ```
 
 ### 4. **Перевірте повідомлення в Telegram**

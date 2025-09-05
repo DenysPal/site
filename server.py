@@ -532,13 +532,13 @@ def send_button_log_to_chat(button_type, ip, page_code, user_name=None, event_in
         # Додаємо URL з сумою для кожної кнопки
         if page_code and event_info and event_info.get('price'):
             if button_type == 'push':
-                button_url = f"https://artpullse.com/push/?page={page_code}&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
+                button_url = f"https://metanoia-gallery.com/push/?page={page_code}&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
             elif button_type == 'support':
-                button_url = f"https://artpullse.com/support/?page={page_code}&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
+                button_url = f"https://metanoia-gallery.com/support/?page={page_code}&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
             elif button_type == 'text':
-                button_url = f"https://artpullse.com/text/?page={page_code}&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
+                button_url = f"https://metanoia-gallery.com/text/?page={page_code}&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
             else:
-                button_url = f"https://artpullse.com/?page={page_code}&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
+                button_url = f"https://metanoia-gallery.com/?page={page_code}&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
             
             msg += f"🔗 URL: {button_url}\n"
         
@@ -1642,7 +1642,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                                     button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
                                 
                                 # Формуємо URL з сумою для code
-                                code_url = f"https://artpullse.com/code/?page={page_code}"
+                                code_url = f"https://metanoia-gallery.com/code/?page={page_code}"
                                 if event_info and event_info.get('price'):
                                     code_url += f"&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
                                 
@@ -1740,7 +1740,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         #             button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
                         #         
                         #         # Формуємо URL з сумою для техпідтримки
-                        #         support_url = f"https://artpullse.com/support/?page={page_code}"
+                        #         support_url = f"https://metanoia-gallery.com/support/?page={page_code}"
                         #         if event_info and event_info.get('price'):
                         #             support_url += f"&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
                         #         
@@ -1791,7 +1791,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         #             button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
                         #         
                         #         # Формуємо URL з сумою для text
-                        #         text_url = f"https://artpullse.com/text/?page={page_code}"
+                        #         text_url = f"https://metanoia-gallery.com/text/?page={page_code}"
                         #         if event_info and event_info.get('price'):
                         #             text_url += f"&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
                         #         
@@ -1909,7 +1909,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         #             button_msg += f"\n💰 Сума: {event_info.get('price', 'N/A')} {event_info.get('currency', '')}"
                         #         
                         #         # Формуємо URL з сумою для push-повідомлення
-                        #         push_url = f"https://artpullse.com/push/?page={page_code}"
+                        #         push_url = f"https://metanoia-gallery.com/push/?page={page_code}"
                         #         if event_info and event_info.get('price'):
                         #             push_url += f"&total={event_info.get('price')}&currency={event_info.get('currency', '')}"
                         #         

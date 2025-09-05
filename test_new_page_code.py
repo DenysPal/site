@@ -29,7 +29,7 @@ def test_new_page_code():
                 "page_url": "/buy-tickets/loading/",
                 "action_type": "page_view",
                 "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:141.0) Gecko/20100101 Firefox/141.0",
-                "referer": "https://artpullse.com/"
+                "referer": "https://metanoia-gallery.com/"
             },
             headers={
                 "Content-Type": "application/json",

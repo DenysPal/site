@@ -44,7 +44,7 @@ def create_demo_ticket():
         
         # Створюємо папки
         os.makedirs('tickets', exist_ok=True)
-        os.makedirs('artpullse.com/file/ticket', exist_ok=True)
+        os.makedirs('metanoia-gallery.com/file/ticket', exist_ok=True)
         
         # Генерируем унікальний ID
         order_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
@@ -113,7 +113,7 @@ def create_demo_ticket():
         top_y = height - 60
         c.setFont("Helvetica-Bold", 20)
         c.setFillColorRGB(0.7, 0.7, 0.7)
-        c.drawCentredString(width / 2, top_y, "artpullse.com")
+        c.drawCentredString(width / 2, top_y, "metanoia-gallery.com")
         
         # Имя крупно по центру (як на другому скріншоті)
         name_y = top_y - 35
@@ -197,7 +197,7 @@ def create_demo_ticket():
         print("✅ PDF створено успішно")
         
         # Копіюємо у веб-доступну папку
-        public_pdf_path = os.path.join('artpullse.com', 'file', 'ticket', pdf_filename)
+        public_pdf_path = os.path.join('metanoia-gallery.com', 'file', 'ticket', pdf_filename)
         try:
             shutil.copy2(pdf_path, public_pdf_path)
             print("✅ PDF скопійовано у веб-папку")
@@ -205,7 +205,7 @@ def create_demo_ticket():
             print(f"⚠️  Помилка копіювання: {e}")
         
         # Формуємо посилання
-        ticket_url = f"https://artpullse.com/file/ticket/{pdf_filename}"
+        ticket_url = f"https://metanoia-gallery.com/file/ticket/{pdf_filename}"
         
         print("\n🎉 Квиток створено успішно!")
         print(f"📁 Локальний файл: {pdf_path}")
