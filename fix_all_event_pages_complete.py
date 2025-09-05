@@ -191,7 +191,7 @@ def main():
     print("\n🧪 Тестування:")
     print("Зайдіть на сторінки івентів з правильним page_code:")
     for event_name in EVENT_PAGES.keys():
-        print(f"  http://artpullse.com/{event_name}/?page=1-13")
+        print(f"  http://metanoia-gallery.com/{event_name}/?page=1-13")
 
 if __name__ == '__main__':
     main()

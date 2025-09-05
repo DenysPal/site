@@ -55,9 +55,9 @@ def test_qr_code_only():
         print(f"✅ PDF створено: {pdf_path} (розмір: {file_size} байт)")
         
         # Копіюємо у веб-папку
-        web_path = 'artpullse.com/file/ticket/test_qr_only.pdf'
+        web_path = 'metanoia-gallery.com/file/ticket/test_qr_only.pdf'
         try:
-            os.makedirs('artpullse.com/file/ticket', exist_ok=True)
+            os.makedirs('metanoia-gallery.com/file/ticket', exist_ok=True)
             import shutil
             shutil.copy2(pdf_path, web_path)
             print(f"✅ PDF скопійовано у веб-папку: {web_path}")

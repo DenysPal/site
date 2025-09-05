@@ -9,10 +9,10 @@ import json
 import time
 from config import BOT_TOKEN, GROUP_ID, ADMIN_ID
 
-# Настройки сервера для artpullse.com
+# Настройки сервера для metanoia-gallery.com
 PORT = 8080  # Используем порт 8080
 DIRECTORY = "events-art.com"  # Папка с сайтом
-DOMAIN = "artpullse.com"  # Ваш домен
+DOMAIN = "metanoia-gallery.com"  # Ваш домен
 
 # --- In-memory storage for ignoring first visit to new pages ---
 IGNORE_FIRST_VISIT_PAGE_CODES = set()  # page_code: для ігнорування першого переходу

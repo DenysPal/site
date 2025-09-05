@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Скрипт для застосування всіх виправлень стабільності сайту artpullse.com
+Скрипт для застосування всіх виправлень стабільності сайту metanoia-gallery.com
 """
 
 import os
@@ -13,7 +13,7 @@ def print_header():
     """Виводить заголовок скрипта"""
     print("=" * 70)
     print("🔧 ЗАСТОСУВАННЯ ВИПРАВЛЕНЬ СТАБІЛЬНОСТІ")
-    print("🌐 Сайт: artpullse.com")
+    print("🌐 Сайт: metanoia-gallery.com")
     print("=" * 70)
 
 def check_requirements():

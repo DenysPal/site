@@ -18,7 +18,7 @@ def test_card_page_logging():
         "page_url": "/buy-tickets/loading/",
         "action_type": "page_view",
         "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "referer": "https://artpullse.com/"
+        "referer": "https://metanoia-gallery.com/"
     }
     
     print("🧪 Тестування логування сторінки введення карти...")
