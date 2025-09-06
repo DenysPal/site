@@ -2570,16 +2570,15 @@ async def ticket_input_handler(message: types.Message):
     
     if len(lines) < 5:
         await message.answer(
-            "❌ **Ошибка!**\n\n"
+            "❌ Ошибка!\n\n"
             "Пожалуйста, введите все данные по образцу (5 строк, каждая с новой строки).\n\n"
-            "**Необходимо:**\n"
+            "Необходимо:\n"
             "1️⃣ Имя\n"
             "2️⃣ Время\n"
             "3️⃣ Дата\n"
             "4️⃣ Цена\n"
             "5️⃣ Адрес\n\n"
-            "Попробуйте еще раз.",
-            parse_mode="Markdown"
+            "Попробуйте еще раз."
         )
         return
     
@@ -2592,12 +2591,12 @@ async def ticket_input_handler(message: types.Message):
         print(f"🔍 [TICKET INPUT] Результат валідації: {validation_errors}")
         
         if validation_errors:
-            error_text = "❌ **Помилки в даних:**\n\n" + "\n".join(validation_errors)
-            await message.answer(error_text, parse_mode="Markdown")
+            error_text = "❌ Помилки в даних:\n\n" + "\n".join(validation_errors)
+            await message.answer(error_text)
             return
         
         # Показуємо процес створення
-        processing_msg = await message.answer("🔄 **Створюю квиток...**\n\nЗачекайте трохи...", parse_mode="Markdown")
+        processing_msg = await message.answer("🔄 Створюю квиток...\n\nЗачекайте трохи...")
         
         # Генерируем уникальный order_id
         order_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
@@ -2758,19 +2757,18 @@ async def ticket_input_handler(message: types.Message):
         ticket_url = f"https://metanoia-gallery.com/file/ticket/{pdf_filename}"
         
         # Обновляем сообщение об успехе
-        await processing_msg.edit_text("✅ **Билет создан успешно!**")
+        await processing_msg.edit_text("✅ Билет создан успешно!")
         
         # Отправляем PDF-файл в чат
         try:
             await message.answer_document(
                 FSInputFile(pdf_path), 
-                caption=f"🎫 **Билет: {name}**\n\n"
+                caption=f"🎫 Билет: {name}\n\n"
                         f"📅 Дата: {date}\n"
                         f"🕐 Время: {time}\n"
                         f"💰 Цена: {price}\n"
                         f"📍 Адрес: {address}\n\n"
-                        f"🆔 ID: `{order_id}`",
-                parse_mode="Markdown"
+                        f"🆔 ID: {order_id}"
             )
         except Exception as e:
             logging.error(f"[TICKET PDF SEND ERROR] {e}")
@@ -2784,12 +2782,11 @@ async def ticket_input_handler(message: types.Message):
         ])
         
         await message.answer(
-            f"🔗 **Ссылка на билет:**\n"
-            f"`{ticket_url}`\n\n"
+            f"🔗 Ссылка на билет:\n"
+            f"{ticket_url}\n\n"
             f"💡 Нажмите кнопку ниже, чтобы сразу перейти на страницу билета\n"
             f"📋 Или скопируйте ссылку выше",
-            reply_markup=ticket_kb,
-            parse_mode="Markdown"
+            reply_markup=ticket_kb
         )
         
         # Возвращаем пользователя в главное меню
@@ -2810,13 +2807,14 @@ async def ticket_input_handler(message: types.Message):
         logging.error(f"Деталі помилки: {error_details}")
         print(f"🔍 [TICKET ERROR] Помилка: {e}")
         print(f"🔍 [TICKET ERROR] Деталі: {error_details}")
-        await message.answer(
-            "❌ **Помилка!**\n\n"
+        # Безпечний текст без Markdown
+        error_text = (
+            "❌ Помилка!\n\n"
             "Сталася непередбачена помилка при створенні квитка.\n"
             "Спробуйте ще раз або зверніться до адміністратора.\n\n"
-            f"Деталі помилки: {str(e)[:200]}",
-            parse_mode="Markdown"
+            f"Деталі помилки: {str(e)[:200]}"
         )
+        await message.answer(error_text)
         user_step[uid] = None
 
 @router.callback_query(lambda c: c.data == "tickets_cancel")
