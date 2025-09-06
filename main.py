@@ -2644,8 +2644,10 @@ async def ticket_input_handler(message: types.Message):
                 img_path = os.path.join('events-art.com', 'image', 'header-image.jpg')
         
         # Генерируем PDF
+        print(f"🔍 [TICKET] Створюємо PDF: {pdf_path}")
         c = canvas.Canvas(pdf_path, pagesize=A4)
         width, height = A4
+        print(f"🔍 [TICKET] PDF canvas створено, розмір: {width}x{height}")
         
         # Малюємо ще темніший сірий прямокутник для всього білета (як на другому скріншоті)
         c.setFillColorRGB(0.3, 0.3, 0.3)  # Ще темніший сірий колір
@@ -2802,11 +2804,17 @@ async def ticket_input_handler(message: types.Message):
         print(f"🔍 [TICKET INPUT] Готовий штрих-код залишається: {barcode_path}")
         
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
         logging.error(f"Загальна помилка обробки квитка: {e}")
+        logging.error(f"Деталі помилки: {error_details}")
+        print(f"🔍 [TICKET ERROR] Помилка: {e}")
+        print(f"🔍 [TICKET ERROR] Деталі: {error_details}")
         await message.answer(
             "❌ **Помилка!**\n\n"
             "Сталася непередбачена помилка при створенні квитка.\n"
-            "Спробуйте ще раз або зверніться до адміністратора.",
+            "Спробуйте ще раз або зверніться до адміністратора.\n\n"
+            f"Деталі помилки: {str(e)[:200]}",
             parse_mode="Markdown"
         )
         user_step[uid] = None
