@@ -2811,21 +2811,12 @@ async def ticket_input_handler(message: types.Message):
         logging.error(f"Деталі помилки: {error_details}")
         print(f"🔍 [TICKET ERROR] Помилка: {e}")
         print(f"🔍 [TICKET ERROR] Деталі: {error_details}")
-<<<<<<< HEAD
         # Безпечний текст без Markdown
         error_text = (
             "❌ Помилка!\n\n"
             "Сталася непередбачена помилка при створенні квитка.\n"
             "Спробуйте ще раз або зверніться до адміністратора.\n\n"
             f"Деталі помилки: {str(e)[:200]}"
-=======
-        await message.answer(
-            "❌ **Помилка!**\n\n"
-            "Сталася непередбачена помилка при створенні квитка.\n"
-            "Спробуйте ще раз або зверніться до адміністратора.\n\n"
-            f"Деталі помилки: {str(e)[:200]}",
-            parse_mode="Markdown"
->>>>>>> b959420 (f)
         )
         await message.answer(error_text)
         user_step[uid] = None
