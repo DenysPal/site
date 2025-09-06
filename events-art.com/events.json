@@ -16406,5 +16406,1293 @@
         "time": "10:00-20:00"
       }
     ]
+  },
+  "2f12c197-2fad-476c-b978-d43272602a19": {
+    "title": "Выставка",
+    "price": "55",
+    "currency": "£",
+    "address": "Civic Centre, Commercial Rd, Southampton SO14 7LY",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "08.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "06.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "12.09.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "29.09.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "22.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "23.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "24.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "25.09.2025",
+        "time": "10:00-20:00"
+      }
+    ]
+  },
+  "fe9c8b38-1637-44f5-97e1-b24d53ecf83a": {
+    "title": "Выставка",
+    "price": "55",
+    "currency": "£",
+    "address": "Civic Centre, Commercial Rd, Southampton SO14 7LY",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "08.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "06.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "12.09.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "29.09.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "22.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "23.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "24.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "25.09.2025",
+        "time": "10:00-20:00"
+      }
+    ]
+  },
+  "71ad647c-75a9-447d-9696-b94a3c82dff1": {
+    "title": "Выставка",
+    "price": "270",
+    "currency": "RON",
+    "address": "Str. Constanței, Năvodari 905700",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "08.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "07.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "12.09.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "29.09.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "22.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "23.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "24.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "25.09.2025",
+        "time": "10:00-20:00"
+      }
+    ]
+  },
+  "07f7b22f-7bef-4594-b95f-18eaf80844d7": {
+    "title": "Выставка",
+    "price": "65",
+    "currency": "€",
+    "address": "Museumplein 10, 1071 DJ Amsterdam",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "08.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "06.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "12.09.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "29.09.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "22.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "23.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "24.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "25.09.2025",
+        "time": "10:00-20:00"
+      }
+    ]
+  },
+  "18ab9b69-75a9-407e-8c67-2cbbf19d30ac": {
+    "title": "Выставка",
+    "price": "54",
+    "currency": "GBP",
+    "address": "Main Rd, HM Naval Base, Portsmouth PO1 3PY",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "19.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "07.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "18.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "25.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "26.08.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "27.08.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "28.08.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "01.09.2025",
+        "time": "10:00-22:00"
+      }
+    ]
+  },
+  "3134c2b0-c1d1-4da5-915d-222b6bcbb18b": {
+    "title": "Выставка",
+    "price": "54",
+    "currency": "GBP",
+    "address": "23-29 Queen St, Belfast BT1 6EA",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "19.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "07.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "18.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "25.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "26.08.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "27.08.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "28.08.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "01.09.2025",
+        "time": "10:00-22:00"
+      }
+    ]
+  },
+  "713f3ed1-54aa-4005-9a4b-e612eee9901e": {
+    "title": "Выставка",
+    "price": "59",
+    "currency": "€",
+    "address": "V. Putvinskio g. 55, Kaunas, 44248 Kauno m. sav",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "06.09",
+        "time": "| 09:30-00:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "07.09",
+        "time": "| 09:30-00:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "08.09",
+        "time": "| 09:30-00:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "09.09",
+        "time": "| 09:30-00:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "10.09",
+        "time": "| 09:30-00:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "11.09",
+        "time": "| 09:30-00:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "12.09",
+        "time": "| 09:30-00:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "13.09",
+        "time": "| 09:30-00:00"
+      }
+    ]
+  },
+  "5ef114c0-5674-46ee-bfb3-9198728fa783": {
+    "title": "Выставка",
+    "price": "58",
+    "currency": "GBP",
+    "address": "Tudor Rd, Windmill Hill, Runcorn WA7 1SX",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "07.09",
+        "time": "| 09:30-00:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "08.09",
+        "time": "| 09:30-00:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "09.09",
+        "time": "| 09:30-00:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "10.09",
+        "time": "| 09:30-00:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "11.09",
+        "time": "| 09:30-00:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "12.09",
+        "time": "| 09:30-00:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "13.09",
+        "time": "| 09:30-00:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "14.09",
+        "time": "| 09:30-00:00"
+      }
+    ]
+  },
+  "419887e4-cabd-4040-8d0a-d253b65dfe0c": {
+    "title": "Выставка",
+    "price": "46",
+    "currency": "€",
+    "address": "Rue de l'Eglise Catholique 11, 1820 Montreux, Switzerland",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "31.08.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "03.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "07.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "06.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "09.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "12.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "15.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "19.09.2025",
+        "time": "10:00-22:000"
+      }
+    ]
+  },
+  "dca0c805-5d62-4b7e-ad67-7fa0b70183c6": {
+    "title": "Выставка",
+    "price": "46",
+    "currency": "€",
+    "address": "Székesfehérvár, Fő u. 5, 8000 Hungary",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "07.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "03.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "31.08.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "06.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "09.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "12.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "15.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "19.09.2025",
+        "time": "10:00-22:000"
+      }
+    ]
+  },
+  "4715e606-f773-43d6-acf1-1488388138ec": {
+    "title": "Выставка",
+    "price": "50",
+    "currency": "EUR",
+    "address": "Parc Expo Rennes,06000 Renne",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "03.09.2025",
+        "time": "10:00-23:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "05.09.2025",
+        "time": "10:00-23:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "07.09.2025",
+        "time": "10:00-23:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "08.09.2025",
+        "time": "10:00-23:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "10.09.2025",
+        "time": "10:00-23:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "11.09.2025",
+        "time": "10:00-23:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "12.09.2025",
+        "time": "10:00-23:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "14.09.2025",
+        "time": "10:00-23:00"
+      }
+    ]
+  },
+  "b79ddc39-f8d4-451d-8114-e8a90a5e4c47": {
+    "title": "Выставка",
+    "price": "55",
+    "currency": "€",
+    "address": "Grote Kerkstraat 9, 8911 DZ Leeuwarden",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "08.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "07.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "12.09.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "29.09.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "22.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "23.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "24.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "25.09.2025",
+        "time": "10:00-20:00"
+      }
+    ]
+  },
+  "626331a3-0575-4f1a-b494-6fac35b4a36e": {
+    "title": "Выставка",
+    "price": "529",
+    "currency": "SEK",
+    "address": "Museivägen 7, 115 27 Stockholm",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "19.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "07.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "18.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "25.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "26.08.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "27.08.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "28.08.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "01.09.2025",
+        "time": "10:00-22:00"
+      }
+    ]
+  },
+  "fa7204c2-761c-4a5a-a3fa-c6e48ac84f1a": {
+    "title": "Выставка",
+    "price": "65",
+    "currency": "EUR",
+    "address": "Budapest, Nagymező u. 20, 1065, Hungary",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "07.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "08.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "09.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "10.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "11.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "12.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "13.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "14.09.2025",
+        "time": "10:00-22:00"
+      }
+    ]
+  },
+  "c195be5b-1d21-4d1f-88cc-888d2cd12dfd": {
+    "title": "Выставка",
+    "price": "1500",
+    "currency": "CZK",
+    "address": "Masarykova 723/14, 460 01 Liberec",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "08.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "07.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "12.09.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "29.09.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "22.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "23.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "24.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "25.09.2025",
+        "time": "10:00-20:00"
+      }
+    ]
+  },
+  "1a74b75b-a9bc-4f99-ba35-6d05e5fc4e64": {
+    "title": "Выставка",
+    "price": "400",
+    "currency": "DKK",
+    "address": "Aros Allé 2, 8000 Aarhus, Denmark",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "07.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "08.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "09.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "10.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "11.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "12.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "13.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "14.09.2025",
+        "time": "10:00-22:00"
+      }
+    ]
+  },
+  "188e22da-080b-4444-9ec2-5df78b860fd8": {
+    "title": "Выставка",
+    "price": "1500",
+    "currency": "CZK",
+    "address": "Masarykova 723/14, 460 01 Liberec",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "08.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "07.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "12.09.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "29.09.2025",
+        "time": "10:00-21:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "22.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "23.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "24.09.2025",
+        "time": "10:00-20:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "25.09.2025",
+        "time": "10:00-20:00"
+      }
+    ]
+  },
+  "40079d29-11d9-437f-8e98-2fa0c004ed1a": {
+    "title": "Выставка",
+    "price": "46",
+    "currency": "€",
+    "address": "Rue Jean-Calvin 10, 1204 Genève, Switzerland",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "31.08.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "03.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "07.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "06.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "09.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "12.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "15.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "19.09.2025",
+        "time": "10:00-22:000"
+      }
+    ]
+  },
+  "f2f29f52-4f36-4245-99ba-23738c81bb88": {
+    "title": "Выставка",
+    "price": "400",
+    "currency": "DKK",
+    "address": "Aros Allé 2, 8000 Aarhus, Denmark",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "07.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "08.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "09.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "10.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "11.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "12.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "13.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "14.09.2025",
+        "time": "10:00-22:00"
+      }
+    ]
+  },
+  "9cfc114f-5460-418d-aa9a-c0eaa16a3443": {
+    "title": "Выставка",
+    "price": "400",
+    "currency": "DKK",
+    "address": "Aros Allé 2, 8000 Aarhus, Denmark",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "06.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "07.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "09.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "10.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "11.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "12.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "13.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "14.09.2025",
+        "time": "10:00-22:00"
+      }
+    ]
+  },
+  "cdd5c715-b6a5-45d5-abaa-a12f63805878": {
+    "title": "Выставка",
+    "price": "50",
+    "currency": "CHF",
+    "address": "Rte du Signal 2, 1018 Lausanne, Switzerland",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "06.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "07.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "09.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "10.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "11.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "12.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "13.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "14.09.2025",
+        "time": "10:00-22:00"
+      }
+    ]
+  },
+  "ddca970a-2a72-43d8-9341-649c585b5656": {
+    "title": "Выставка",
+    "price": "49",
+    "currency": "CHF",
+    "address": "Museumstrasse 32, 9000 St. Gallen",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "19.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "08.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "18.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "25.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "26.08.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "27.08.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "28.08.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "01.09.2025",
+        "time": "10:00-22:00"
+      }
+    ]
+  },
+  "15bb6a5c-90fe-45d6-a5a2-7bcd475e89bd": {
+    "title": "Выставка",
+    "price": "65",
+    "currency": "EUR",
+    "address": "Tatabánya, Néphaz u. 5, 2800 Hungary",
+    "events": [
+      {
+        "name": "Terroir and Traditions",
+        "path": "terroir-and-traditions/index.html",
+        "date": "06.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Collection Co–selection",
+        "path": "collection-co–selection/index.html",
+        "date": "07.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Snucie",
+        "path": "snucie/index.html",
+        "date": "09.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Art that saves lives",
+        "path": "art-that-saves-lives/index.html",
+        "date": "10.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Gotong Royong",
+        "path": "gotong-royong/index.html",
+        "date": "11.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Anna Konik",
+        "path": "anna-konik/index.html",
+        "date": "12.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Uncensored",
+        "path": "uncensored/index.html",
+        "date": "13.09.2025",
+        "time": "10:00-22:00"
+      },
+      {
+        "name": "Jacek Adamas",
+        "path": "jacek-adamas/index.html",
+        "date": "14.09.2025",
+        "time": "10:00-22:00"
+      }
+    ]
   }
 }
