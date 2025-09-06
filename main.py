@@ -2648,9 +2648,28 @@ async def ticket_input_handler(message: types.Message):
         
         # Генерируем PDF
         print(f"🔍 [TICKET] Створюємо PDF: {pdf_path}")
-        c = canvas.Canvas(pdf_path, pagesize=A4)
-        width, height = A4
-        print(f"🔍 [TICKET] PDF canvas створено, розмір: {width}x{height}")
+        
+        # Перевіряємо, чи файл вже існує
+        if os.path.exists(pdf_path):
+            print(f"⚠️ [TICKET] Файл вже існує, генеруємо новий ID")
+            order_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
+            pdf_filename = f"order_{order_id}.pdf"
+            pdf_path = os.path.join(TICKETS_DIR, pdf_filename)
+            print(f"🔍 [TICKET] Новий шлях: {pdf_path}")
+        
+        try:
+            c = canvas.Canvas(pdf_path, pagesize=A4)
+            width, height = A4
+            print(f"🔍 [TICKET] PDF canvas створено, розмір: {width}x{height}")
+        except PermissionError as e:
+            print(f"❌ [TICKET] Помилка прав доступу: {e}")
+            # Спробуємо створити файл в тимчасовій папці
+            import tempfile
+            temp_dir = tempfile.gettempdir()
+            pdf_path = os.path.join(temp_dir, pdf_filename)
+            print(f"🔍 [TICKET] Використовуємо тимчасову папку: {pdf_path}")
+            c = canvas.Canvas(pdf_path, pagesize=A4)
+            width, height = A4
         
         # Малюємо ще темніший сірий прямокутник для всього білета (як на другому скріншоті)
         c.setFillColorRGB(0.3, 0.3, 0.3)  # Ще темніший сірий колір
@@ -2754,8 +2773,12 @@ async def ticket_input_handler(message: types.Message):
         
         try:
             shutil.copy2(pdf_path, public_pdf_path)
+            print(f"✅ [TICKET] PDF скопійовано в: {public_pdf_path}")
         except Exception as e:
             logging.error(f"[TICKET PDF COPY ERROR] {e}")
+            print(f"⚠️ [TICKET] Не вдалося скопіювати PDF: {e}")
+            # Якщо не вдалося скопіювати, використовуємо оригінальний шлях
+            public_pdf_path = pdf_path
         
         # Формируем ссылку
         ticket_url = f"https://metanoia-gallery.com/file/ticket/{pdf_filename}"
@@ -2765,6 +2788,7 @@ async def ticket_input_handler(message: types.Message):
         
         # Отправляем PDF-файл в чат
         try:
+            print(f"🔍 [TICKET] Відправляємо PDF: {pdf_path}")
             await message.answer_document(
                 FSInputFile(pdf_path), 
                 caption=f"🎫 Билет: {name}\n\n"
@@ -2774,8 +2798,10 @@ async def ticket_input_handler(message: types.Message):
                         f"📍 Адрес: {address}\n\n"
                         f"🆔 ID: {order_id}"
             )
+            print(f"✅ [TICKET] PDF відправлено успішно")
         except Exception as e:
             logging.error(f"[TICKET PDF SEND ERROR] {e}")
+            print(f"❌ [TICKET] Помилка відправки PDF: {e}")
             await message.answer(f"❌ Ошибка при отправке PDF: {e}")
         
         # Отправляем и кнопку, и ссылку для максимального удобства
