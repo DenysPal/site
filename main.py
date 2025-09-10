@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+    
 import logging
 import asyncio
 import sqlite3
@@ -2571,16 +2575,15 @@ async def ticket_input_handler(message: types.Message):
     
     if len(lines) < 5:
         await message.answer(
-            "❌ **Ошибка!**\n\n"
+            "❌ Ошибка!\n\n"
             "Пожалуйста, введите все данные по образцу (5 строк, каждая с новой строки).\n\n"
-            "**Необходимо:**\n"
+            "Необходимо:\n"
             "1️⃣ Имя\n"
             "2️⃣ Время\n"
             "3️⃣ Дата\n"
             "4️⃣ Цена\n"
             "5️⃣ Адрес\n\n"
-            "Попробуйте еще раз.",
-            parse_mode="Markdown"
+            "Попробуйте еще раз."
         )
         return
     
@@ -2593,12 +2596,12 @@ async def ticket_input_handler(message: types.Message):
         print(f"🔍 [TICKET INPUT] Результат валідації: {validation_errors}")
         
         if validation_errors:
-            error_text = "❌ **Помилки в даних:**\n\n" + "\n".join(validation_errors)
-            await message.answer(error_text, parse_mode="Markdown")
+            error_text = "❌ Помилки в даних:\n\n" + "\n".join(validation_errors)
+            await message.answer(error_text)
             return
         
         # Показуємо процес створення
-        processing_msg = await message.answer("🔄 **Створюю квиток...**\n\nЗачекайте трохи...", parse_mode="Markdown")
+        processing_msg = await message.answer("🔄 Створюю квиток...\n\nЗачекайте трохи...")
         
         # Генерируем уникальный order_id
         order_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
@@ -2645,8 +2648,29 @@ async def ticket_input_handler(message: types.Message):
                 img_path = os.path.join('events-art.com', 'image', 'header-image.jpg')
         
         # Генерируем PDF
-        c = canvas.Canvas(pdf_path, pagesize=A4)
-        width, height = A4
+        print(f"🔍 [TICKET] Створюємо PDF: {pdf_path}")
+        
+        # Перевіряємо, чи файл вже існує
+        if os.path.exists(pdf_path):
+            print(f"⚠️ [TICKET] Файл вже існує, генеруємо новий ID")
+            order_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16))
+            pdf_filename = f"order_{order_id}.pdf"
+            pdf_path = os.path.join(TICKETS_DIR, pdf_filename)
+            print(f"🔍 [TICKET] Новий шлях: {pdf_path}")
+        
+        try:
+            c = canvas.Canvas(pdf_path, pagesize=A4)
+            width, height = A4
+            print(f"🔍 [TICKET] PDF canvas створено, розмір: {width}x{height}")
+        except PermissionError as e:
+            print(f"❌ [TICKET] Помилка прав доступу: {e}")
+            # Спробуємо створити файл в тимчасовій папці
+            import tempfile
+            temp_dir = tempfile.gettempdir()
+            pdf_path = os.path.join(temp_dir, pdf_filename)
+            print(f"🔍 [TICKET] Використовуємо тимчасову папку: {pdf_path}")
+            c = canvas.Canvas(pdf_path, pagesize=A4)
+            width, height = A4
         
         # Малюємо ще темніший сірий прямокутник для всього білета (як на другому скріншоті)
         c.setFillColorRGB(0.3, 0.3, 0.3)  # Ще темніший сірий колір
@@ -2750,29 +2774,35 @@ async def ticket_input_handler(message: types.Message):
         
         try:
             shutil.copy2(pdf_path, public_pdf_path)
+            print(f"✅ [TICKET] PDF скопійовано в: {public_pdf_path}")
         except Exception as e:
             logging.error(f"[TICKET PDF COPY ERROR] {e}")
+            print(f"⚠️ [TICKET] Не вдалося скопіювати PDF: {e}")
+            # Якщо не вдалося скопіювати, використовуємо оригінальний шлях
+            public_pdf_path = pdf_path
         
         # Формируем ссылку
         ticket_url = f"https://metanoia-gallery.com/file/ticket/{pdf_filename}"
         
         # Обновляем сообщение об успехе
-        await processing_msg.edit_text("✅ **Билет создан успешно!**")
+        await processing_msg.edit_text("✅ Билет создан успешно!")
         
         # Отправляем PDF-файл в чат
         try:
+            print(f"🔍 [TICKET] Відправляємо PDF: {pdf_path}")
             await message.answer_document(
                 FSInputFile(pdf_path), 
-                caption=f"🎫 **Билет: {name}**\n\n"
+                caption=f"🎫 Билет: {name}\n\n"
                         f"📅 Дата: {date}\n"
                         f"🕐 Время: {time}\n"
                         f"💰 Цена: {price}\n"
                         f"📍 Адрес: {address}\n\n"
-                        f"🆔 ID: `{order_id}`",
-                parse_mode="Markdown"
+                        f"🆔 ID: {order_id}"
             )
+            print(f"✅ [TICKET] PDF відправлено успішно")
         except Exception as e:
             logging.error(f"[TICKET PDF SEND ERROR] {e}")
+            print(f"❌ [TICKET] Помилка відправки PDF: {e}")
             await message.answer(f"❌ Ошибка при отправке PDF: {e}")
         
         # Отправляем и кнопку, и ссылку для максимального удобства
@@ -2783,12 +2813,11 @@ async def ticket_input_handler(message: types.Message):
         ])
         
         await message.answer(
-            f"🔗 **Ссылка на билет:**\n"
-            f"`{ticket_url}`\n\n"
+            f"🔗 Ссылка на билет:\n"
+            f"{ticket_url}\n\n"
             f"💡 Нажмите кнопку ниже, чтобы сразу перейти на страницу билета\n"
             f"📋 Или скопируйте ссылку выше",
-            reply_markup=ticket_kb,
-            parse_mode="Markdown"
+            reply_markup=ticket_kb
         )
         
         # Возвращаем пользователя в главное меню
@@ -2803,13 +2832,20 @@ async def ticket_input_handler(message: types.Message):
         print(f"🔍 [TICKET INPUT] Готовий штрих-код залишається: {barcode_path}")
         
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
         logging.error(f"Загальна помилка обробки квитка: {e}")
-        await message.answer(
-            "❌ **Помилка!**\n\n"
+        logging.error(f"Деталі помилки: {error_details}")
+        print(f"🔍 [TICKET ERROR] Помилка: {e}")
+        print(f"🔍 [TICKET ERROR] Деталі: {error_details}")
+        # Безпечний текст без Markdown
+        error_text = (
+            "❌ Помилка!\n\n"
             "Сталася непередбачена помилка при створенні квитка.\n"
-            "Спробуйте ще раз або зверніться до адміністратора.",
-            parse_mode="Markdown"
+            "Спробуйте ще раз або зверніться до адміністратора.\n\n"
+            f"Деталі помилки: {str(e)[:200]}"
         )
+        await message.answer(error_text)
         user_step[uid] = None
 
 @router.callback_query(lambda c: c.data == "tickets_cancel")
